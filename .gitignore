@@ -8,6 +8,9 @@ simulator/out
 tester/build
 tester/out
 
+.envrc
+.direnv/
+
 *.class
 *.cap
 *~
