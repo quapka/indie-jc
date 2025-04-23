@@ -2,6 +2,7 @@ package tests;
 
 import applet.MainApplet;
 import applet.HelloWorldApplet;
+import applet.IndistinguishabilityApplet;
 import cz.muni.fi.crocs.rcard.client.CardManager;
 import cz.muni.fi.crocs.rcard.client.CardType;
 import cz.muni.fi.crocs.rcard.client.RunConfig;
@@ -75,7 +76,7 @@ public class BaseTest {
 
         } else if (cardType != CardType.PHYSICAL && cardType != CardType.PHYSICAL_JAVAX) {
             // Running in the simulator
-            runCfg.setAppletToSimulate(HelloWorldApplet.class)
+            runCfg.setAppletToSimulate(IndistinguishabilityApplet.class)
                     .setTestCardType(CardType.JCARDSIMLOCAL)
                     .setbReuploadApplet(true)
                     .setInstallData(installData);
