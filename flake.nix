@@ -35,7 +35,10 @@
     devShells = with pkgs; {
       default = mkShell {
         name = "gradle2nix";
-        packages = [ inputs.gradle2nix.packages.${system}.gradle2nix ];
+        packages = [
+          nodejs
+          inputs.gradle2nix.packages.${system}.gradle2nix
+        ];
         inputsFrom = [ gradle jdk ];
 
         GRADLE_HOME = "${gradle}";
