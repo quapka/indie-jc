@@ -8,6 +8,8 @@ import javacardx.framework.util.*;
 import javacardx.apdu.ExtendedLength;
 import javacard.security.*;
 
+import applet.Base64UrlSafeDecoder.*;
+
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
 	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
@@ -40,7 +42,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
 	private byte[] extApduBuffer = new byte[2048];
 	private byte[] procBuffer = new byte[2048];
-	public short extApduSize = 0;
+	private short extApduSize = 0;
 
     // FIXME remove
     private static final byte[] precomputedDigest = {
@@ -79,15 +81,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         (byte) 0x93, (byte) 0x50, (byte) 0x9a, (byte) 0x8f,
         (byte) 0x3f, (byte) 0x7f, (byte) 0x8a, (byte) 0x83,
         (byte) 0xa3, (byte) 0x54, (byte) 0xd5
-    };
-
-
-
-    private static final byte[] Base64UrlSafeAlphabet = {
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-        'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-        'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'
     };
 
 
@@ -139,7 +132,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     //     (byte) 0x85, (byte) 0x88, (byte) 0xe5, (byte) 0xad
     // };
 
-
+    private boolean initialized = false;
 
     private KeyPair ecKeyPair;
     private ECPrivateKey privateKey;
@@ -148,6 +141,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private ECPublicKey OIDC_PUBLIC_KEY = null;
 
     private short sw = ISO7816.SW_NO_ERROR;
+    private Base64UrlSafeDecoder base64UrlSafeDecoder;
 
 	public static void install(byte[] bArray, short bOffset, byte bLength)
 	{
@@ -161,6 +155,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
 	public void process(APDU apdu)
 	{
+        if ( !initialized ) {
+            initialize();
+        }
+
         byte[] buffer = apdu.getBuffer();
         byte cla = buffer[ISO7816.OFFSET_CLA];
         byte ins = buffer[ISO7816.OFFSET_INS];
@@ -193,6 +191,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             deriveSalt(apdu);
         }
 	}
+
+    private void initialize() {
+        base64UrlSafeDecoder = new Base64UrlSafeDecoder();
+        initialized = true;
+    }
 
     private void setOIDCPublicKey() {
         OIDC_PUBLIC_KEY = (ECPublicKey) KeyBuilder.buildKey(
@@ -470,7 +473,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         System.out.println(String.format("secondDot: %d", secondDot));
 
         short nDecoded = 0;
-        nDecoded = decodeBase64Urlsafe(
+        nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (firstDot + 1),
             // (short) (secondDot - firstDot),
@@ -563,9 +566,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         // System.out.println(buffer);
         // byte[] slice = Arrays.copyOfRange(buffer, firstDot, secondDot);
-        // short nDecoded = decodeBase64Urlsafe(buffer, (short) 0,  firstDot, procBuffer, (short) 0);
+        // short nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(buffer, (short) 0,  firstDot, procBuffer, (short) 0);
 
-        short nDecoded = decodeBase64Urlsafe(
+        short nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (secondDot + 1),
             (short) (extApduSize - secondDot + 1),
@@ -615,7 +618,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
         }
 
-        // nDecoded = decodeBase64Urlsafe(
+        // nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
         //     buffer,
         //     (short) 0,
         //     (short) (firstDot + 1),
@@ -624,7 +627,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // );
 
         // short len = 124;
-        // nDecoded = decodeBase64Urlsafe(
+        // nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
         //     buffer,
         //     (short) (firstDot + 1),
         //     // (short) (secondDot - firstDot + 1),
@@ -650,43 +653,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     // FIXME return an error if problem?
     // FIXME there is quite likely some of by one error when decoding values 
-    public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
-        short n_written = 0;
-        byte[] temp = new byte[3];
-        int base = 0;
-
-        for (short i = 0; i < inputLength; i += 4) {
-            base = 0;
-            for (byte j = 0; j <  4; j++) {
-                // NOTE if the search is slow, try using Util.arrayFindGeneric?
-                byte index = base64CharToValue(input[inputOffset + j + i]);
-                if (index == 255) {
-                    return (byte) 255;
-                }
-                base += index << ((3 - j) * 6);
-            }
-            output[outputOffset + n_written + 0] = (byte) (base >> 16 & 0xFF);
-            output[outputOffset + n_written + 1] = (byte) (base >>  8 & 0xFF);
-            output[outputOffset + n_written + 2] = (byte) (base >>  0 & 0xFF);
-            n_written += 3;
-        }
-
-        return n_written;
-    }
-
-    // FIXME is there a quicker way to do this byte resolution? Long switch-case?
-    private byte base64CharToValue(byte c) {
-        for (byte i = 0; i < Base64UrlSafeAlphabet.length; i++) {
-            if (Base64UrlSafeAlphabet[i] == c) {
-                return i;
-            }
-        }
-        // FIXME returning 0 here might not be fully correct, but seems to work fine.
-        // if ( c == '=' ) {
-        //     return 0;
-        // }
-        return 0;
-    }
 
     private byte[] intToBytes(int value, byte[] input) {
         input[0] = (byte) (value >> 16 & 0xFF);
