@@ -153,6 +153,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 		register();
 	}
 
+    // FIXME implement select(), deselect() and possibly other Applet.* methods?
 	public void process(APDU apdu)
 	{
         if ( !initialized ) {
@@ -476,9 +477,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (firstDot + 1),
-            // (short) (secondDot - firstDot),
             (short) (secondDot - (firstDot + 1)),
-            // (short) (128),
             procBuffer,
             (short) 0
         );
@@ -500,17 +499,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         nDecoded = decodeBase64Urlsafe(
             buffer,
             (short) (firstDot + 1),
-            // (short) (secondDot - firstDot),
             (short) (secondDot - (firstDot + 1)),
-            // (short) (128),
             procBuffer,
             (short) 0
         );
 
         short hashSize = deriveHashSecret(procBuffer, nDecoded, apdu);
-        // add signature verification
 
-        // short fieldLength = getStringValueFor(procBuffer, (short) 0, nDecoded, NAME_FIELD_NAME, apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, hashSize);
     }
 
