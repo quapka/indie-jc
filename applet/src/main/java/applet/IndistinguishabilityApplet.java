@@ -329,7 +329,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 		byte[] buffer = loadApdu(apdu);
 		byte[] apduBuffer = apdu.getBuffer();
 
-        Util.arrayCopyNonAtomic(buffer, (short) apdu.getOffsetCdata(), apduBuffer, (short) 0, (short) (extApduSize - apdu.getOffsetCdata()));
+        Util.arrayCopyNonAtomic(buffer, apdu.getOffsetCdata(), apduBuffer, (short) 0, (short) (extApduSize - apdu.getOffsetCdata()));
         apdu.setOutgoingAndSend((short) 0, (short) (extApduSize - apdu.getOffsetCdata()));
     }
 
@@ -484,7 +484,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         );
 
         short fieldLength = getStringValueFor(procBuffer, (short) 0, nDecoded, AUD_FIELD_NAME, apduBuffer, (short) 0);
-        apdu.setOutgoingAndSend((short) 0, (short) fieldLength);
+        apdu.setOutgoingAndSend((short) 0, fieldLength);
     }
 
     public void deriveSalt(APDU apdu) {
@@ -511,7 +511,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // add signature verification
 
         // short fieldLength = getStringValueFor(procBuffer, (short) 0, nDecoded, NAME_FIELD_NAME, apduBuffer, (short) 0);
-        apdu.setOutgoingAndSend((short) 0, (short) hashSize);
+        apdu.setOutgoingAndSend((short) 0, hashSize);
     }
 
 
@@ -610,7 +610,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         derSignature[38] = (byte) 0x20;
         // s-value
 
-        if ( verifySignature(buffer, (short) 0, (short) secondDot, derSignature, (short) 0, (short) 71) ) {
+        if ( verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, (short) 71) ) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
             apdu.setOutgoingAndSend((short) 0, (short) Good.length);
         } else {
@@ -664,7 +664,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private byte[] loadApdu(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        short recvLen = (short) apdu.setIncomingAndReceive(); // + apdu.getOffsetCdata());
+        short recvLen = apdu.setIncomingAndReceive(); // + apdu.getOffsetCdata());
         if (apdu.getOffsetCdata() == ISO7816.OFFSET_CDATA) {
             extApduSize = recvLen;
             System.out.println(String.format("extApduSize: %d", extApduSize));
@@ -672,7 +672,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             return extApduBuffer;
         }
 
-        Util.arrayCopyNonAtomic(apduBuffer, (short) apdu.getOffsetCdata(), extApduBuffer, (short) 0, recvLen);
+        Util.arrayCopyNonAtomic(apduBuffer, apdu.getOffsetCdata(), extApduBuffer, (short) 0, recvLen);
         short written = recvLen;
         recvLen = apdu.receiveBytes((short) 0);
         while (recvLen > 0) {
