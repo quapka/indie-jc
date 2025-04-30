@@ -14,10 +14,6 @@ public class Base64UrlSafeDecoder
     public Base64UrlSafeDecoder() {
     }
 
-    public void works() {
-        System.out.println("it works");
-    }
-
     public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
         // This implemntation expects the input to have the correct alphabet
         short n_written = 0;
