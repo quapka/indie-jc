@@ -11,7 +11,7 @@ public class Base64UrlSafeDecoder
 
     private byte[] temp = new byte[3];
 
-    Base64UrlSafeDecoder() {
+    public Base64UrlSafeDecoder() {
     }
 
     public void works() {
@@ -19,28 +19,37 @@ public class Base64UrlSafeDecoder
     }
 
     public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
+        // This implemntation expects the input to have the correct alphabet
         short n_written = 0;
-        // byte[] temp = new byte[3];
+        // Not all implmentation will have int?
         int base = 0;
-        System.out.println("about to decode");
+        byte pad = 0;
+        byte index = 0;
 
         for (short i = 0; i < inputLength; i += 4) {
             base = 0;
-            for (byte j = 0; j <  4; j++) {
+            for (byte j = 0; j < 4; j++) {
                 // NOTE if the search is slow, try using Util.arrayFindGeneric?
-                byte index = base64CharToValue(input[inputOffset + j + i]);
+                try {
+                    index = base64CharToValue(input[inputOffset + j + i]);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    pad += (byte) 1;
+                    index = 0;
+                }
                 if (index == 255) {
                     return (byte) 255;
                 }
                 base += index << ((3 - j) * 6);
             }
+            // FIXME how to detect that the padding was = or == and we don't want
+            // to write the last 1 or 2 bytes?
             output[outputOffset + n_written + 0] = (byte) (base >> 16 & 0xFF);
             output[outputOffset + n_written + 1] = (byte) (base >>  8 & 0xFF);
             output[outputOffset + n_written + 2] = (byte) (base >>  0 & 0xFF);
             n_written += 3;
         }
 
-        return n_written;
+        return (short) (n_written - pad);
     }
 
     // FIXME is there a quicker way to do this byte resolution? Long switch-case?
