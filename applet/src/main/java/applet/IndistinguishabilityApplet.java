@@ -171,9 +171,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             sendGood(apdu);
         } else if ( cla == 0x04 ) {
             sendBad(apdu);
-        } else if ( cla == 0x05 ) {
-            sendPrivate(apdu);
-        } else if ( cla == 0x06 ) {
+        }else if ( cla == 0x06 ) {
             sendPublic(apdu);
         // } else if ( cla == 0x07 ) {
         //     parseJWT(apdu);
