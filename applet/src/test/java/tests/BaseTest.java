@@ -1,7 +1,5 @@
 package tests;
 
-import applet.MainApplet;
-import applet.HelloWorldApplet;
 import applet.IndistinguishabilityApplet;
 import cz.muni.fi.crocs.rcard.client.CardManager;
 import cz.muni.fi.crocs.rcard.client.CardType;
