@@ -18,7 +18,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 	private static final byte[] None = {'N', 'o', 'n', 'e'};
 
     private byte[] salt = new byte[32];
-	private byte[] derSignature = new byte[71];
+    // TODO is the maximal ECDSA DER encoded signature 72 bytes?
+	private byte[] derSignature = new byte[72];
 
 	private static final byte[] NONCE_FIELD_NAME = {'n', 'o', 'n', 'c', 'e'};
 	private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
@@ -545,6 +546,56 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             end = indexOf(input, (short) (start + 1), inputLen, DOUBLEQUOTE);
         }
         return -1;
+    }
+
+    public byte derEncodeRawEcdsaSignature(byte[] signature, byte[] encoded) {
+        // SEQUENCE
+        byte index = 0;
+        derSignature[index++] = 0x30;
+        // NOTE assuming P256
+        short rLen = 32;
+        short sLen = 32;
+
+        // byte mask = 0x80;
+
+        // NOTE maybe flip == 0 to != 0?
+        if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
+            rLen += 1;
+        }
+        if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
+            sLen += 1;
+        }
+        // FIXME sequenceLen is byte
+        short sequenceLen = (short) 2;
+        sequenceLen += rLen;
+        sequenceLen += (short) 2;
+        sequenceLen += sLen;
+
+        // short wholeLen = sequenceLen;
+        // wholeLen += (short) 1;
+
+        derSignature[index++] = (byte) sequenceLen;
+        derSignature[index++] = (byte) 0x02;
+        derSignature[index++] = (byte) rLen;
+
+        if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
+            derSignature[index++] = (byte) 0x00;
+        }
+
+        Util.arrayCopyNonAtomic(signature, (short) 0, derSignature, index, (short) 32);
+        index += 32;
+
+        derSignature[index++] = (byte) 0x02;
+        derSignature[index++] = (byte) sLen;
+        
+        if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
+            derSignature[index++] = (byte) 0x00;
+        }
+
+        System.out.println(String.format("Index of s: %d", index));
+        Util.arrayCopyNonAtomic(signature, (short) 32, derSignature, index, (short) 32);
+        index += 32;
+        return index;
     }
 
     public void decode(APDU apdu) {
