@@ -497,7 +497,30 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         System.out.println(String.format("secondDot: %d", secondDot));
 
         short nDecoded = 0;
-        nDecoded = decodeBase64Urlsafe(
+        // add signature verification
+        nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
+            buffer,
+            (short) (secondDot + 1),
+            (short) (extApduSize - (secondDot + 1)),
+            procBuffer,
+            (short) 0
+        );
+        // encode signature
+        short sigLen = derEncodeRawEcdsaSignature(procBuffer, derSignature);
+        System.out.println(sigLen);
+        for (short i = 0; i < sigLen; i++ ) {
+            System.out.print(String.format("%02x", derSignature[i]));
+        }
+        System.out.println();
+        if ( !verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen) ) {
+            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
+            // FIXME better output
+            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
+            return;
+        }
+
+        // if signature valid derive the salt
+        nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (firstDot + 1),
             (short) (secondDot - (firstDot + 1)),
