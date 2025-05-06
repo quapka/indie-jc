@@ -62,20 +62,20 @@ public class AppletTest extends BaseTest {
     //     System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
     // }
 
-    // @Test
-    // public void testDecodeBase64UrlSafe() throws Exception {
-    //     // String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
-    //     String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
+    @Test
+    public void testDecodeBase64UrlSafe() throws Exception {
+        // String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
+        String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
 
-    //     byte[] byteToken = token.getBytes();
-    //     // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
-    //     // byte[] data = {'d', 'a', 't', 'a'};
-    //     CommandAPDU cmd = new CommandAPDU(0x00, 0x02, 0x00, 0, byteToken);
-    //     ResponseAPDU responseAPDU = connect().transmit(cmd);
-    //     System.out.println(String.format("byteInput length: %d", byteToken.length));
-    //     System.out.println(String.format("Received: %d", responseAPDU.getData().length));
-    //     System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
-    // }
+        byte[] byteToken = token.getBytes();
+        // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
+        // byte[] data = {'d', 'a', 't', 'a'};
+        CommandAPDU cmd = new CommandAPDU(0x00, 0x02, 0x00, 0, byteToken);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        System.out.println(String.format("byteInput length: %d", byteToken.length));
+        System.out.println(String.format("Received: %d", responseAPDU.getData().length));
+        System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
+    }
 
     // @Test
     // public void testFindingDecodedValue() throws Exception {
@@ -95,21 +95,27 @@ public class AppletTest extends BaseTest {
     @Test
     public void testDerivingSalt() throws Exception {
         // String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
-        // String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
-        String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1ODI3NzQ0LCJleHAiOjE3NDU4MzEzNDQsImF1dGhfdGltZSI6MTc0NTgyNzc0Mywibm9uY2UiOiI4MDY4YWU4YTMxN2IyMjBmODQ0ZTg1OTczOWE3YTY0YmY1ZGRhNzU5YjEzZmM4MGRjMDllYjIwODM1MWZhY2ViIiwiYXRfaGFzaCI6IjZ0TlFBcXZZVDFGc1BhamJkcFllQmciLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.i6UOXl1M8Viohu-LPfBFKnCjUCptOF59dXqM8mrHP0hqOIY5Em8XZC8bpoxmy--KW0hn5QjO7_Psx907ZodWuw";
+        String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
+        // String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1ODI3NzQ0LCJleHAiOjE3NDU4MzEzNDQsImF1dGhfdGltZSI6MTc0NTgyNzc0Mywibm9uY2UiOiI4MDY4YWU4YTMxN2IyMjBmODQ0ZTg1OTczOWE3YTY0YmY1ZGRhNzU5YjEzZmM4MGRjMDllYjIwODM1MWZhY2ViIiwiYXRfaGFzaCI6IjZ0TlFBcXZZVDFGc1BhamJkcFllQmciLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.i6UOXl1M8Viohu-LPfBFKnCjUCptOF59dXqM8mrHP0hqOIY5Em8XZC8bpoxmy--KW0hn5QjO7_Psx907ZodWuw";
 
         byte[] byteToken = token.getBytes();
         // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
         // byte[] data = {'d', 'a', 't', 'a'};
+        System.out.println("Command:");
         CommandAPDU cmd = new CommandAPDU(0x00, 0x03, 0x00, 0, byteToken);
+
+        for (short i = 0; i < cmd.getBytes().length; i++) {
+            System.out.print(String.format("%02x", cmd.getBytes()[i]));
+        }
+        System.out.println("end.");
         ResponseAPDU responseAPDU = connect().transmit(cmd);
         System.out.println(String.format("byteInput length: %d", byteToken.length));
         System.out.println(String.format("Received: %d", responseAPDU.getData().length));
-        // System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
-        //
+        System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
+
         byte[] salt = responseAPDU.getData();
 
-        for (short i = 0; i < salt.length; i++ ) {
+        for (short i = 0; i < salt.length; i++) {
             System.out.print(String.format("%02x", salt[i]));
         }
         System.out.println();
