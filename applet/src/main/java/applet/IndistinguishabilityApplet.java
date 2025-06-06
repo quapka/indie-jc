@@ -9,15 +9,25 @@ import javacardx.apdu.ExtendedLength;
 import javacard.security.*;
 
 import applet.Base64UrlSafeDecoder.*;
+import applet.DiscreteLogEquality.*;
+import applet.Consts;
+
+import applet.jcmathlib;
+import applet.jcmathlib.*;
 
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
+    public static ResourceManager rm;
+    public static DiscreteLogEquality dleq;
+
 	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
 	private static final byte[] Good = {'G', 'O', 'O', 'D'};
 	private static final byte[] Bad = {'B', 'A', 'D'};
 	private static final byte[] None = {'N', 'o', 'n', 'e'};
 
     private byte[] salt = new byte[32];
+    // at least shal handle 65 bytes of uncompressed points
+    private byte[] tmp = new byte[128];
     // TODO is the maximal ECDSA DER encoded signature 72 bytes?
 	private byte[] derSignature = new byte[72];
 
@@ -85,6 +95,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     };
 
 
+
     // private static final byte[] OIDC_PRIVKEY = {(byte) 0xa7, (byte) 0xd0, (byte) 0x5b, (byte) 0x9a, (byte) 0x4a, (byte) 0xf4, (byte) 0x9a, (byte) 0xba, (byte) 0x84, (byte) 0xdc, (byte) 0x7b, (byte) 0x98, (byte) 0xa9, (byte) 0x1e, (byte) 0x21, (byte) 0x75, (byte) 0xb9, (byte) 0x47, (byte) 0xf3, (byte) 0x90, (byte) 0x4e, (byte) 0xde, (byte) 0x38, (byte) 0x9a, (byte) 0x28, (byte) 0x8d, (byte) 0xc3, (byte) 0x42, (byte) 0x8f, (byte) 0xd8, (byte) 0x8d, (byte) 0xe6};
 
     // This is a copy-pasted key from indie-oidc-provider
@@ -146,17 +157,27 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
 	public static void install(byte[] bArray, short bOffset, byte bLength)
 	{
-		new IndistinguishabilityApplet();
+		new IndistinguishabilityApplet(bArray, bOffset, bLength).register();
 	}
 
-	public IndistinguishabilityApplet()
-	{
-		register();
+	public IndistinguishabilityApplet(byte[] bArray, short bOffset, byte bLength) {
+        OperationSupport.getInstance().setCard(OperationSupport.SIMULATOR); // TODO set your card
+        if (!OperationSupport.getInstance().DEFERRED_INITIALIZATION) {
+            initialize();
+        }
+		// register();
 	}
 
     // FIXME implement select(), deselect() and possibly other Applet.* methods?
 	public void process(APDU apdu)
 	{
+        if ( selectingApplet() ) {
+            return;
+        }
+
+        if (apdu.getBuffer()[ISO7816.OFFSET_CLA] != Consts.CLA.INDIE)
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+
         if ( !initialized ) {
             initialize();
         }
@@ -167,33 +188,63 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte p1 = buffer[ISO7816.OFFSET_P1];
         byte p2 = buffer[ISO7816.OFFSET_P2];
 
-        if ( cla == 0x02 ) {
-            sendGood(apdu);
-        } else if ( cla == 0x04 ) {
-            sendBad(apdu);
-        }else if ( cla == 0x06 ) {
-            sendPublic(apdu);
-        // } else if ( cla == 0x07 ) {
-        //     parseJWT(apdu);
-        } else if ( ins == 0x01 ) {
-            if ( p1 == 0x00 ) {
-                echo(apdu);
-            } else if ( p1 == 0x01 ) {
-                echo(apdu);
-            }
-        } else if ( ins == 0x02 ) {
-            if ( p1 == 0x00 ) {
-                decode(apdu);
-            } else if ( p1 == 0x01 ) {
-                findValue(apdu);
-            }
-        } else if ( ins == 0x03 ) {
-            deriveSalt(apdu);
+        // catch in try except
+        // try {
+        switch (ins) {
+            case Consts.INS.GET_VERIFICATION_PUBKEY:
+                System.out.println("About to getDerivationPubkey");
+                getDerivationPubkey(apdu);
+                break;
+            case Consts.INS.GET_EXAMPLE_PROOF:
+                System.out.println("About to computeDleq");
+                computeDleq(apdu);
+                break;
+            default:
+                break;
         }
+
+        // } catch (Exception e) {
+        //     System.out.println("About to computeDleq 2");
+        //     throw e;
+        // } 
+
+        // if ( cla == 0x02 ) {
+        //     sendGood(apdu);
+        // } else if ( cla == 0x04 ) {
+        //     sendBad(apdu);
+        // }else if ( cla == 0x06 ) {
+        //     sendPublic(apdu);
+        // // } else if ( cla == 0x07 ) {
+        // //     parseJWT(apdu);
+        // } else if ( ins == 0x01 ) {
+        //     if ( p1 == 0x00 ) {
+        //         echo(apdu);
+        //     } else if ( p1 == 0x01 ) {
+        //         echo(apdu);
+        //     }
+        // } else if ( ins == 0x02 ) {
+        //     if ( p1 == 0x00 ) {
+        //         decode(apdu);
+        //     } else if ( p1 == 0x01 ) {
+        //         findValue(apdu);
+        //     }
+        // } else if ( ins == 0x03 ) {
+        //     deriveSalt(apdu);
+        // }
 	}
 
     private void initialize() {
+        if ( initialized ) {
+            return;
+        }
+        rm = new ResourceManager((short) 256, (short) 4096);
+        dleq = new DiscreteLogEquality();
+        if ( !dleq.initialized ) {
+            dleq.initialize();
+        }
+
         base64UrlSafeDecoder = new Base64UrlSafeDecoder();
+
         initialized = true;
     }
 
@@ -280,50 +331,59 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // likely, could be done at the client though.
     }
 
-	private void sendPrivate(APDU apdu) {
-        sw = ISO7816.SW_NO_ERROR;
-        // byte[] privkeyBytes = { 'N', 'o', ' ', 'k', 'e', 'y', ' ', 's', 'e', 't'};
-        byte[] privkeyBytes = new byte[KeyBuilder.LENGTH_EC_FP_256];
-        byte[] pubkeyBytes = new byte[KeyBuilder.LENGTH_EC_FP_256];
-        byte[] buffer = apdu.getBuffer();
+    // private void loadIssuerPublic() {
+    // }
+    
+    // private void DistKeyGen() {
+    // }
 
-        try {
+    // private PartialEval() {
+    // }
 
-            generateKeypair();
-            ECPrivateKey privkey = (ECPrivateKey) ecKeyPair.getPrivate();
-            // ECPublicKey pubkey = (ECPublicKey) ecKeyPair.getPublic();
+	// private void sendPrivate(APDU apdu) {
+        // sw = ISO7816.SW_NO_ERROR;
+        // // byte[] privkeyBytes = { 'N', 'o', ' ', 'k', 'e', 'y', ' ', 's', 'e', 't'};
+        // byte[] privkeyBytes = new byte[KeyBuilder.LENGTH_EC_FP_256];
+        // byte[] pubkeyBytes = new byte[KeyBuilder.LENGTH_EC_FP_256];
+        // byte[] buffer = apdu.getBuffer();
 
-            // byte[] S = {'n', (byte) 0x00, (byte) 0xff, (byte) 0xee};
-            // privkey.setS(S, (short) 0, (short) 4);
+        // try {
 
-            // short length = privkey.getS(buffer, (short) 0);
-            // short length = pubkey.getW(pubkeyBytes, (short) 0);
+            // generateKeypair();
+            // ECPrivateKey privkey = (ECPrivateKey) ecKeyPair.getPrivate();
+            // // ECPublicKey pubkey = (ECPublicKey) ecKeyPair.getPublic();
 
-            // short length = (short) privkeyBytes.length;
-            // Util.arrayCopyNonAtomic(privkeyBytes, (short) 0, buffer, (short) 0, length);
-            // apdu.setOutgoingAndSend((short) 0, length);
-            //
-            if ( verifySignaturePrehashed() ) {
-                Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, (short) Good.length);
-                apdu.setOutgoingAndSend((short) 0, (short) Good.length);
-            } else {
-                Util.arrayCopyNonAtomic(Bad, (short) 0, buffer, (short) 0, (short) Bad.length);
-                apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
-            }
-        // } catch (CardRuntimeException ce) {
-        //     sw = ce.getReason();
-        //     // Util.setShort(sw, 2, 0);
-        //     // apdu.setOutgoingAndSend((short) 0, length);
-        } catch (CryptoException ce) {
-            // switch (e.getReason()){
-            //     case CryptoException.ILLEGAL_USE:
+            // // byte[] S = {'n', (byte) 0x00, (byte) 0xff, (byte) 0xee};
+            // // privkey.setS(S, (short) 0, (short) 4);
 
+            // // short length = privkey.getS(buffer, (short) 0);
+            // // short length = pubkey.getW(pubkeyBytes, (short) 0);
+
+            // // short length = (short) privkeyBytes.length;
+            // // Util.arrayCopyNonAtomic(privkeyBytes, (short) 0, buffer, (short) 0, length);
+            // // apdu.setOutgoingAndSend((short) 0, length);
+            // //
+            // if ( verifySignaturePrehashed() ) {
+                // Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, (short) Good.length);
+                // apdu.setOutgoingAndSend((short) 0, (short) Good.length);
+            // } else {
+                // Util.arrayCopyNonAtomic(Bad, (short) 0, buffer, (short) 0, (short) Bad.length);
+                // apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
             // }
-            Util.setShort(buffer, (short) 0, ce.getReason());
-            // Util.arrayCopyNonAtomic(None, (short) 0, buffer, (short) 0, (short) None.length);
-            apdu.setOutgoingAndSend((short) 0, (short) None.length);
-        }
-	}
+        // // } catch (CardRuntimeException ce) {
+        // //     sw = ce.getReason();
+        // //     // Util.setShort(sw, 2, 0);
+        // //     // apdu.setOutgoingAndSend((short) 0, length);
+        // } catch (CryptoException ce) {
+            // // switch (e.getReason()){
+            // //     case CryptoException.ILLEGAL_USE:
+
+            // // }
+            // Util.setShort(buffer, (short) 0, ce.getReason());
+            // // Util.arrayCopyNonAtomic(None, (short) 0, buffer, (short) 0, (short) None.length);
+            // apdu.setOutgoingAndSend((short) 0, (short) None.length);
+        // }
+	// }
     
     private void echo(APDU apdu) {
 		byte[] buffer = loadApdu(apdu);
@@ -333,20 +393,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) (extApduSize - apdu.getOffsetCdata()));
     }
 
-    private boolean verifySignaturePrehashed() {
-        setOIDCPublicKey();
-        Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
-        sigObj.init(OIDC_PUBLIC_KEY, Signature.MODE_VERIFY);
 
-        return sigObj.verifyPreComputedHash(
-            precomputedDigest,
-            (short) 0,
-            (short) precomputedDigest.length,
-            derEncodedSignature,
-            (short) 0,
-            (short) derEncodedSignature.length
-        );
-    }
+    // // FIXME as the hash won't be precomputed
+    // private boolean verifySignaturePrehashed() {
+    //     setOIDCPublicKey();
+    //     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
+    //     sigObj.init(OIDC_PUBLIC_KEY, Signature.MODE_VERIFY);
+
+    //     return sigObj.verifyPreComputedHash(
+    //         precomputedDigest,
+    //         (short) 0,
+    //         (short) precomputedDigest.length,
+    //         derEncodedSignature,
+    //         (short) 0,
+    //         (short) derEncodedSignature.length
+    //     );
+    // }
 
     private boolean verifySignature(byte[] message, short msgOffset, short msgLen, byte[] signature, short sigOffset, short sigLen) 
     {
@@ -531,6 +593,57 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, hashSize);
     }
 
+    /**
+     * Returns the verification public key for the salt derivation,
+     * in particular, the discrete log of equality proof verification.
+     */
+    public void getDerivationPubkey(APDU apdu) {
+		byte[] apduBuffer = apdu.getBuffer();
+
+        ECPublicKey pubKey = dleq.curve.disposablePub;
+        short pubKeyLength = pubKey.getW(apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, pubKeyLength);
+    }
+
+    public void computeDleq(APDU apdu) {
+        System.out.println("computeDleq");
+		byte[] buffer = loadApdu(apdu);
+		byte[] apduBuffer = apdu.getBuffer();
+        // FIXME for now the user provides already a point on the curve
+        // however, in the TVRF the input is hashed-to-curve first
+        // 1. get value from user
+        // 2. hash it to curve
+        for (int i = ISO7816.OFFSET_CDATA; i < ISO7816.OFFSET_CDATA + 65; i++) {
+            System.out.print(String.format("%02x", apduBuffer[i]));
+        }
+        dleq.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
+        System.out.println();
+
+        // System.out.println("userPoint");
+        // System.out.println(dleq.userPoint);
+        // for (int i = 0; i < proofLength; i ++ ) {
+        //     System.out.print(String.format("%02x", apduBuffer[i]));
+        // }
+        // System.out.println();
+        // 3. multiply by secret
+        dleq.M.copy(dleq.userPoint);
+        dleq.M.multiplication(dleq.secret);
+        // provide a proof of usage of the secret
+        short proofLength = dleq.exampleProof(apduBuffer);
+        // System.out.println(String.format("HEeeeeeeeeeeeeee: %d", proofLength));
+        short partialLength = dleq.M.getW(apduBuffer, proofLength);
+        // Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
+
+        apdu.setOutgoingAndSend((short) 0, (short) (proofLength + partialLength));
+        // System.out.println("Printing proof:");
+        // for (int i = 0; i < proofLength; i ++ ) {
+        //     System.out.print(String.format("%02x", apduBuffer[i]));
+        // }
+        // System.out.println();
+        // Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
+        // apdu.setOutgoingAndSend((short) 0, (short) Good.length);
+    }
 
     public short getStringValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputLen) {
 
@@ -676,6 +789,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         derSignature[37] = (byte) 0x02;
         derSignature[38] = (byte) 0x20;
         // s-value
+        for (short i = 0; i < derSignature.length; i++) {
+            System.out.print(String.format("%02x", derSignature[i]));
+        }
+        System.out.println();
 
         if ( verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, (short) 71) ) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
@@ -707,6 +824,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // apdu.setOutgoingAndSend((short) 0,  (short) (len / 4 * 3));
     }
 
+    /** 
+     * Returns the index of a byte `token` in the `buffer` if found
+     * and -1 otherwise.
+     */
     public short indexOf(byte[] buffer, short offset, short bufferSize, byte token) {
         for (short i = offset; i < bufferSize; i++) {
             if ( buffer[i] == token ) {
