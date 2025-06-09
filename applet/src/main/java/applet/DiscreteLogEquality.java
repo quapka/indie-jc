@@ -65,7 +65,7 @@ public class DiscreteLogEquality {
      */
     public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, BigNat secret, byte[] out) {
         // choose random r <- ZZ_q
-        RandomData rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
+        RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         rng.generateData(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
         // FIXME use fixed value for debugging.
