@@ -52,7 +52,7 @@ public class DiscreteLogEquality {
         ECPrivateKey privKey = curve.disposablePriv;
         secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         short byteLength = privKey.getS(tmp, (short) 0);
-        secret.fromByteArray(tmp, (short) 0, (short) byteLength);
+        secret.fromByteArray(tmp, (short) 0, byteLength);
         secret.mod(curve.rBN);
 
         initialized = true;
