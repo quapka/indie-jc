@@ -600,7 +600,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public void getDerivationPubkey(APDU apdu) {
 		byte[] apduBuffer = apdu.getBuffer();
 
-        ECPublicKey pubKey = dleq.curve.disposablePub;
+        ECPublicKey pubKey = DiscreteLogEquality.curve.disposablePub;
         short pubKeyLength = pubKey.getW(apduBuffer, (short) 0);
 
         apdu.setOutgoingAndSend((short) 0, pubKeyLength);
@@ -617,22 +617,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         for (int i = ISO7816.OFFSET_CDATA; i < ISO7816.OFFSET_CDATA + 65; i++) {
             System.out.print(String.format("%02x", apduBuffer[i]));
         }
-        dleq.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
+        DiscreteLogEquality.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
         System.out.println();
 
         // System.out.println("userPoint");
-        // System.out.println(dleq.userPoint);
+        // System.out.println(DiscreteLogEquality.userPoint);
         // for (int i = 0; i < proofLength; i ++ ) {
         //     System.out.print(String.format("%02x", apduBuffer[i]));
         // }
         // System.out.println();
         // 3. multiply by secret
-        dleq.M.copy(dleq.userPoint);
-        dleq.M.multiplication(dleq.secret);
+        DiscreteLogEquality.M.copy(DiscreteLogEquality.userPoint);
+        DiscreteLogEquality.M.multiplication(DiscreteLogEquality.secret);
         // provide a proof of usage of the secret
         short proofLength = dleq.exampleProof(apduBuffer);
         // System.out.println(String.format("HEeeeeeeeeeeeeee: %d", proofLength));
-        short partialLength = dleq.M.getW(apduBuffer, proofLength);
+        short partialLength = DiscreteLogEquality.M.getW(apduBuffer, proofLength);
         // Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
 
         apdu.setOutgoingAndSend((short) 0, (short) (proofLength + partialLength));
