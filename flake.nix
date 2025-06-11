@@ -37,6 +37,7 @@
         name = "gradle2nix";
         packages = [
           nodejs
+          global-platform-pro
           inputs.gradle2nix.packages.${system}.gradle2nix
         ];
         inputsFrom = [ gradle jdk ];
