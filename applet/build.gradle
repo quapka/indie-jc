@@ -117,8 +117,21 @@ final def JC310b43 = libsSdk + '/jc310b43_kit'
 // If another SDK is selected, please comment the cap.targetsdk setting.
 final def JC_SELECTED = JC310b43
 
-javacard {
+task preprocessJavaSources(type: Copy) {
+    from 'src/main/java'
+    into "$buildDir/processed-sources"
 
+    // Filter all the debugging prints
+    filter { line ->
+        line.replaceAll('System.out', '// System.out')
+    }
+}
+
+tasks.named('buildJavaCard').configure {
+    dependsOn preprocessJavaSources
+}
+
+javacard {
     //noinspection GroovyAssignabilityCheck
     config {
         jckit JC_SELECTED
@@ -134,8 +147,8 @@ javacard {
             version '0.1'
             aid packageAID
 
+            sources "$buildDir/processed-sources/applet"
 
-            sources 'src/main/java/applet'
 
             // JC310b43 supports compilation targeting for lower API versions.
             // Here you can specify path to the SDK you want to use.
