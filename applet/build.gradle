@@ -79,6 +79,9 @@ application {
     mainClass = 'main.Run'
 }
 
+final def packageAID = '01:FF:FF:04:05:06:07:08:09:01:02'
+final def appletAID = "${packageAID}:01:02"
+
 test {
     // useTestNG()
     useJUnitPlatform {
@@ -129,7 +132,7 @@ javacard {
         cap {
             packageName 'applet'
             version '0.1'
-            aid '01:ff:ff:04:05:06:07:08:09'
+            aid packageAID
 
 
             sources 'src/main/java/applet'
@@ -146,7 +149,7 @@ javacard {
             //noinspection GroovyAssignabilityCheck
             applet {
                 className 'applet.HelloWorldApplet'
-                aid '01:ff:ff:04:05:06:07:08:0A:01:02'
+                aid appletAID
             }
 
             //noinspection GroovyAssignabilityCheck

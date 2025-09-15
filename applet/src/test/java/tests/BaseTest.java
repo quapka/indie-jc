@@ -18,7 +18,8 @@ import java.util.ArrayList;
  * @author Petr Svenda, Dusan Klinec (ph4r05)
  */
 public class BaseTest {
-    private static String APPLET_AID = "01ffff0405060708090102";
+    // The APPLET_AID is set at the applet/build.gradle level
+    private static String APPLET_AID = System.getProperty("applet.aid").replaceAll(":", "");
     private static byte APPLET_AID_BYTE[] = Util.hexStringToByteArray(APPLET_AID);
 
     protected CardType cardType = CardType.JCARDSIMLOCAL;
