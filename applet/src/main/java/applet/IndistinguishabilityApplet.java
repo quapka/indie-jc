@@ -201,40 +201,38 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     sendBad(apdu);
                     break;
             }
-                return;
+        } else if ( cla == Consts.CLA.INDIE ) {
+            // // catch in try except
+            // // try {
+            switch (ins) {
+                case 0x02:
+                    sendGood(apdu);
+                    break;
+                case 0x03:
+                    sendBad(apdu);
+                    break;
+                case 0x04:
+                    if ( DiscreteLogEquality.initialized) {
+                        sendGood(apdu);
+                    } else {
+                        sendBad(apdu);
+                    }
+                    break;
+                case Consts.INS.GET_VERIFICATION_PUBKEY:
+                    System.out.println("About to getDerivationPubkey");
+                    getDerivationPubkey(apdu);
+                    break;
+                case Consts.INS.GET_EXAMPLE_PROOF:
+                    System.out.println("About to computeDleq");
+                    computeDleq(apdu);
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
         }
 
-//         if ( cla != Consts.CLA.INDIE ) {
-//             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-//         }
-
-//         // // catch in try except
-//         // // try {
-//         switch (ins) {
-//             case 0x02:
-//                 sendGood(apdu);
-//                 break;
-//             case 0x03:
-//                 sendBad(apdu);
-//                 break;
-//             case 0x04:
-//                 if ( DiscreteLogEquality.initialized) {
-//                     sendGood(apdu);
-//                 } else {
-//                     sendBad(apdu);
-//                 }
-//                 break;
-//             case Consts.INS.GET_VERIFICATION_PUBKEY:
-//                 System.out.println("About to getDerivationPubkey");
-//                 getDerivationPubkey(apdu);
-//                 break;
-//             case Consts.INS.GET_EXAMPLE_PROOF:
-//                 System.out.println("About to computeDleq");
-//                 computeDleq(apdu);
-//                 break;
-//             default:
-//                 break;
-//         }
 	}
 
     private void initialize() {
