@@ -2,6 +2,7 @@ package tests;
 
 import cz.muni.fi.crocs.rcard.client.CardType;
 import applet.IndistinguishabilityApplet;
+import applet.Consts;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 
@@ -42,28 +43,23 @@ public class AppletTest extends BaseTest {
     public void tearDownMethod() throws Exception {
     }
 
-    // @Test
-    // public void test() throws Exception {
-    //     CommandAPDU cmd = new CommandAPDU(0x05, 0x00, 0, 0);
-    //     ResponseAPDU responseAPDU = connect().transmit(cmd);
-    //     System.out.println(new String(responseAPDU.getData(), "UTF-8"));
-    //     // cmd = new CommandAPDU(0x02, 0x00, 0, 0);
-    //     // responseAPDU = connect().transmit(cmd);
-    //     // System.out.println(new String(responseAPDU.getData(), "UTF-8"));
-    // }
+    @Test
+    public void testDebugGood() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.GOOD, 0, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
 
-    // @Test
-    // public void testEcho() throws Exception {
-    //     String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
-    //     byte[] byteToken = token.getBytes();
-    //     // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
-    //     // byte[] data = {'d', 'a', 't', 'a'};
-    //     CommandAPDU cmd = new CommandAPDU(0x00, 0x01, 0, 0, byteToken);
-    //     ResponseAPDU responseAPDU = connect().transmit(cmd);
-    //     System.out.println(byteToken.length);
-    //     System.out.println(String.format("Received: %d", responseAPDU.getData().length));
-    //     System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
-    // }
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+    }
+
+    @Test
+    public void testDebugBad() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.BAD, 0, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Bad, responseAPDU.getData()));
+    }
 
     @Test
     public void testDecodeBase64UrlSafe() throws Exception {

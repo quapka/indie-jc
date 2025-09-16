@@ -21,8 +21,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static DiscreteLogEquality dleq;
 
 	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
-	private static final byte[] Good = {'G', 'O', 'O', 'D'};
-	private static final byte[] Bad = {'B', 'A', 'D'};
+	public static final byte[] Good = {'G', 'O', 'O', 'D'};
+	public static final byte[] Bad = {'B', 'A', 'D'};
 	private static final byte[] None = {'N', 'o', 'n', 'e'};
 
     private byte[] salt = new byte[32];
@@ -188,49 +188,53 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte p1 = buffer[ISO7816.OFFSET_P1];
         byte p2 = buffer[ISO7816.OFFSET_P2];
 
-        // catch in try except
-        // try {
-        switch (ins) {
-            case Consts.INS.GET_VERIFICATION_PUBKEY:
-                System.out.println("About to getDerivationPubkey");
-                getDerivationPubkey(apdu);
-                break;
-            case Consts.INS.GET_EXAMPLE_PROOF:
-                System.out.println("About to computeDleq");
-                computeDleq(apdu);
-                break;
-            default:
-                break;
+
+        if ( cla == Consts.CLA.DEBUG ) {
+            System.out.println("debugging");
+            switch (ins) {
+                case Consts.INS.GOOD:
+                    System.out.println("sending good");
+                    sendGood(apdu);
+                    break;
+                case Consts.INS.BAD:
+                    System.out.println("sending bad");
+                    sendBad(apdu);
+                    break;
+            }
+                return;
         }
 
-        // } catch (Exception e) {
-        //     System.out.println("About to computeDleq 2");
-        //     throw e;
-        // } 
+//         if ( cla != Consts.CLA.INDIE ) {
+//             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+//         }
 
-        // if ( cla == 0x02 ) {
-        //     sendGood(apdu);
-        // } else if ( cla == 0x04 ) {
-        //     sendBad(apdu);
-        // }else if ( cla == 0x06 ) {
-        //     sendPublic(apdu);
-        // // } else if ( cla == 0x07 ) {
-        // //     parseJWT(apdu);
-        // } else if ( ins == 0x01 ) {
-        //     if ( p1 == 0x00 ) {
-        //         echo(apdu);
-        //     } else if ( p1 == 0x01 ) {
-        //         echo(apdu);
-        //     }
-        // } else if ( ins == 0x02 ) {
-        //     if ( p1 == 0x00 ) {
-        //         decode(apdu);
-        //     } else if ( p1 == 0x01 ) {
-        //         findValue(apdu);
-        //     }
-        // } else if ( ins == 0x03 ) {
-        //     deriveSalt(apdu);
-        // }
+//         // // catch in try except
+//         // // try {
+//         switch (ins) {
+//             case 0x02:
+//                 sendGood(apdu);
+//                 break;
+//             case 0x03:
+//                 sendBad(apdu);
+//                 break;
+//             case 0x04:
+//                 if ( DiscreteLogEquality.initialized) {
+//                     sendGood(apdu);
+//                 } else {
+//                     sendBad(apdu);
+//                 }
+//                 break;
+//             case Consts.INS.GET_VERIFICATION_PUBKEY:
+//                 System.out.println("About to getDerivationPubkey");
+//                 getDerivationPubkey(apdu);
+//                 break;
+//             case Consts.INS.GET_EXAMPLE_PROOF:
+//                 System.out.println("About to computeDleq");
+//                 computeDleq(apdu);
+//                 break;
+//             default:
+//                 break;
+//         }
 	}
 
     private void initialize() {
