@@ -141,7 +141,7 @@ public class DiscreteLogEquality {
         // convert the ephemeral key to point and secret
         ECPoint pubKeyPoint = new ECPoint(curve);
         byte[] buffer = new byte[124];
-        for (int i = 0; i < 32; i ++ ) {
+        for (short i = 0; i < 32; i ++ ) {
             System.out.print(String.format("%02x", buffer[i]));
         }
         // G.multiplication(secret);

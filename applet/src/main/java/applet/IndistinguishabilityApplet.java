@@ -616,7 +616,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // however, in the TVRF the input is hashed-to-curve first
         // 1. get value from user
         // 2. hash it to curve
-        for (int i = ISO7816.OFFSET_CDATA; i < ISO7816.OFFSET_CDATA + 65; i++) {
+        for (short i = ISO7816.OFFSET_CDATA; i < ISO7816.OFFSET_CDATA + 65; i++) {
             System.out.print(String.format("%02x", apduBuffer[i]));
         }
         DiscreteLogEquality.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
