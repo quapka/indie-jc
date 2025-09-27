@@ -1,7 +1,7 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -i python3 -p python312Packages.pyscard
 
-# import argparse
+import argparse
 import configparser
 # import smartcard
 
@@ -20,6 +20,14 @@ def load_jcardsim_configuration():
 
 
 def install_indie_jc_applet():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-r", "--reader", help="The card reader index.", type=int, default=2
+    )
+    args = parser.parse_args()
+
+    reader_idx = args.reader
+
     config = load_jcardsim_configuration()
     install_apdu = [0x80, 0xB8]
     p1 = 0x00
@@ -40,7 +48,7 @@ def install_indie_jc_applet():
     install_apdu.append(expected_data_len)
 
     r = readers()
-    connection = r[0].createConnection()
+    connection = r[reader_idx].createConnection()
     connection.connect()
 
     # data, sw1, sw2 = connection.transmit([0x00, 0xA4, 0x04, 0x00])
