@@ -40,6 +40,9 @@
           global-platform-pro
           inputs.gradle2nix.packages.${system}.gradle2nix
         ];
+
+        LD_LIBRARY_PATH = with pkgs; lib.makeLibraryPath [ pcsclite ];
+
         inputsFrom = [ gradle jdk ];
 
         GRADLE_HOME = "${gradle}";
