@@ -5,17 +5,23 @@ version '1.0-SNAPSHOT'
 // Do not modify this particular block. Dependencies for the project are lower.
 buildscript {
     repositories {
+        mavenLocal()
         mavenCentral()
-        maven { url "https://javacard.pro/maven" }
+        gradlePluginPortal()
+        maven {
+            url = uri("https://repo1.maven.org/maven2/")
+        }
+        maven { url "https://mvn.javacard.pro/maven" }
         maven { url "https://deadcode.me/mvn" }
-        // mavenLocal()
+        maven { url "https://jitpack.io" }
     }
     dependencies {
-        classpath 'com.klinec:gradle-javacard:1.8.0'
+        classpath 'sk.neuromancer:gradle-javacard:1.8.1'
+        classpath 'io.github.jnasmartcardio:jnasmartcardio:0.2.7'
     }
 }
 
-apply plugin: 'com.klinec.gradle.javacard'
+apply plugin: 'sk.neuromancer.gradle.javacard'
 apply plugin: 'idea'
 apply plugin: 'application'
 sourceCompatibility = 1.8
@@ -28,10 +34,13 @@ final def libsSdk = rootPath + '/libs-sdks'
 // Repositories for your project
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://repo1.maven.org/maven2/")
+    }
     // mavenLocal() // for local maven repository if needed
 
     // Repository with JCardSim, Globalplatform, etc, ...
-    maven { url "https://javacard.pro/maven" }
+    maven { url "https://mvn.javacard.pro/maven" }
     maven { url "https://deadcode.me/mvn" }
 
     // Local lib repository
@@ -47,6 +56,8 @@ dependencies {
     implementation 'com.klinec:jcardsim:3.0.6.0'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.58'
 
+    testImplementation 'io.github.jnasmartcardio:jnasmartcardio:0.2.7'
+
     testImplementation 'org.testng:testng:6.1.1'
     testImplementation 'org.slf4j:slf4j-api:1.7.33'
     testImplementation 'org.slf4j:slf4j-log4j12:1.7.33'
@@ -55,7 +66,10 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.1'
 
-    testImplementation(group: 'com.klinec', name: 'javacard-tools', version: '1.0.4') {
+    testImplementation 'com.github.martinpaljak:apdu4j:21.05.06'
+    testImplementation 'com.github.martinpaljak:apdu4j-pcsc:21.05.06'
+
+    testImplementation(group: 'com.klinec', name: 'javacard-tools', version: '1.0.6') {
         exclude group: "com.klinec", module: "jcardsim"
     }
     
@@ -79,10 +93,20 @@ application {
     mainClass = 'main.Run'
 }
 
+task gpVersion(type: sk.neuromancer.gradle.javacard.gp.GpExec) {
+    description = 'display Global Platform Pro version'
+    group = 'version'
+    args '--version'
+}
+
+
 final def packageAID = '01:FF:FF:04:05:06:07:08:09:01:02'
 final def appletAID = "${packageAID}:01:02"
 
 test {
+    systemProperty 'package.aid', packageAID
+    systemProperty 'applet.aid', appletAID
+
     // useTestNG()
     useJUnitPlatform {
         excludeTags 'manual'
@@ -95,6 +119,15 @@ test {
         check.dependsOn it
         shouldRunAfter test
     }
+}
+
+task setPhysicalCard {
+    System.setProperty('testcard.type', 'physical')
+}
+
+task testPhysical {
+    dependsOn setPhysicalCard
+    dependsOn test
 }
 
 // JavaCard SDKs and libraries
@@ -146,6 +179,7 @@ javacard {
             packageName 'applet'
             version '0.1'
             aid packageAID
+            output 'indie.cap'
 
             sources "$buildDir/processed-sources/applet"
 
@@ -161,8 +195,9 @@ javacard {
 
             //noinspection GroovyAssignabilityCheck
             applet {
-                className 'applet.HelloWorldApplet'
+                className 'applet.IndistinguishabilityApplet'
                 aid appletAID
+
             }
 
             //noinspection GroovyAssignabilityCheck
