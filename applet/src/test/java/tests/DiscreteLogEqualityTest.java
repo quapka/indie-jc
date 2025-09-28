@@ -110,20 +110,15 @@ public class DiscreteLogEqualityTest extends BaseTest {
         //
     }
 
+    /**
+     * Generate a random point on the chosen secp256r1 curve
+     */
     public ECPoint randomPoint() {
-        // BigInteger xCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(pubKeyData, 1, 32));
-
         RandomData rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         byte[] buffer = new byte[32];
         rng.generateData(buffer, (short) 0, (short) 32);
 
         BigInteger scalar = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(buffer, 0, 32));
-        byte[] byteRepr = scalar.toByteArray();
-        // System.out.println("Random scalar:");
-        // for (int i = 0; i < byteRepr.length; i++) {
-        //     System.out.print(String.format("%02x", byteRepr[i]));
-        // }
-        // System.out.println();
 
         return Generator.multiply(scalar);
     }
