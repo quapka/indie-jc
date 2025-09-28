@@ -69,10 +69,9 @@ public class AppletTest extends BaseTest {
         byte[] byteToken = token.getBytes();
         // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
         // byte[] data = {'d', 'a', 't', 'a'};
-        // CommandAPDU cmd = new CommandAPDU(0x00, 0x02, 0x00, 0x00, byteToken);
-        CommandAPDU cmd = new CommandAPDU(0x00, 0x02, 0x00, 0x00);
-        ResponseAPDU responseAPDU = connect()
-            .transmit(cmd);
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, 0x02, 0x00, 0, byteToken);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
         System.out.println(String.format("byteInput length: %d", byteToken.length));
         System.out.println(String.format("Received: %d", responseAPDU.getData().length));
         System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
@@ -103,7 +102,7 @@ public class AppletTest extends BaseTest {
         // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
         // byte[] data = {'d', 'a', 't', 'a'};
         System.out.println("Command:");
-        CommandAPDU cmd = new CommandAPDU(0x00, 0x03, 0x00, 0, byteToken);
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, 0x03, 0x00, 0, byteToken);
 
         for (short i = 0; i < cmd.getBytes().length; i++) {
             System.out.print(String.format("%02x", cmd.getBytes()[i]));
