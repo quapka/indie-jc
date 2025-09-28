@@ -17,6 +17,7 @@ import applet.jcmathlib.*;
 
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
+    public final static short CARD_TYPE = OperationSupport.JCOP4_P71;
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
 
@@ -161,7 +162,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 	}
 
 	public IndistinguishabilityApplet(byte[] bArray, short bOffset, byte bLength) {
-        OperationSupport.getInstance().setCard(OperationSupport.SIMULATOR); // TODO set your card
+        OperationSupport.getInstance().setCard(CARD_TYPE); // TODO set your card
         if (!OperationSupport.getInstance().DEFERRED_INITIALIZATION) {
             initialize();
         }
