@@ -206,7 +206,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     sendBad(apdu);
                     break;
                 case 0x04:
-                    if ( DiscreteLogEquality.initialized) {
+                    if ( dleq.initialized) {
                         sendGood(apdu);
                     } else {
                         sendBad(apdu);
@@ -235,9 +235,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         rm = new ResourceManager((short) 256, (short) 4096);
         dleq = new DiscreteLogEquality();
-        if ( !dleq.initialized ) {
-            dleq.initialize();
-        }
+        // TODO Use the following init instead?
+        // if ( !DiscreteLogEquality.initialized ) {
+        //     dleq.initialize();
+        // }
+        // if ( !dleq.initialized ) {
+        //     dleq.initialize();
+        // }
 
         base64UrlSafeDecoder = new Base64UrlSafeDecoder();
 

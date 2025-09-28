@@ -16,7 +16,7 @@ public class DiscreteLogEquality {
     public static BigNat r, ch, tmpNum, secret;
     public static BigNat curveOrder;
     private byte[] tmp = new byte[128];
-    boolean initialized = false;
+    public boolean initialized = false;
 	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
         'D', 'i', 's', 'c', 'r', 'e', 't', 'e', ' ',
         'l', 'o', 'g', ' ',
@@ -25,7 +25,6 @@ public class DiscreteLogEquality {
 
 
     public DiscreteLogEquality() {
-
         if ( !initialized ) {
             initialize();
         }
