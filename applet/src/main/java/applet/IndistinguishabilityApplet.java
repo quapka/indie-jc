@@ -176,9 +176,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             return;
         }
 
-        if (apdu.getBuffer()[ISO7816.OFFSET_CLA] != Consts.CLA.INDIE)
-            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-
         if ( !initialized ) {
             initialize();
         }
@@ -190,21 +187,17 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte p2 = buffer[ISO7816.OFFSET_P2];
 
 
+        // FIXME Add try-except instructions
         if ( cla == Consts.CLA.DEBUG ) {
-            System.out.println("debugging");
             switch (ins) {
                 case Consts.INS.GOOD:
-                    System.out.println("sending good");
                     sendGood(apdu);
                     break;
                 case Consts.INS.BAD:
-                    System.out.println("sending bad");
                     sendBad(apdu);
                     break;
             }
         } else if ( cla == Consts.CLA.INDIE ) {
-            // // catch in try except
-            // // try {
             switch (ins) {
                 case 0x02:
                     sendGood(apdu);
