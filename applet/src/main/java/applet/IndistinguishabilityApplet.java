@@ -634,30 +634,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         DiscreteLogEquality.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
         System.out.println();
-
-        // System.out.println("userPoint");
-        // System.out.println(DiscreteLogEquality.userPoint);
-        // for (int i = 0; i < proofLength; i ++ ) {
-        //     System.out.print(String.format("%02x", apduBuffer[i]));
-        // }
-        // System.out.println();
         // 3. multiply by secret
         DiscreteLogEquality.M.copy(DiscreteLogEquality.userPoint);
         DiscreteLogEquality.M.multiplication(DiscreteLogEquality.secret);
         // provide a proof of usage of the secret
         short proofLength = dleq.exampleProof(apduBuffer);
-        // System.out.println(String.format("HEeeeeeeeeeeeeee: %d", proofLength));
         short partialLength = DiscreteLogEquality.M.getW(apduBuffer, proofLength);
-        // Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
 
         apdu.setOutgoingAndSend((short) 0, (short) (proofLength + partialLength));
-        // System.out.println("Printing proof:");
-        // for (int i = 0; i < proofLength; i ++ ) {
-        //     System.out.print(String.format("%02x", apduBuffer[i]));
-        // }
-        // System.out.println();
-        // Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
-        // apdu.setOutgoingAndSend((short) 0, (short) Good.length);
     }
 
     public short getStringValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputLen) {
