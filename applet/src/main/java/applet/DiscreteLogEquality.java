@@ -88,8 +88,11 @@ public class DiscreteLogEquality {
 
     /**
      * Implemented following the description from the publication:
-     *     Fully Distributed Verifiable Random Functions
-     *     and their Application to Decentralised Random Beacons
+     *     Fully Distributed Verifiable Random Functions and their Application to Decentralised Random Beacons
+     *     Page 3. Definition 2.1
+     *     link: https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9581233
+     *
+     *     Instead of the multiplicative notation we use the additive one.
      */
     public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, byte[] out) {
         // choose random r <- ZZ_q
