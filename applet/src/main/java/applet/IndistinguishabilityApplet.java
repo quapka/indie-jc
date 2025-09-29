@@ -210,6 +210,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             }
         } else if ( cla == Consts.CLA.INDIE ) {
             switch (ins) {
+                case Consts.INS.KEY_GEN:
+                    generateDVRFKeypair(apdu);
                     break;
                 case Consts.INS.GET_VERIFICATION_PUBKEY:
                     System.out.println("About to getDerivationPubkey");
@@ -288,8 +290,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     }
 
-    private void generateKeypair()
+    private void generateDVRFKeypair(APDU apdu)
     {
+
         ECPrivateKey privateKey = (ECPrivateKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PRIVATE,
             KeyBuilder.LENGTH_EC_FP_256,
@@ -327,6 +330,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         ecKeyPair = new KeyPair(publicKey, privateKey);
 
         ecKeyPair.genKeyPair();
+
+        byte[] apduBuffer = apdu.getBuffer();
+        short keySize = publicKey.getW(apduBuffer, (short) 0);
+        apdu.setOutgoingAndSend((short) 0, keySize);
     }
 
     private void encodeSignatureAsDer(byte[] r_s_buffer) {

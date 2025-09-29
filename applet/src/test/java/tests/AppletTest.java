@@ -147,6 +147,14 @@ public class AppletTest extends BaseTest {
         System.out.println(String.format("Received: %d", responseAPDU.getData().length));
     }
 
+    @Test
+    public void testDVRFKeyGeneration() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        Assert.assertEquals(responseAPDU.getData().length, 1 + 32 + 32);
+    }
+
     // @Test
     // public void test2() throws Exception {
     //     String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";

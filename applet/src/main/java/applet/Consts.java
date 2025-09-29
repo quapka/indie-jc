@@ -9,6 +9,7 @@ public class Consts {
     public class INS {
         public static final byte GET_VERIFICATION_PUBKEY = (byte) 0x00;
         public static final byte GET_EXAMPLE_PROOF = (byte) 0x01;
+        public static final byte KEY_GEN = (byte) 0x02;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
