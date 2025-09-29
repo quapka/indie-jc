@@ -37,6 +37,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 	private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
 	private static final byte[] NAME_FIELD_NAME = {'n', 'a', 'm', 'e'};
 
+    public static byte nParties;
+    public static byte threshold;
+
 	private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
     // indie-service HASH_SALT_SECRET
@@ -210,6 +213,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             }
         } else if ( cla == Consts.CLA.INDIE ) {
             switch (ins) {
+                case Consts.INS.SETUP:
+                    setup(apdu);
+                    break;
+                case Consts.INS.GET_SETUP:
+                    getSetup(apdu);
+                    break;
                 case Consts.INS.KEY_GEN:
                     generateDVRFKeypair(apdu);
                     break;
@@ -251,6 +260,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         base64UrlSafeDecoder = new Base64UrlSafeDecoder();
 
         initialized = true;
+    }
+
+    private void setup(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        nParties = apduBuffer[ISO7816.OFFSET_P1];
+        threshold = apduBuffer[ISO7816.OFFSET_P2];
+    }
+
+    private void getSetup(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        apduBuffer[0] = nParties;
+        apduBuffer[1] = threshold;
+
+        apdu.setOutgoingAndSend((short) 0, (short) 2);
     }
 
     private void setOIDCPublicKey() {

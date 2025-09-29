@@ -193,4 +193,19 @@ public class AppletTest extends BaseTest {
         ECPoint dvrfPubKey = curve.createPoint(xCoord, yCoord);
 
     }
+
+    @Test
+    public void testSetup() throws Exception {
+        byte threshold = 0x02;
+        byte nParties = 0x03;
+        CommandAPDU setupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold);
+        ResponseAPDU responseAPDU = connect().transmit(setupCmd);
+
+        CommandAPDU getSetupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
+        responseAPDU = connect().transmit(getSetupCmd);
+        byte[] data = responseAPDU.getData();
+
+        Assert.assertEquals(data[0], nParties);
+        Assert.assertEquals(data[1], threshold);
+    }
 }
