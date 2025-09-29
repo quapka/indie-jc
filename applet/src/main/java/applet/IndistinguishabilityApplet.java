@@ -210,18 +210,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             }
         } else if ( cla == Consts.CLA.INDIE ) {
             switch (ins) {
-                case 0x02:
-                    sendGood(apdu);
-                    break;
-                case 0x03:
-                    sendBad(apdu);
-                    break;
-                case 0x04:
-                    if ( dleq.initialized) {
-                        sendGood(apdu);
-                    } else {
-                        sendBad(apdu);
-                    }
                     break;
                 case Consts.INS.GET_VERIFICATION_PUBKEY:
                     System.out.println("About to getDerivationPubkey");
