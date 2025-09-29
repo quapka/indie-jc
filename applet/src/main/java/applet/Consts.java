@@ -14,7 +14,7 @@ public class Consts {
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
         public static final byte BAD = (byte) 0x99;
-        public static final byte COMPUTE_MOD_MULT = (byte) 0x02;
+        public static final byte COMPUTE_MOD_MULT = (byte) 0xaa;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {
