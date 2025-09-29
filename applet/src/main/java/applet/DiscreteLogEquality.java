@@ -62,7 +62,7 @@ public class DiscreteLogEquality {
      *     Fully Distributed Verifiable Random Functions
      *     and their Application to Decentralised Random Beacons
      */
-    public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, BigNat secret, byte[] out) {
+    public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, byte[] out) {
         // choose random r <- ZZ_q
         RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         rng.generateData(tmp, (short) 0, (short) 32);
@@ -217,7 +217,7 @@ public class DiscreteLogEquality {
 
         // partial.multiplication(secret);
         // System.out.println(userPoint);
-        return proveEq(userPoint, pubKeyPoint, M, secret, out);
+        return proveEq(userPoint, pubKeyPoint, M, out);
     }
 
     /**
