@@ -9,10 +9,11 @@ public class Consts {
     public class INS {
         public static final byte GET_VERIFICATION_PUBKEY = (byte) 0x00;
         public static final byte GET_EXAMPLE_PROOF = (byte) 0x01;
-        public static final byte COMPUTE_MOD_MULT = (byte) 0x02;
 
+        // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
         public static final byte BAD = (byte) 0x99;
+        public static final byte COMPUTE_MOD_MULT = (byte) 0x02;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {
