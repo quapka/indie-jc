@@ -64,24 +64,21 @@ public class DiscreteLogEquality {
     }
 
     private void printBigNat(BigNat num) {
-        byte[] buffer = new byte[32];
-        num.copyToByteArray(buffer, (short) 0);
+        num.copyToByteArray(tmp, (short) 0);
         for (short i = 0; i < 32; i ++ ) {
-            System.out.print(String.format("%02x", buffer[i]));
+            System.out.print(String.format("%02x", tmp[i]));
         }
         System.out.println();
     }
 
     public void calculateModMult() {
-        byte[] buffer = new byte[32];
-
         // a.setValue((short) 1);
-        rng.generateData(buffer, (short) 0, (short) 32);
-        aBN.fromByteArray(buffer, (short) 0, (short) 32);
+        rng.generateData(tmp, (short) 0, (short) 32);
+        aBN.fromByteArray(tmp, (short) 0, (short) 32);
 
         // b.setValue((short) 2);
-        rng.generateData(buffer, (short) 0, (short) 32);
-        bBN.fromByteArray(buffer, (short) 0, (short) 32);
+        rng.generateData(tmp, (short) 0, (short) 32);
+        bBN.fromByteArray(tmp, (short) 0, (short) 32);
 
         printBigNat(aBN);
         printBigNat(bBN);
@@ -168,37 +165,34 @@ public class DiscreteLogEquality {
 
         // convert the ephemeral key to point and secret
         ECPoint pubKeyPoint = new ECPoint(curve);
-        byte[] buffer = new byte[124];
         for (short i = 0; i < 32; i ++ ) {
-            System.out.print(String.format("%02x", buffer[i]));
+            System.out.print(String.format("%02x", tmp[i]));
         }
         // G.multiplication(secret);
         System.out.println();
-        short byteLength = pubKey.getW(buffer, (short) 0);
-        pubKeyPoint.setW(buffer, (short) 0, byteLength);
+        short byteLength = pubKey.getW(tmp, (short) 0);
+        pubKeyPoint.setW(tmp, (short) 0, byteLength);
 
-        // buffer = new byte[124];
-        // byteLength = privKey.getS(buffer, (short) 0);
+        // byteLength = privKey.getS(tmp, (short) 0);
         // System.out.println(String.format("Byte length: %d", byteLength));
         // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", buffer[i]));
+        //     System.out.print(String.format("%02x", tmp[i]));
         // }
         // System.out.println();
 
         // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        // buffer = new byte[124];
         // // byte[] tmp = new byte[32];
-        // rng.generateData(buffer, (short) 0, (short) 16);
-        // rng.generateData(buffer, (short) 0, (short) 16);
-        // secret.fromByteArray(buffer, (short) 0, (short) 16); // FIXME 32 -> 16
+        // rng.generateData(tmp, (short) 0, (short) 16);
+        // rng.generateData(tmp, (short) 0, (short) 16);
+        // secret.fromByteArray(tmp, (short) 0, (short) 16); // FIXME 32 -> 16
         // // secret.setValue((byte) 42);
         // secret.mod(curve.rBN);
-        // secret.copyToByteArray(buffer, (short) 0);
+        // secret.copyToByteArray(tmp, (short) 0);
 
 
         // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", buffer[i]));
+        //     System.out.print(String.format("%02x", tmp[i]));
         // }
         // G.multiplication(secret);
         // System.out.println();
@@ -219,23 +213,23 @@ public class DiscreteLogEquality {
         // Next, multiply the base point G by the scalar
         // ECPoint H = new ECPoint(curve);
         // H.randomize();
-        // H.getX(buffer, (short) 0);
+        // H.getX(tmp, (short) 0);
         // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", buffer[i]));
+        //     System.out.print(String.format("%02x", tmp[i]));
         // }
         // System.out.println();
 
         // H.randomize();
-        // H.getX(buffer, (short) 0);
+        // H.getX(tmp, (short) 0);
         // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", buffer[i]));
+        //     System.out.print(String.format("%02x", tmp[i]));
         // }
         // System.out.println();
 
         // H.randomize();
-        // H.getX(buffer, (short) 0);
+        // H.getX(tmp, (short) 0);
         // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", buffer[i]));
+        //     System.out.print(String.format("%02x", tmp[i]));
         // }
         // System.out.println();
 
