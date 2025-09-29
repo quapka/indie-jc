@@ -18,6 +18,7 @@ public class DiscreteLogEquality {
     public static BigNat aBN, bBN;
     private byte[] tmp = new byte[128];
     public boolean initialized = false;
+    public static RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
         'D', 'i', 's', 'c', 'r', 'e', 't', 'e', ' ',
         'l', 'o', 'g', ' ',
@@ -73,7 +74,6 @@ public class DiscreteLogEquality {
 
     public void calculateModMult() {
         byte[] buffer = new byte[32];
-        RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 
         // a.setValue((short) 1);
         rng.generateData(buffer, (short) 0, (short) 32);
@@ -97,7 +97,6 @@ public class DiscreteLogEquality {
      */
     public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, byte[] out) {
         // choose random r <- ZZ_q
-        RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         rng.generateData(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
         // FIXME measure, whether the modding is necessary. The consequent point multiplication is possible either way.
@@ -189,7 +188,6 @@ public class DiscreteLogEquality {
         // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         // buffer = new byte[124];
-        // RandomData rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         // // byte[] tmp = new byte[32];
         // rng.generateData(buffer, (short) 0, (short) 16);
         // rng.generateData(buffer, (short) 0, (short) 16);
@@ -209,7 +207,6 @@ public class DiscreteLogEquality {
 
         // Generate a random point H to be used in the proof
         // First, generate random scalar h
-        // RandomData rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         // byte[] tmp = new byte[32];
         // rng.generateData(tmp, (short) 0, (short) 32);
 
