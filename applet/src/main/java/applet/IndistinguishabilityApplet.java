@@ -18,6 +18,7 @@ import applet.jcmathlib.*;
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
     public final static short CARD_TYPE = OperationSupport.SIMULATOR;
+    // public final static short CARD_TYPE = OperationSupport.JCOP4_P71;
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
 
@@ -246,6 +247,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         rm = new ResourceManager((short) 256);
         // rm = new ResourceManager((short) 256, (short) 2056);
         dleq = new DiscreteLogEquality();
+        if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
+            rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
+        }
         // TODO Use the following init instead?
         // if ( !DiscreteLogEquality.initialized ) {
         //     dleq.initialize();
