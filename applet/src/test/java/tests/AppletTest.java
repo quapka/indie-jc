@@ -22,6 +22,16 @@ public class AppletTest extends BaseTest {
     
     public AppletTest() throws Exception {
         // Change card type here if you want to use physical card
+        // String cardTypeProp = System.getProperty("testcard.type");
+        // if ( cardTypeProp == null ) {
+        //     cardType = CardType.JCARDSIMLOCAL;
+        // } else if ( cardTypeProp == "physical" )  {
+        //     cardType = CardType.PHYSICAL;
+        // } else if ( cardTypeProp == "simlocal" ) {
+        //     cardType = CardType.JCARDSIMLOCAL;
+        // }
+        // setCardType(CardType.PHYSICAL);
+
         if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
             setCardType(CardType.JCARDSIMLOCAL);
         } else {
