@@ -37,7 +37,6 @@ public class DiscreteLogEquality {
         if ( initialized ) {
             return;
         }
-        // rm = new ResourceManager((short) 256);
         // NOTE r for the protocol versus `r` as the curve order
         curve = new ECCurve(SecP256r1.p, SecP256r1.a, SecP256r1.b, SecP256r1.G, SecP256r1.r, SecP256r1.k, IndistinguishabilityApplet.rm);
         r = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
@@ -173,71 +172,6 @@ public class DiscreteLogEquality {
         short byteLength = pubKey.getW(tmp, (short) 0);
         pubKeyPoint.setW(tmp, (short) 0, byteLength);
 
-        // byteLength = privKey.getS(tmp, (short) 0);
-        // System.out.println(String.format("Byte length: %d", byteLength));
-        // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // System.out.println();
-
-        // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-        // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        // // byte[] tmp = new byte[32];
-        // rng.generateData(tmp, (short) 0, (short) 16);
-        // rng.generateData(tmp, (short) 0, (short) 16);
-        // secret.fromByteArray(tmp, (short) 0, (short) 16); // FIXME 32 -> 16
-        // // secret.setValue((byte) 42);
-        // secret.mod(curve.rBN);
-        // secret.copyToByteArray(tmp, (short) 0);
-
-
-        // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // G.multiplication(secret);
-        // System.out.println();
-
-        // curve.updateAfterReset();
-
-        // Generate a random point H to be used in the proof
-        // First, generate random scalar h
-        // byte[] tmp = new byte[32];
-        // rng.generateData(tmp, (short) 0, (short) 32);
-
-        // for (int i = 0; i < 32; i++) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // BigNat h = new BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, rm);
-        // h.fromByteArray(tmp, (short) 0, (short) 32);
-        // h.mod(curve.rBN);
-        // Next, multiply the base point G by the scalar
-        // ECPoint H = new ECPoint(curve);
-        // H.randomize();
-        // H.getX(tmp, (short) 0);
-        // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // System.out.println();
-
-        // H.randomize();
-        // H.getX(tmp, (short) 0);
-        // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // System.out.println();
-
-        // H.randomize();
-        // H.getX(tmp, (short) 0);
-        // for (int i = 0; i < 32; i ++ ) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // System.out.println();
-
-        // ECPoint partial = new ECPoint(curve);
-        // partial.copy(H);
-
-        // partial.multiplication(secret);
-        // System.out.println(userPoint);
         return proveEq(userPoint, pubKeyPoint, M, out);
     }
 
