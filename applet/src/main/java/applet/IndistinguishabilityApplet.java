@@ -149,8 +149,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private boolean initialized = false;
 
     private KeyPair ecKeyPair;
-    private ECPrivateKey privateKey;
-    private ECPublicKey publicKey;
+    private ECPrivateKey privDVRFKey;
+    private ECPublicKey pubDVRFKey;
 
     private ECPublicKey OIDC_PUBLIC_KEY = null;
 
@@ -293,19 +293,19 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private void generateDVRFKeypair(APDU apdu)
     {
 
-        ECPrivateKey privateKey = (ECPrivateKey) KeyBuilder.buildKey(
+        ECPrivateKey privDVRFKey = (ECPrivateKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PRIVATE,
             KeyBuilder.LENGTH_EC_FP_256,
             false
         );
-        ECPublicKey publicKey = (ECPublicKey) KeyBuilder.buildKey(
+        ECPublicKey pubDVRFKey = (ECPublicKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PUBLIC,
             KeyBuilder.LENGTH_EC_FP_256,
             false
         );
 
          try {
-            if ( publicKey == null) {
+            if ( pubDVRFKey == null) {
                 ecKeyPair.genKeyPair();
             }
         } catch (Exception e) {
@@ -313,26 +313,26 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short offset = 0;
 
-        publicKey.setFieldFP(SecP256r1.p, offset, (short) SecP256r1.p.length);
-        publicKey.setA(SecP256r1.a, offset, (short) SecP256r1.a.length);
-        publicKey.setB(SecP256r1.b, offset, (short) SecP256r1.b.length);
-        publicKey.setG(SecP256r1.G, offset, (short) SecP256r1.G.length);
-        publicKey.setR(SecP256r1.n, offset, (short) SecP256r1.n.length);
-        publicKey.setK(SecP256r1.h);
+        pubDVRFKey.setFieldFP(SecP256r1.p, offset, (short) SecP256r1.p.length);
+        pubDVRFKey.setA(SecP256r1.a, offset, (short) SecP256r1.a.length);
+        pubDVRFKey.setB(SecP256r1.b, offset, (short) SecP256r1.b.length);
+        pubDVRFKey.setG(SecP256r1.G, offset, (short) SecP256r1.G.length);
+        pubDVRFKey.setR(SecP256r1.n, offset, (short) SecP256r1.n.length);
+        pubDVRFKey.setK(SecP256r1.h);
 
-        privateKey.setFieldFP(SecP256r1.p, offset, (short) SecP256r1.p.length);
-        privateKey.setA(SecP256r1.a, offset, (short) SecP256r1.a.length);
-        privateKey.setB(SecP256r1.b, offset, (short) SecP256r1.b.length);
-        privateKey.setG(SecP256r1.G, offset, (short) SecP256r1.G.length);
-        privateKey.setR(SecP256r1.n, offset, (short) SecP256r1.n.length);
-        privateKey.setK(SecP256r1.h);
+        privDVRFKey.setFieldFP(SecP256r1.p, offset, (short) SecP256r1.p.length);
+        privDVRFKey.setA(SecP256r1.a, offset, (short) SecP256r1.a.length);
+        privDVRFKey.setB(SecP256r1.b, offset, (short) SecP256r1.b.length);
+        privDVRFKey.setG(SecP256r1.G, offset, (short) SecP256r1.G.length);
+        privDVRFKey.setR(SecP256r1.n, offset, (short) SecP256r1.n.length);
+        privDVRFKey.setK(SecP256r1.h);
 
-        ecKeyPair = new KeyPair(publicKey, privateKey);
+        ecKeyPair = new KeyPair(pubDVRFKey, privDVRFKey);
 
         ecKeyPair.genKeyPair();
 
         byte[] apduBuffer = apdu.getBuffer();
-        short keySize = publicKey.getW(apduBuffer, (short) 0);
+        short keySize = pubDVRFKey.getW(apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, keySize);
     }
 
