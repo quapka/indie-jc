@@ -176,8 +176,9 @@ public class DiscreteLogEquality {
     }
 
     /**
-     * The verification is not actually needed on the JavaCard
+     * The verification is not needed and thus not supported on the JavaCard
      */
-    private void VerifyEq() {
+    private void VerifyEq() throws ISOException {
+        ISOException.throwIt(ISO7816.SW_FUNC_NOT_SUPPORTED);
     }
 }
