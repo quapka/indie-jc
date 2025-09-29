@@ -27,7 +27,6 @@ import java.math.BigInteger;
 import java.util.*;
 
 public class DiscreteLogEqualityTest extends BaseTest {
-    // ResourceManager rm;
     public static ECCurve curve;
     public static ECPoint Generator;
     public static BigInteger x;
@@ -43,7 +42,6 @@ public class DiscreteLogEqualityTest extends BaseTest {
     public static short CURVE_K = SecP256r1.k;
 
     public DiscreteLogEqualityTest() throws Exception {
-        System.out.println("DiscreteLogEqualityTest initializing...");
         // Change card type here if you want to use physical card
         // setCardType(CardType.JCARDSIMLOCAL);
         curve = new ECCurve.Fp(new BigInteger(1, CURVE_P), new BigInteger(1, CURVE_A), new BigInteger(1, CURVE_B));
@@ -138,17 +136,26 @@ public class DiscreteLogEqualityTest extends BaseTest {
     @Test
     public void testComputingDleqProof() throws Exception {
         ECPoint verPubkeyPoint = getCardVerificationPubkey();
+        // There is not hash to curve calculation, simply a random point is
+        // generated directly
         ECPoint hashedToCurvePoint = randomPoint();
 
         byte[] encoded = hashedToCurvePoint.getEncoded(false);
         CommandAPDU getProofCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_EXAMPLE_PROOF, 0x00, 0x00, encoded);
 
         // System.out.println(String.format("Encoded: %d", encoded.length));
-        // for (int i = 0; i < encoded.length; i++) {
+        // for (short i = 0; i < encoded.length; i++) {
         //     System.out.print(String.format("%02x", encoded[i]));
         // }
-        // System.out.println();
+
+        System.out.println();
         ResponseAPDU responseAPDU = connect().transmit(getProofCmd);
+
+        System.out.println(String.format("ResponseAPDU from example proof: %d", responseAPDU.getData().length));
+        for (short i = 0; i < responseAPDU.getData().length; i++) {
+            System.out.print(String.format("%02x", responseAPDU.getData()[i]));
+        }
+
         byte[] proof = Arrays.copyOfRange(responseAPDU.getData(), 0, 64);
         byte[] derivedPointData = Arrays.copyOfRange(responseAPDU.getData(), 64, 64 + 65);
         BigInteger xCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(derivedPointData, 1, 33));
