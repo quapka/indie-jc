@@ -20,9 +20,12 @@ import java.util.Arrays;
 public class AppletTest extends BaseTest {
     
     public AppletTest() throws Exception {
-        // System.out.println("AppletTest initializing...");
         // Change card type here if you want to use physical card
-        setCardType(CardType.JCARDSIMLOCAL);
+        if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
+            setCardType(CardType.JCARDSIMLOCAL);
+        } else {
+            setCardType(CardType.PHYSICAL);
+        }
         setSimulateStateful(true);
         connect();
     }
