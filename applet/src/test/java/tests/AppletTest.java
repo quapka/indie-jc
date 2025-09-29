@@ -154,44 +154,4 @@ public class AppletTest extends BaseTest {
 
         Assert.assertEquals(responseAPDU.getData().length, 1 + 32 + 32);
     }
-
-    // @Test
-    // public void test2() throws Exception {
-    //     String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
-
-
-    // }
-
-    // Example test
-    // @Test
-    // public void hello() throws Exception {
-    //     final byte[] AID = {(byte) 0xF0, 0x00, 0x00, 0x00, 0x01};
-    //     final CommandAPDU cmd = new CommandAPDU(0x02, 0x00, 0, 0, AID);
-
-    //     // final byte[] AID = {0x01, (byte) 0xff, (byte) 0xff, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
-    //     // AID appletAID = AIDUtil.create("F000000001");
-
-    //     final CommandAPDU select = new CommandAPDU(0xA4, 0x80, 0, 0);
-    //     // System.out.println(cmd);
-    //     final ResponseAPDU responseAPDU2 = connect().transmit(select);
-    //     String str2 = new String(responseAPDU2.getData(), "UTF-8");
-    //     System.out.println(str2);
-    //     final ResponseAPDU responseAPDU = connect().transmit(cmd);
-
-    //     // final byte[] expectedResponse = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
-    //     Assert.assertNotNull(responseAPDU);
-    //     Assert.assertEquals(0x9000, responseAPDU.getSW());
-    //     Assert.assertNotNull(responseAPDU.getBytes());
-
-    //     StringBuilder sb = new StringBuilder();
-    //     for (byte b : responseAPDU.getData()) {
-    //         sb.append(String.format("0x%02X ", b));
-    //     }
-    //     System.out.println(sb.toString());
-    //     // System.out.println(responseAPDU.getBytes());
-    //     String str = new String(responseAPDU.getData(), "UTF-8");
-    //     System.out.println(str);
-    //     // Assert.assertEquals(expectedResponse, responseAPDU.getBytes());
-    //     //
-    // }
 }
