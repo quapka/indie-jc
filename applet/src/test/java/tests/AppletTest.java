@@ -3,6 +3,7 @@ package tests;
 import cz.muni.fi.crocs.rcard.client.CardType;
 import applet.IndistinguishabilityApplet;
 import applet.Consts;
+import applet.jcmathlib;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 
