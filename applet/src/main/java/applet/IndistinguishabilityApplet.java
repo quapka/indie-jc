@@ -169,7 +169,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 		register();
 	}
 
-    // FIXME implement select(), deselect() and possibly other Applet.* methods?
+    public boolean select() {
+        if (initialized) {
+            dleq.curve.updateAfterReset();
+        }
+        return true;
+    }
+
+    // FIXME implement, deselect() and possibly other Applet.* methods?
 	public void process(APDU apdu)
 	{
         if ( selectingApplet() ) {
