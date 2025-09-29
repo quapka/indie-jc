@@ -203,6 +203,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                 case Consts.INS.BAD:
                     sendBad(apdu);
                     break;
+                case Consts.INS.COMPUTE_MOD_MULT:
+                    dleq.calculateModMult();
+                    break;
             }
         } else if ( cla == Consts.CLA.INDIE ) {
             switch (ins) {

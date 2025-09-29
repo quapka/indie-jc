@@ -57,6 +57,39 @@ public class DiscreteLogEquality {
         initialized = true;
     }
 
+    private void printBigNat(BigNat num) {
+        byte[] buffer = new byte[32];
+        num.copyToByteArray(buffer, (short) 0);
+        for (short i = 0; i < 32; i ++ ) {
+            System.out.print(String.format("%02x", buffer[i]));
+        }
+        System.out.println();
+    }
+
+    public void calculateModMult() {
+        byte[] buffer = new byte[32];
+        RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+
+        BigNat a = new BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        // a.setValue((short) 1);
+        rng.generateData(buffer, (short) 0, (short) 32);
+        a.fromByteArray(buffer, (short) 0, (short) 32);
+
+        BigNat b = new BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        // b.setValue((short) 2);
+        rng.generateData(buffer, (short) 0, (short) 32);
+        b.fromByteArray(buffer, (short) 0, (short) 32);
+
+        // BigNat c = new BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        // c.setValue((short) 2);
+
+        printBigNat(a);
+        printBigNat(b);
+        printBigNat(curve.rBN);
+        a.modMult(b, curve.rBN);
+        printBigNat(a);
+    }
+
     /**
      * Implemented following the description from the publication:
      *     Fully Distributed Verifiable Random Functions
