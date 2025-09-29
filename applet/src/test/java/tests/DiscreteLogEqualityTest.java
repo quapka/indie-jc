@@ -51,63 +51,6 @@ public class DiscreteLogEqualityTest extends BaseTest {
         CURVE_SPEC = new ECParameterSpec(curve, Generator, new BigInteger(1, CURVE_R), BigInteger.valueOf(CURVE_K));
     }
 
-    @Test
-    public void testDiscreteLog()  {
-        // OperationSupport.getInstance().setCard(OperationSupport.SIMULATOR); // TODO set your card
-        // setCardType(CardType.JCARDSIMLOCAL); // FIXME is this necessary?
-        // rm = new ResourceManager((short) 256);
-        // FIXME set this curve elsewhere and reference it as _the curve_
-        // curve = new ECCurve(SecP256r1.p, SecP256r1.a, SecP256r1.b, SecP256r1.G, SecP256r1.r, SecP256r1.k, rm);
-
-        // // use the ephemeral public key
-        // ECPrivateKey privKey = curve.disposablePriv;
-        // ECPublicKey  pubKey = curve.disposablePub;
-
-        // // convert the ephe
-        // ECPoint pubKeyPoint = new ECPoint(curve);
-        // byte[] buffer = new byte[100];
-        // short byteLength = pubKey.getW(buffer, (short) 0);
-        // pubKeyPoint.setW(buffer, (short) 0, byteLength);
-
-        // byteLength = privKey.getS(buffer, (short) 0);
-        // BigNat secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, rm);
-        // secret.fromByteArray(buffer, (short) 0, byteLength);
-
-        // // curve.updateAfterReset();
-
-        // // Generate a random point H to be used in the proof
-        // // First, generate random scalar h
-        // // RandomData rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
-        // // byte[] tmp = new byte[32];
-        // // rng.generateData(tmp, (short) 0, (short) 32);
-
-        // // for (int i = 0; i < 32; i++) {
-        // //     System.out.print(String.format("%02x", tmp[i]));
-        // // }
-        // // BigNat h = new BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, rm);
-        // // h.fromByteArray(tmp, (short) 0, (short) 32);
-        // // h.mod(curve.rBN);
-        // // Next, multiply the base point G by the scalar
-        // ECPoint H = new ECPoint(curve);
-        // H.randomize();
-
-        // ECPoint partial = new ECPoint(curve);
-        // partial.copy(H);
-
-        // partial.multiplication(secret);
-        // DiscreteLogEquality dle = new DiscreteLogEquality(rm);
-        // byte[] out = new byte[32];
-        // dle.ProveEq(H, pubKeyPoint, partial, secret, out);
-        // H.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
-        // BigNat scalar = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, rm);
-        // // BigNat scalar = new BigNat();
-        // scalar.setValue((byte) 42);
-        // H.multiplication(scalar);
-        // KeyPair keyPair = curve.newKeyPair();
-        // ECPoint H = keyPair.getPublic();
-        //
-    }
-
     /**
      * Generate a random point on the chosen secp256r1 curve
      */
@@ -141,6 +84,7 @@ public class DiscreteLogEqualityTest extends BaseTest {
         Assert.assertEquals(0x9000, responseAPDU.getSW());
     }
 
+    // FIXME
     @Test
     public void testComputingDleqProof() throws Exception {
         ECPoint verPubkeyPoint = getCardVerificationPubkey();
