@@ -7,6 +7,14 @@ import applet.jcmathlib;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 
+import applet.jcmathlib.*;
+import javacard.security.*;
+
+import org.bouncycastle.math.ec.ECCurve;
+import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.jce.spec.ECParameterSpec;
+import java.math.BigInteger;
+
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 
@@ -19,6 +27,19 @@ import java.util.Arrays;
  * @author xsvenda, Dusan Klinec (ph4r05)
  */
 public class AppletTest extends BaseTest {
+    public static ECCurve curve;
+    public static ECPoint Generator;
+    public static BigInteger x;
+    public static BigInteger y;
+    private static final int SIGNUM_POSITIVE = 1;
+
+    public static ECParameterSpec CURVE_SPEC = null;
+    public static byte[] CURVE_P = SecP256r1.p;
+    public static byte[] CURVE_R = SecP256r1.r;
+    public static byte[] CURVE_A = SecP256r1.a;
+    public static byte[] CURVE_B = SecP256r1.b;
+    public static byte[] CURVE_G = SecP256r1.G;
+    public static short CURVE_K = SecP256r1.k;
     
     public AppletTest() throws Exception {
         // Change card type here if you want to use physical card
@@ -39,6 +60,12 @@ public class AppletTest extends BaseTest {
         }
         setSimulateStateful(true);
         connect();
+
+        curve = new ECCurve.Fp(new BigInteger(1, CURVE_P), new BigInteger(1, CURVE_A), new BigInteger(1, CURVE_B));
+        BigInteger x = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1, CURVE_G.length / 2 + 1));
+        BigInteger y = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1 + CURVE_G.length / 2, CURVE_G.length));
+        Generator = curve.createPoint(x, y);
+        CURVE_SPEC = new ECParameterSpec(curve, Generator, new BigInteger(1, CURVE_R), BigInteger.valueOf(CURVE_K));
     }
 
     @BeforeAll
@@ -153,5 +180,17 @@ public class AppletTest extends BaseTest {
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(responseAPDU.getData().length, 1 + 32 + 32);
+    }
+
+    @Test
+    public void testDLEQAgainstGeneratedKey() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        byte[] data = responseAPDU.getData();
+
+        BigInteger xCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
+        BigInteger yCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 35, 65));
+        ECPoint dvrfPubKey = curve.createPoint(xCoord, yCoord);
+
     }
 }
