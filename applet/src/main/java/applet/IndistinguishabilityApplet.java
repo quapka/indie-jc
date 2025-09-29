@@ -852,11 +852,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         return -1;
     }
 
-    // public void 
-
-    // FIXME return an error if problem?
-    // FIXME there is quite likely some of by one error when decoding values 
-
     private byte[] loadApdu(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short recvLen = apdu.setIncomingAndReceive(); // + apdu.getOffsetCdata());
