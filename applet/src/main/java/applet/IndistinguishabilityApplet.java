@@ -158,15 +158,15 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
 	public static void install(byte[] bArray, short bOffset, byte bLength)
 	{
-		new IndistinguishabilityApplet(bArray, bOffset, bLength).register();
+		new IndistinguishabilityApplet(bArray, bOffset, bLength);
 	}
 
 	public IndistinguishabilityApplet(byte[] bArray, short bOffset, byte bLength) {
-        OperationSupport.getInstance().setCard(CARD_TYPE); // TODO set your card
+        OperationSupport.getInstance().setCard(CARD_TYPE);
         if (!OperationSupport.getInstance().DEFERRED_INITIALIZATION) {
             initialize();
         }
-		// register();
+		register();
 	}
 
     // FIXME implement select(), deselect() and possibly other Applet.* methods?
