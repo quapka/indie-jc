@@ -100,8 +100,6 @@ public class DiscreteLogEquality {
         RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         rng.generateData(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
-        // FIXME use fixed value for debugging.
-        // r.setValue((byte) 42);
         // FIXME measure, whether the modding is necessary. The consequent point multiplication is possible either way.
         // r.mod(curve.rBN);
         // FIXME implement rG via the co-processor, set r as private key and compute public key
@@ -115,7 +113,6 @@ public class DiscreteLogEquality {
         short hashSize = hashCommitments(userPoint, pubkeyPoint, partial, com1, com2);
         ch.fromByteArray(tmp, (short) 0, hashSize);
         // compute res = r + secret * ch
-        // TODO shall these be moded? And by what?
         ch.modMult(secret, curve.rBN);
         // res = r
         r.modAdd(ch, curve.rBN);
