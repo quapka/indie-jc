@@ -15,6 +15,7 @@ public class DiscreteLogEquality {
     public static ECPoint G, com1, com2, userPoint, M;
     public static BigNat r, ch, tmpNum, secret;
     public static BigNat curveOrder;
+    public static BigNat aBN, bBN;
     private byte[] tmp = new byte[128];
     public boolean initialized = false;
 	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
@@ -48,6 +49,10 @@ public class DiscreteLogEquality {
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
         curveOrder = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
+
+        aBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        bBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+
         ECPrivateKey privKey = curve.disposablePriv;
         secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         short byteLength = privKey.getS(tmp, (short) 0);
@@ -70,24 +75,19 @@ public class DiscreteLogEquality {
         byte[] buffer = new byte[32];
         RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 
-        BigNat a = new BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         // a.setValue((short) 1);
         rng.generateData(buffer, (short) 0, (short) 32);
-        a.fromByteArray(buffer, (short) 0, (short) 32);
+        aBN.fromByteArray(buffer, (short) 0, (short) 32);
 
-        BigNat b = new BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         // b.setValue((short) 2);
         rng.generateData(buffer, (short) 0, (short) 32);
-        b.fromByteArray(buffer, (short) 0, (short) 32);
+        bBN.fromByteArray(buffer, (short) 0, (short) 32);
 
-        // BigNat c = new BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        // c.setValue((short) 2);
-
-        printBigNat(a);
-        printBigNat(b);
+        printBigNat(aBN);
+        printBigNat(bBN);
         printBigNat(curve.rBN);
-        a.modMult(b, curve.rBN);
-        printBigNat(a);
+        aBN.modMult(bBN, curve.rBN);
+        printBigNat(aBN);
     }
 
     /**
