@@ -133,6 +133,14 @@ public class DiscreteLogEqualityTest extends BaseTest {
         return verPubkeyPoint;
     }
 
+    // FIXME remove the computeModMult test
+    @Test
+    public void computeModMult() throws Exception {
+        CommandAPDU computeModMultCmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.COMPUTE_MOD_MULT, 0x00, 0x00);
+        ResponseAPDU responseAPDU = connect().transmit(computeModMultCmd);
+        Assert.assertEquals(0x9000, responseAPDU.getSW());
+    }
+
     @Test
     public void testComputingDleqProof() throws Exception {
         ECPoint verPubkeyPoint = getCardVerificationPubkey();
