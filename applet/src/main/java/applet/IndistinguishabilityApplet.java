@@ -294,18 +294,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public short deriveHashSecret(byte[] body, short bodySize, APDU apdu) {
-        // FIXME do not allocate buffers here
-        byte[] valueBuf = new byte[64];
-
         MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
         hasher.update(HASH_SECRET_DOMAIN_SEPARATOR, (short) 0, (short) HASH_SECRET_DOMAIN_SEPARATOR.length);
 
-        short valueLen = getStringValueFor(body, (short) 0, bodySize, AUD_FIELD_NAME, valueBuf, (short) 0);
-        hasher.update(valueBuf, (short) 0, valueLen);
+        short valueLen = getStringValueFor(body, (short) 0, bodySize, AUD_FIELD_NAME, tmp, (short) 0);
+        hasher.update(tmp, (short) 0, valueLen);
 
-        valueLen = getStringValueFor(body, (short) 0, bodySize, NAME_FIELD_NAME, valueBuf, (short) 0);
-        hasher.update(valueBuf, (short) 0, valueLen);
-        // hasher.update(HASH_SALT_SECRET, (short) 0, (short) HASH_SALT_SECRET.length);
+        valueLen = getStringValueFor(body, (short) 0, bodySize, NAME_FIELD_NAME, tmp, (short) 0);
+        hasher.update(tmp, (short) 0, valueLen);
 
 		byte[] apduBuffer = apdu.getBuffer();
         hasher.doFinal(HASH_SALT_SECRET, (short) 0, (short) HASH_SALT_SECRET.length, apduBuffer, (short) 0);
