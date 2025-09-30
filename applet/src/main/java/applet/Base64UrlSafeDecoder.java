@@ -9,10 +9,8 @@ public class Base64UrlSafeDecoder
         'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'
     };
 
-    // private byte[] temp = new byte[3];
 
-    public Base64UrlSafeDecoder() {
-    }
+    public Base64UrlSafeDecoder() {}
 
     public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
         // This implemntation expects the input to have the correct alphabet
