@@ -12,7 +12,7 @@ import javacardx.framework.util.*;
 public class DiscreteLogEquality {
     public static ECCurve curve;
     // FIXME M is H actually :D
-    public static ECPoint G, com1, com2, userPoint, M;
+    public static ECPoint G, com1, com2, userPoint, M, tmpPoint;
     public static BigNat r, ch, tmpNum, secret;
     public static BigNat curveOrder;
     public static BigNat aBN, bBN;
@@ -45,6 +45,7 @@ public class DiscreteLogEquality {
         com1 = new ECPoint(curve);
         com2 = new ECPoint(curve);
         userPoint = new ECPoint(curve);
+        tmpPoint = new ECPoint(curve);
         M = new ECPoint(curve);
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
         curveOrder = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
@@ -166,16 +167,15 @@ public class DiscreteLogEquality {
         ECPublicKey pubKey = curve.disposablePub;
 
         // convert the ephemeral key to point and secret
-        ECPoint pubKeyPoint = new ECPoint(curve);
         for (short i = 0; i < 32; i ++ ) {
             System.out.print(String.format("%02x", tmp[i]));
         }
         // G.multiplication(secret);
         System.out.println();
         short byteLength = pubKey.getW(tmp, (short) 0);
-        pubKeyPoint.setW(tmp, (short) 0, byteLength);
+        tmpPoint.setW(tmp, (short) 0, byteLength);
 
-        return proveEq(userPoint, pubKeyPoint, M, out);
+        return proveEq(userPoint, tmpPoint, M, out);
     }
 
     /**
