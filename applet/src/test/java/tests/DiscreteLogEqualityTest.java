@@ -131,14 +131,6 @@ public class DiscreteLogEqualityTest extends BaseTest {
         ECPoint com2Verify = H.multiply(resVerify).add(Y.multiply(chVerify).negate());
         byte[] digest = hashCommitments(G, H, X, Y, com1Verify, com2Verify);
 
-        // for (int i = 0; i < 32; i++) {
-        //     System.out.print(String.format("%02x", chVerifyData[i]));
-        // }
-        // System.out.println();
-        // for (int i = 0; i < 32; i++) {
-        //     System.out.print(String.format("%02x", digest[i]));
-        // }
-
         return Arrays.equals(chVerifyData, digest);
     }
 
