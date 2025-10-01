@@ -54,7 +54,7 @@ dependencies {
     jcardsim 'com.klinec:jcardsim:3.0.6.0'
 
     implementation 'com.klinec:jcardsim:3.0.6.0'
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.58'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.82'
 
     testImplementation 'io.github.jnasmartcardio:jnasmartcardio:0.2.7'
 
@@ -64,6 +64,7 @@ dependencies {
     testImplementation 'org.apache.logging.log4j:log4j-core:2.17.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.1'
+    testImplementation 'org.bouncycastle:bcprov-jdk18on:1.82'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.1'
 
     testImplementation 'com.github.martinpaljak:apdu4j:21.05.06'
