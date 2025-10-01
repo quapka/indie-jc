@@ -241,13 +241,12 @@ public class AppletTest extends BaseTest {
         String message = "this is my message";
         byte[] msgBytes = message.getBytes();
 
-        int read = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
-        read += cipher.doFinal(ctxtBuff, read);
+        int ctxLen = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
+        ctxLen += cipher.doFinal(ctxtBuff, ctxLen);
         System.out.println("Calculated ciphertext.");
-        printBuffer(ctxtBuff, (short) read);
+        printBuffer(ctxtBuff, (short) ctxLen);
 
-
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) read, 0x00, ctxtBuff, 0, read);
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxLen, 0x00, ctxtBuff, 0, ctxLen);
         responseAPDU = connect().transmit(cmd);
 
         System.out.println(String.format("Plaintext: \"%s\"", new String(responseAPDU.getData(), "UTF-8")));
