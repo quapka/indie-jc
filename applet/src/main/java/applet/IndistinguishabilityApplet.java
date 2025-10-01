@@ -4,9 +4,12 @@ import java.util.*;
 
 import javacard.framework.*;
 import javacardx.framework.util.*;
+import javacardx.crypto.*;
+import javacardx.crypto.Cipher;
 // import javacard.framework.util.ArrayLogic;
 import javacardx.apdu.ExtendedLength;
 import javacard.security.*;
+import javacard.security.CryptoException;
 
 import applet.Base64UrlSafeDecoder.*;
 import applet.DiscreteLogEquality.*;
@@ -39,6 +42,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public static byte nParties;
     public static byte threshold;
+    // TODO AESKey or only Key
+    private static AESKey aeadSecretKey;
 
 	private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
@@ -210,6 +215,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                 case Consts.INS.COMPUTE_MOD_MULT:
                     dleq.calculateModMult();
                     break;
+                case Consts.INS.AEAD_DECRYPT:
+                    // aeadEncryption();
+                    authenticatedEncryption(apdu);
+                    break;
             }
         } else if ( cla == Consts.CLA.INDIE ) {
             switch (ins) {
@@ -249,6 +258,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
+
+        // change to TYPE_AES_TRANSIENT_RESET
+        aeadSecretKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
+
+
         // TODO Use the following init instead?
         // if ( !DiscreteLogEquality.initialized ) {
         //     dleq.initialize();
@@ -274,6 +288,107 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apduBuffer[1] = threshold;
 
         apdu.setOutgoingAndSend((short) 0, (short) 2);
+    }
+
+    private void aeadEncryption() {
+        for (short i = 0; i < 128; i++) {
+            tmp[i] = 0;
+        }
+        aeadSecretKey.setKey(tmp, (short) 0);
+        // System.out.println(aeadSecretKey.isInitialized());
+
+        // AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.CIPHER_AES_GCM, Cipher.PAD_NULL, false);
+        AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
+        // aead.init(aeadSecretKey, AEADCipher.MODE_ENCRYPT);
+        aead.init(aeadSecretKey, AEADCipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
+        byte[] msgBytes = {'t', 'h', 'i', 's', ' ' , 'i', 's', ' ', 'm', 'y', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e'};
+        byte[] ctxtBuff = new byte[128];
+        short ctxtLen = aead.doFinal(msgBytes, (short) 0, (short) msgBytes.length, ctxtBuff, (short) 0);
+
+        // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
+        // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
+        aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
+        short ptxtLen = aead.doFinal(ctxtBuff, (short) 0, ctxtLen, tmp, (short) 0);
+
+        System.out.println("Inside card plaintext: ");
+        for (short i = 0; i < ptxtLen; i++ ) {
+            System.out.print(String.format("%c", tmp[i]));
+        }
+        System.out.println();
+    }
+
+    private void authenticatedEncryption(APDU apdu) {
+        // establish ECDH shared secret
+        byte[] apduBuffer = apdu.getBuffer();
+
+        // KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DHC_KDF, false);
+        // // FIXME use dedicated key-identity card?
+        // ecdh.init(privDVRFKey);
+        // // set the user's ephemeral public key
+        // ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, (short) (1 + 32 + 32), tmp, (short) 0);
+        for (short i = 0; i < 128; i++) {
+            tmp[i] = 0;
+        }
+        aeadSecretKey.setKey(tmp, (short) 0);
+        System.out.println(aeadSecretKey.isInitialized());
+
+        // AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.CIPHER_AES_GCM, Cipher.PAD_NULL, false);
+        AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
+
+        byte p1  = apduBuffer[ISO7816.OFFSET_P1];
+        System.out.println(String.format("P1: %d", p1));
+        System.out.println("1 ");
+        try {
+            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, apduBuffer, (short) (1 + 32 + 32), (short) 16);
+            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 16);
+            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
+            aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
+        } catch ( CryptoException e ) {
+            switch ( e.getReason() ) {
+                case CryptoException.INVALID_INIT:
+                    ISOException.throwIt(Consts.ERR.AEAD_INVALID_INIT);
+                    break;
+                case CryptoException.UNINITIALIZED_KEY:
+                    ISOException.throwIt(Consts.ERR.AEAD_UNINITIALIZED_KEY);
+                    break;
+                case CryptoException.ILLEGAL_USE:
+                    ISOException.throwIt(Consts.ERR.AEAD_ILLEGAL_USE);
+                    break;
+                default:
+                    ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
+            }
+        }
+
+
+        // short plaintextLen = aead.doFinal(apduBuffer, (short) (1 + 32 + 32 + 16), (short) 32, tmp, (short) 0);
+        System.out.print("apduBuffer: ");
+        for (short i = ISO7816.OFFSET_CDATA; i < p1; i++) {
+            System.out.print(String.format("%02x", apduBuffer[i]));
+        }
+        System.out.println();
+
+        short plaintextLen = 0;
+        try {
+            plaintextLen = aead.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) p1 , tmp, (short) 0);
+        } catch ( CryptoException e ) {
+            switch ( e.getReason() ) {
+                case CryptoException.INVALID_INIT:
+                    ISOException.throwIt(Consts.ERR.AEAD_INVALID_INIT);
+                    break;
+                case CryptoException.UNINITIALIZED_KEY:
+                    ISOException.throwIt(Consts.ERR.AEAD_UNINITIALIZED_KEY);
+                    break;
+                case CryptoException.ILLEGAL_USE:
+                    ISOException.throwIt(Consts.ERR.AEAD_ILLEGAL_USE);
+                    break;
+                default:
+                    ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
+            }
+        }
+
+
+		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, plaintextLen);
+		apdu.setOutgoingAndSend((short) 0, plaintextLen);
     }
 
     private void setOIDCPublicKey() {

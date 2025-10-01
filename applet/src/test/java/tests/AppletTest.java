@@ -10,9 +10,17 @@ import org.junit.jupiter.api.*;
 import applet.jcmathlib.*;
 import javacard.security.*;
 
+import java.security.*;
+
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.jce.spec.ECParameterSpec;
+import org.bouncycastle.crypto.*;
+import org.bouncycastle.crypto.modes.*;
+import org.bouncycastle.crypto.params.*;
+import org.bouncycastle.crypto.engines.*;
+// import org.bouncycastle.crypto.modes.AEADCipher;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.math.BigInteger;
 
 import javax.smartcardio.CommandAPDU;
@@ -66,6 +74,8 @@ public class AppletTest extends BaseTest {
         BigInteger y = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1 + CURVE_G.length / 2, CURVE_G.length));
         Generator = curve.createPoint(x, y);
         CURVE_SPEC = new ECParameterSpec(curve, Generator, new BigInteger(1, CURVE_R), BigInteger.valueOf(CURVE_K));
+
+        Security.addProvider(new BouncyCastleProvider());
     }
 
     @BeforeAll
@@ -192,5 +202,56 @@ public class AppletTest extends BaseTest {
 
         Assert.assertEquals(data[0], nParties);
         Assert.assertEquals(data[1], threshold);
+    }
+
+    public void printBuffer(byte[] buf, short size) {
+        for(short i = 0; i < size; i++) {
+            System.out.print(String.format("%02x", buf[i]));
+        }
+        System.out.println();
+    }
+    @Test
+    public void testAuthenticatedDecrytion() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        byte[] data = responseAPDU.getData();
+
+        BigInteger xCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
+        BigInteger yCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 35, 65));
+        ECPoint dvrfPubKey = curve.createPoint(xCoord, yCoord);
+
+
+        // FIXME use ECDH derive shared secret
+        byte[] emptyKey = new byte[16];
+        byte[] emptyNonce = new byte[12];
+
+        KeyParameter aeadKey = new KeyParameter(emptyKey, 0, 16);
+        short macSizeBits = 128;
+        AEADParameters params = new AEADParameters(aeadKey, macSizeBits, emptyNonce);
+
+        // printBuffer(params.getNonce(), (short) 16);
+
+        System.out.println(params.getMacSize());
+        AEADCipher cipher = new GCMBlockCipher(new AESEngine());
+
+        boolean forEncryption = true;
+        cipher.init(forEncryption, params);
+        byte[] ctxtBuff = new byte[256];
+
+        String message = "this is my message";
+        byte[] msgBytes = message.getBytes();
+
+        int read = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
+        read += cipher.doFinal(ctxtBuff, read);
+        System.out.println("Calculated ciphertext.");
+        printBuffer(ctxtBuff, (short) read);
+
+
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) read, 0x00, ctxtBuff, 0, read);
+        responseAPDU = connect().transmit(cmd);
+
+        System.out.println(String.format("Plaintext: \"%s\"", new String(responseAPDU.getData(), "UTF-8")));
+
+        Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
     }
 }

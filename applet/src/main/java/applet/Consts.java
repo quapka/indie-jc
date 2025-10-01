@@ -17,9 +17,17 @@ public class Consts {
         public static final byte GOOD = (byte) 0x88;
         public static final byte BAD = (byte) 0x99;
         public static final byte COMPUTE_MOD_MULT = (byte) 0xaa;
+        public static final byte AEAD_DECRYPT = (byte) 0x04;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {
         public static final short OK = (short) 0x9000;
+    }
+
+    public class ERR {
+        public static final short SW_EXCEPTION = (short) 0xe000;
+        public static final short AEAD_INVALID_INIT = (short) 0xe001;
+        public static final short AEAD_UNINITIALIZED_KEY = (short) 0xe002;
+        public static final short AEAD_ILLEGAL_USE = (short) 0xe003;
     }
 }
