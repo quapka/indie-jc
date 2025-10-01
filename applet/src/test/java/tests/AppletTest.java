@@ -186,7 +186,7 @@ public class AppletTest extends BaseTest {
         BigInteger xCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
         BigInteger yCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 35, 65));
         ECPoint dvrfPubKey = curve.createPoint(xCoord, yCoord);
-
+        // FIXME do assertions
     }
 
     @Test

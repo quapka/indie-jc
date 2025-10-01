@@ -424,8 +424,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     }
 
-    private void generateDVRFKeypair(APDU apdu)
-    {
+    /**
+     * Generates new ECC Keypair, stores it in `privDVRFKey` and `pubDVRFKey`
+     * and returns the public part (encoded as 65B) via APDU
+     */
+    private void generateDVRFKeypair(APDU apdu) {
 
         ECPrivateKey privDVRFKey = (ECPrivateKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PRIVATE,
