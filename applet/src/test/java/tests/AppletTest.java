@@ -223,13 +223,18 @@ public class AppletTest extends BaseTest {
 
         // FIXME use ECDH derive shared secret
         byte[] emptyKey = new byte[16];
-        byte[] emptyNonce = new byte[12];
+
+        SecureRandom prng = new SecureRandom();
+        byte nonceByteSize = 12;
+        byte[] nonce = new byte[nonceByteSize];
+        prng.nextBytes(nonce);
 
         KeyParameter aeadKey = new KeyParameter(emptyKey, 0, 16);
         short macSizeBits = 128;
-        AEADParameters params = new AEADParameters(aeadKey, macSizeBits, emptyNonce);
+        AEADParameters params = new AEADParameters(aeadKey, macSizeBits, nonce);
+        System.out.println("Nonce: ");
+        printBuffer(params.getNonce(), (short) nonceByteSize);
 
-        // printBuffer(params.getNonce(), (short) 16);
 
         System.out.println(params.getMacSize());
         AEADCipher cipher = new GCMBlockCipher(new AESEngine());
@@ -241,12 +246,16 @@ public class AppletTest extends BaseTest {
         String message = "this is my message";
         byte[] msgBytes = message.getBytes();
 
-        int ctxLen = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
-        ctxLen += cipher.doFinal(ctxtBuff, ctxLen);
+        int ctxtLen = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
+        ctxtLen += cipher.doFinal(ctxtBuff, ctxtLen);
         System.out.println("Calculated ciphertext.");
-        printBuffer(ctxtBuff, (short) ctxLen);
+        printBuffer(ctxtBuff, (short) ctxtLen);
 
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxLen, 0x00, ctxtBuff, 0, ctxLen);
+        byte[] aeadPayload = new byte [nonceByteSize + ctxtLen];
+        System.arraycopy(nonce, 0, aeadPayload, 0, nonceByteSize);
+        System.arraycopy(ctxtBuff, 0, aeadPayload, nonceByteSize, ctxtLen);
+
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, 0x00, aeadPayload, 0, nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
 
         System.out.println(String.format("Plaintext: \"%s\"", new String(responseAPDU.getData(), "UTF-8")));

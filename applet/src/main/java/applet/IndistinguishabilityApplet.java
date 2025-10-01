@@ -341,8 +341,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         try {
             // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, apduBuffer, (short) (1 + 32 + 32), (short) 16);
             // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 16);
-            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
-            aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
+            aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 12);
+            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
@@ -362,14 +362,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         // short plaintextLen = aead.doFinal(apduBuffer, (short) (1 + 32 + 32 + 16), (short) 32, tmp, (short) 0);
         System.out.print("apduBuffer: ");
-        for (short i = ISO7816.OFFSET_CDATA; i < p1; i++) {
+        for (short i = ISO7816.OFFSET_CDATA; i < p1 + 12; i++) {
             System.out.print(String.format("%02x", apduBuffer[i]));
         }
         System.out.println();
 
         short plaintextLen = 0;
         try {
-            plaintextLen = aead.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) p1 , tmp, (short) 0);
+            plaintextLen = aead.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + 12), (short) p1 , tmp, (short) 0);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
