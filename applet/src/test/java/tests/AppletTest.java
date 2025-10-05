@@ -240,39 +240,11 @@ public class AppletTest extends BaseTest {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
         byte[] data = responseAPDU.getData();
-        System.out.println(data.length);
-
-        BigInteger xCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
-        BigInteger yCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 33, 65));
-
-        // System.out.println(Arrays.copyOfRange(data, 1, 33));
-        // System.out.println(Arrays.copyOfRange(data, 35, 65));
-        // BigInteger yCoord = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 35, 65));
-
-        // System.out.println(xCoord);
-        // System.out.println(yCoord);
 
         byte[] seed = new byte[32];
         SecureRandom prng = new SecureRandom(seed);
 
-        // // FIXME use ECDH derive shared secret
-        byte[] emptyKey = new byte[16];
-        // ECGenParameterSpec namedParamSpec = new ECGenParameterSpec("secp256r1");
-        // KeyPairGenerator keyGen = KeyPairGenerator.getInstance("ECDH","BC");
-        // // ECKeyPairGenerator keyGen = new ECKeyPairGenerator();
-        // // keyGen.initialize(namedParamSpec, prng);
-        // KeyPair keyPair = keyGen.generateKeyPair();
-        //
-
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
-        // KeyPairGenerator kpgECDSA = KeyPairGenerator.getInstance("ECDSA", "BC");
-        // KeyPair keyPairECDSA = kpg.generateKeyPair();
-
-        // java.security.spec.ECPoint dvrfPubPoint = new java.security.spec.ECPoint(xCoord, yCoord);
-        // java.security.spec.ECPoint dvrfPubPoint = new java.security.spec.ECPoint(
-
-        //         yCoord
-        // );
         KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
         // ECPublicKeyParameters ecPubKeyParams = ((ECPublicKeyParameters) keyPair.getPublic()).getParameters();
         // CustomNamedCurves.getByName("secP256r1");
@@ -281,45 +253,16 @@ public class AppletTest extends BaseTest {
             new ECFieldFp(namedSpec.getCurve().getField().getCharacteristic()),
             namedSpec.getCurve().getA().toBigInteger(), namedSpec.getCurve().getB().toBigInteger()
         );
-        AlgorithmParameters algParams = AlgorithmParameters.getInstance("EC", "BC");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
-        algParams.init(ecGenSpec);
-        java.security.spec.ECParameterSpec ecSpec = algParams.getParameterSpec(java.security.spec.ECParameterSpec.class);
-
-        // ECParameterSpec curve = CustomNamedCurves.getByName("secP256r1");
-        // ECParameterSpec ecSpec = new ECParameterSpec(
-        //     curve,
-        //     new java.security.spec.ECPoint(namedSpec.getG().getAffineXCoord().toBigInteger(),
-        //     namedSpec.getG().getAffineYCoord().toBigInteger()),
-        //     namedSpec.getN(),
-        //     namedSpec.getH().intValue()
-        // );
-        // ECPointUtil.decodePoint(((ECPublicKeyParameters) keyPair.getPublic().getParameters()).getCurve(), data);
-        // java.security.spec.ECPoint dvrfPubPoint = ECPointUtil.decodePoint(ecCurve, data);
-
-        // ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(dvrfPubPoint, ((java.security.interfaces.ECPublicKey) keyPair.getPublic()).getParams());
-        // ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(Hex.decode(data)), ecSpec);
-        // printBuffer(data, (short) 65);
-        // Hex.decode(data);
-        // ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
-        // Decode point directly, as in https://bitcoin.stackexchange.com/a/72425?
         ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
         ECPublicKey dvrfPubKey = (ECPublicKey) keyFact.generatePublic(dvrfPubSpec);
         System.out.println(dvrfPubKey);
 
-
-        // AlgorithmParameters ecDomain = crypto.getHelper().createAlgorithmParameters("EC");
-        // ECParameterSpec ecSpec = (ECParameterSpec)ecDomain.getParameterSpec(ECParameterSpec.class);
-
-        // java.security.spec.ECPoint dvrfPubPoint = ecGenSpec.decodePoint(data);
         // TODO the RNG seed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
         KeyPair keyPair = kpg.generateKeyPair();
         ECPublicKey pubKey = (ECPublicKey) keyPair.getPublic();
         System.out.println(pubKey);
-
-        // java.security.spec.ECPoint jPoint = ECUtil.convertPoint(dvrfPubPoint);
-        // ECPublicKey cardPubKey = (ECPublicKey) keyFact.generatePublic(new ECPublicKeySpec(jPoint, ecGenSpec));
 
         KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
         ecdh.init(keyPair.getPrivate());
@@ -330,35 +273,19 @@ public class AppletTest extends BaseTest {
         // Need to consider also the uncompressing inside the card.
         byte[] encodedPubKey = bcPubSpec.getQ().getEncoded(false);
 
-        // ECPublicKey dvrfPubKey = (ECPublicKey) keyFact.generatePublic(dvrfPubSpec);
-
-        // BigInteger k = new BigInteger(ecdh.generateSecret());
-
-
-
         byte[] sharedSecret = ecdh.generateSecret();
         MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
         byte[] derivedKey = sha1.digest(sharedSecret);
-        // byte[] ecdhKey = byte[20];
 
         byte[] ecdhKey = Arrays.copyOf(derivedKey, 20);
-
-        // keyPairGenerator.initialize(ecSpec, new SecureRandom());
-        // ECParameterSpec ecParamsSpec = ECUtil.getECParameterSpec(, "P-256");
 
         byte nonceByteSize = 12;
         byte[] nonce = new byte[nonceByteSize];
         prng.nextBytes(nonce);
 
-        // KeyParameter aeadKey = new KeyParameter(ecdhKey, 0, 16);
         KeyParameter aeadKey = new KeyParameter(ecdhKey, 0, 16);
         short macSizeBits = 128;
         AEADParameters params = new AEADParameters(aeadKey, macSizeBits, nonce);
-        System.out.println("Nonce: ");
-        printBuffer(params.getNonce(), (short) nonceByteSize);
-
-
-        System.out.println(params.getMacSize());
         AEADCipher cipher = new GCMBlockCipher(new AESEngine());
 
         boolean forEncryption = true;
@@ -381,8 +308,6 @@ public class AppletTest extends BaseTest {
 
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, 0x00, aeadPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
-
-        System.out.println(String.format("Plaintext: \"%s\"", new String(responseAPDU.getData(), "UTF-8")));
 
         Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
     }

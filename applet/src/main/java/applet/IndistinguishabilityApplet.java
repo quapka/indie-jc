@@ -318,32 +318,18 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     private void authenticatedEncryption(APDU apdu) {
-        // establish ECDH shared secret
         byte[] apduBuffer = apdu.getBuffer();
 
         KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
         // // FIXME use dedicated key-identity card?
         ecdh.init(privDVRFKey);
         ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
-        // // set the user's ephemeral public key
-        // ecdh.generateSecret(apduBuffer, ISO7816.OFFSET_CDATA, (short) (1 + 32 + 32), tmp, (short) 0);
-        // for (short i = 0; i < 128; i++) {
-        //     tmp[i] = 0;
-        // }
         aeadSecretKey.setKey(tmp, (short) 0);
-        System.out.println(aeadSecretKey.isInitialized());
-
-        // AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.CIPHER_AES_GCM, Cipher.PAD_NULL, false);
         AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
-        System.out.println(String.format("P1: %d", p1));
-        System.out.println("1 ");
         try {
-            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, apduBuffer, (short) (1 + 32 + 32), (short) 16);
-            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 16);
             aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
-            // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
@@ -359,14 +345,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
             }
         }
-
-
-        // short plaintextLen = aead.doFinal(apduBuffer, (short) (1 + 32 + 32 + 16), (short) 32, tmp, (short) 0);
-        // System.out.print("apduBuffer: ");
-        // for (short i = ISO7816.OFFSET_CDATA + 65; i < p1 + 12; i++) {
-        //     System.out.print(String.format("%02x", apduBuffer[i]));
-        // }
-        // System.out.println();
 
         short plaintextLen = 0;
         try {
@@ -386,7 +364,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
             }
         }
-
 
 		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, plaintextLen);
 		apdu.setOutgoingAndSend((short) 0, plaintextLen);
