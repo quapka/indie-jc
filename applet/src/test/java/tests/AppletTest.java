@@ -303,7 +303,7 @@ public class AppletTest extends BaseTest {
         // Hex.decode(data);
         // ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
         // Decode point directly, as in https://bitcoin.stackexchange.com/a/72425?
-        ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(Hex.decode("042b495a9b4142dc317624626ad108d4896c12a97af1a1372e9a7b0f29adcaeb49dee377c97fbb17b61480e857f5ce72408488e2763619159d032d3be091266dd6")), namedSpec);
+        ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
         ECPublicKey dvrfPubKey = (ECPublicKey) keyFact.generatePublic(dvrfPubSpec);
         System.out.println(dvrfPubKey);
 
