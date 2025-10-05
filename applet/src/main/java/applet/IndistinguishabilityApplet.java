@@ -430,12 +430,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
      */
     private void generateDVRFKeypair(APDU apdu) {
 
-        ECPrivateKey privDVRFKey = (ECPrivateKey) KeyBuilder.buildKey(
+        privDVRFKey = (ECPrivateKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PRIVATE,
             KeyBuilder.LENGTH_EC_FP_256,
             false
         );
-        ECPublicKey pubDVRFKey = (ECPublicKey) KeyBuilder.buildKey(
+        pubDVRFKey = (ECPublicKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PUBLIC,
             KeyBuilder.LENGTH_EC_FP_256,
             false
