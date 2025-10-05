@@ -6,9 +6,16 @@ import javacard.framework.*;
 import javacardx.framework.util.*;
 import javacardx.crypto.*;
 import javacardx.crypto.Cipher;
-// import javacard.framework.util.ArrayLogic;
 import javacardx.apdu.ExtendedLength;
-import javacard.security.*;
+import javacard.security.KeyBuilder;
+import javacard.security.KeyPair;
+import javacard.security.Signature;
+import javacard.security.KeyBuilder;
+import javacard.security.ECPublicKey;
+import javacard.security.ECPrivateKey;
+import javacard.security.MessageDigest;
+import javacard.security.KeyAgreement;
+import javacard.security.AESKey;
 import javacard.security.CryptoException;
 
 import applet.Base64UrlSafeDecoder.*;
