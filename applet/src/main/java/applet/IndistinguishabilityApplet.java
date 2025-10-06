@@ -50,6 +50,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static byte threshold;
     // TODO AESKey or only Key
     private static AESKey aeadSecretKey;
+    private static AEADCipher aead;
 
 	private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
@@ -264,6 +265,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
+        aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
 
         // change to TYPE_AES_TRANSIENT_RESET
         aeadSecretKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
@@ -302,7 +304,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         aeadSecretKey.setKey(tmp, (short) 0);
 
-        Cipher aead =  (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
         aead.init(aeadSecretKey, Cipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
         byte[] msgBytes = {'t', 'h', 'i', 's', ' ' , 'i', 's', ' ', 'm', 'y', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e'};
         byte[] ctxtBuff = new byte[128];
@@ -326,7 +327,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         ecdh.init(privDVRFKey);
         ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
         aeadSecretKey.setKey(tmp, (short) 0);
-        Cipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
         try {
