@@ -1,11 +1,12 @@
 package applet;
 
-import java.util.*;
-
-import javacard.framework.*;
-import javacardx.framework.util.*;
-import javacardx.crypto.*;
+import javacard.framework.Util;
+import javacard.framework.ISO7816;
+import javacard.framework.ISOException;
+import javacard.framework.APDU;
+import javacard.framework.Applet;
 import javacardx.crypto.Cipher;
+import javacardx.crypto.AEADCipher;
 import javacardx.apdu.ExtendedLength;
 import javacard.security.KeyBuilder;
 import javacard.security.KeyPair;
@@ -18,12 +19,10 @@ import javacard.security.KeyAgreement;
 import javacard.security.AESKey;
 import javacard.security.CryptoException;
 
-import applet.Base64UrlSafeDecoder.*;
-import applet.DiscreteLogEquality.*;
 import applet.Consts;
 
-import applet.jcmathlib;
-import applet.jcmathlib.*;
+import applet.jcmathlib.OperationSupport;
+import applet.jcmathlib.ResourceManager;
 
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {

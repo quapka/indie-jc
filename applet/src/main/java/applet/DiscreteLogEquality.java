@@ -1,13 +1,20 @@
 package applet;
 
 // Source: https://github.com/OpenCryptoProject/JCMathLib
-import applet.jcmathlib.*;
+import applet.jcmathlib.BigNat;
+import applet.jcmathlib.SecP256r1;
+import applet.jcmathlib.ECPoint;
+import applet.jcmathlib.ECCurve;
 
-import javacard.framework.*;
-import javacard.security.*;
-import javacardx.framework.util.*;
+import javacard.framework.Util;
+import javacard.framework.JCSystem;
+import javacard.framework.ISO7816;
+import javacard.framework.ISOException;
+import javacard.security.ECPublicKey;
+import javacard.security.ECPrivateKey;
+import javacard.security.RandomData;
+import javacard.security.MessageDigest;
 
-// import static applet.IndistinguishabilityApplet;
 
 public class DiscreteLogEquality {
     public static ECCurve curve;
