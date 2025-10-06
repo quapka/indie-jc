@@ -222,7 +222,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     dleq.calculateModMult();
                     break;
                 case Consts.INS.AEAD_DECRYPT:
-                    authenticatedEncryption(apdu);
+                    aesCtrDecryption(apdu);
                     break;
             }
         } else if ( cla == Consts.CLA.INDIE ) {
@@ -296,7 +296,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) 2);
     }
 
-    private void authenticatedEncryption(APDU apdu) {
+    private void aesCtrDecryption(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
 
         KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);

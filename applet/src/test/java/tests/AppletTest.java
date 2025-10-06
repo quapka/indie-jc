@@ -239,7 +239,7 @@ public class AppletTest extends BaseTest {
         System.out.println();
     }
     @Test
-    public void testAuthenticatedDecrytion() throws Exception {
+    public void testAesCtrDecryption() throws Exception {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
         byte[] data = responseAPDU.getData();
