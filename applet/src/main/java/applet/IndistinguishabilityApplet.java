@@ -301,18 +301,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             tmp[i] = 0;
         }
         aeadSecretKey.setKey(tmp, (short) 0);
-        // System.out.println(aeadSecretKey.isInitialized());
 
-        // Cipher aead = (Cipher) Cipher.getInstance(Cipher.CIPHER_AES_GCM, Cipher.PAD_NULL, false);
         Cipher aead =  (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
-        // aead.init(aeadSecretKey, Cipher.MODE_ENCRYPT);
         aead.init(aeadSecretKey, Cipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
         byte[] msgBytes = {'t', 'h', 'i', 's', ' ' , 'i', 's', ' ', 'm', 'y', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e'};
         byte[] ctxtBuff = new byte[128];
         short ctxtLen = aead.doFinal(msgBytes, (short) 0, (short) msgBytes.length, ctxtBuff, (short) 0);
 
-        // aead.init(aeadSecretKey, Cipher.MODE_DECRYPT);
-        // aead.init(aeadSecretKey, Cipher.MODE_DECRYPT);
         aead.init(aeadSecretKey, Cipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
         short ptxtLen = aead.doFinal(ctxtBuff, (short) 0, ctxtLen, tmp, (short) 0);
 
