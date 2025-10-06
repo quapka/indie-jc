@@ -44,7 +44,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.AEADParameters;
 // import org.bouncycastle.crypto.params.*;
 import org.bouncycastle.crypto.engines.*;
-// import org.bouncycastle.crypto.modes.AEADCipher;
+import org.bouncycastle.crypto.modes.AEADCipher;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.math.BigInteger;
 

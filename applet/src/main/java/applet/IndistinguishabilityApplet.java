@@ -303,17 +303,17 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         aeadSecretKey.setKey(tmp, (short) 0);
         // System.out.println(aeadSecretKey.isInitialized());
 
-        // AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.CIPHER_AES_GCM, Cipher.PAD_NULL, false);
-        AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
-        // aead.init(aeadSecretKey, AEADCipher.MODE_ENCRYPT);
-        aead.init(aeadSecretKey, AEADCipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
+        // Cipher aead = (Cipher) Cipher.getInstance(Cipher.CIPHER_AES_GCM, Cipher.PAD_NULL, false);
+        Cipher aead =  (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
+        // aead.init(aeadSecretKey, Cipher.MODE_ENCRYPT);
+        aead.init(aeadSecretKey, Cipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
         byte[] msgBytes = {'t', 'h', 'i', 's', ' ' , 'i', 's', ' ', 'm', 'y', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e'};
         byte[] ctxtBuff = new byte[128];
         short ctxtLen = aead.doFinal(msgBytes, (short) 0, (short) msgBytes.length, ctxtBuff, (short) 0);
 
-        // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
-        // aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT);
-        aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
+        // aead.init(aeadSecretKey, Cipher.MODE_DECRYPT);
+        // aead.init(aeadSecretKey, Cipher.MODE_DECRYPT);
+        aead.init(aeadSecretKey, Cipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
         short ptxtLen = aead.doFinal(ctxtBuff, (short) 0, ctxtLen, tmp, (short) 0);
 
         System.out.println("Inside card plaintext: ");
@@ -331,11 +331,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         ecdh.init(privDVRFKey);
         ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
         aeadSecretKey.setKey(tmp, (short) 0);
-        AEADCipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
+        Cipher aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
         try {
-            aead.init(aeadSecretKey, AEADCipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
+            aead.init(aeadSecretKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
