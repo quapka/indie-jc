@@ -249,13 +249,7 @@ public class AppletTest extends BaseTest {
 
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
         KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
-        // ECPublicKeyParameters ecPubKeyParams = ((ECPublicKeyParameters) keyPair.getPublic()).getParameters();
-        // CustomNamedCurves.getByName("secP256r1");
         ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
-        EllipticCurve ecCurve = new EllipticCurve(
-            new ECFieldFp(namedSpec.getCurve().getField().getCharacteristic()),
-            namedSpec.getCurve().getA().toBigInteger(), namedSpec.getCurve().getB().toBigInteger()
-        );
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
         ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
         ECPublicKey dvrfPubKey = (ECPublicKey) keyFact.generatePublic(dvrfPubSpec);
