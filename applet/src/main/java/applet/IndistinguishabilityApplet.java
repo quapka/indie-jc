@@ -222,7 +222,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     dleq.calculateModMult();
                     break;
                 case Consts.INS.AEAD_DECRYPT:
-                    // aeadEncryption();
                     authenticatedEncryption(apdu);
                     break;
             }
@@ -295,28 +294,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apduBuffer[1] = threshold;
 
         apdu.setOutgoingAndSend((short) 0, (short) 2);
-    }
-
-    // AEAD is mostly unsupported by available the JavaCards
-    private void aeadEncryption() {
-        for (short i = 0; i < 128; i++) {
-            tmp[i] = 0;
-        }
-        aesCtrKey.setKey(tmp, (short) 0);
-
-        aesCtr.init(aesCtrKey, Cipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
-        byte[] msgBytes = {'t', 'h', 'i', 's', ' ' , 'i', 's', ' ', 'm', 'y', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e'};
-        byte[] ctxtBuff = new byte[128];
-        short ctxtLen = aesCtr.doFinal(msgBytes, (short) 0, (short) msgBytes.length, ctxtBuff, (short) 0);
-
-        aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
-        short ptxtLen = aesCtr.doFinal(ctxtBuff, (short) 0, ctxtLen, tmp, (short) 0);
-
-        System.out.println("Inside card plaintext: ");
-        for (short i = 0; i < ptxtLen; i++ ) {
-            System.out.print(String.format("%c", tmp[i]));
-        }
-        System.out.println();
     }
 
     private void authenticatedEncryption(APDU apdu) {
