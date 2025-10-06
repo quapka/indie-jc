@@ -12,6 +12,7 @@ import applet.jcmathlib.*;
 
 import javax.crypto.KeyAgreement;
 // import java.security.*;
+import javax.crypto.Cipher;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -42,9 +43,11 @@ import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.AEADParameters;
-// import org.bouncycastle.crypto.params.*;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.crypto.engines.*;
 import org.bouncycastle.crypto.modes.AEADCipher;
+import org.bouncycastle.crypto.modes.CTRModeCipher;
+import org.bouncycastle.crypto.modes.SICBlockCipher;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.math.BigInteger;
 
@@ -283,10 +286,10 @@ public class AppletTest extends BaseTest {
         byte[] nonce = new byte[nonceByteSize];
         prng.nextBytes(nonce);
 
-        KeyParameter aeadKey = new KeyParameter(ecdhKey, 0, 16);
+        KeyParameter ctrKey = new KeyParameter(ecdhKey, 0, 16);
         short macSizeBits = 128;
-        AEADParameters params = new AEADParameters(aeadKey, macSizeBits, nonce);
-        AEADCipher cipher = new GCMBlockCipher(new AESEngine());
+        CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
+        ParametersWithIV params = new ParametersWithIV(ctrKey, nonce);
 
         boolean forEncryption = true;
         cipher.init(forEncryption, params);
@@ -296,17 +299,16 @@ public class AppletTest extends BaseTest {
         byte[] msgBytes = message.getBytes();
 
         int ctxtLen = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
-        ctxtLen += cipher.doFinal(ctxtBuff, ctxtLen);
         System.out.println("Calculated ciphertext.");
         printBuffer(ctxtBuff, (short) ctxtLen);
 
-        byte[] aeadPayload = new byte [65 + nonceByteSize + ctxtLen];
+        byte[] encPayload = new byte [65 + nonceByteSize + ctxtLen];
         System.out.println(String.format("encodedPubKey length: %d", encodedPubKey.length));
-        System.arraycopy(encodedPubKey, 0, aeadPayload, 0, encodedPubKey.length);
-        System.arraycopy(nonce, 0, aeadPayload, encodedPubKey.length, nonceByteSize);
-        System.arraycopy(ctxtBuff, 0, aeadPayload, nonceByteSize + encodedPubKey.length, ctxtLen);
+        System.arraycopy(encodedPubKey, 0, encPayload, 0, encodedPubKey.length);
+        System.arraycopy(nonce, 0, encPayload, encodedPubKey.length, nonceByteSize);
+        System.arraycopy(ctxtBuff, 0, encPayload, nonceByteSize + encodedPubKey.length, ctxtLen);
 
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, 0x00, aeadPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, 0x00, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
 
         Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));

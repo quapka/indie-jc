@@ -6,7 +6,6 @@ import javacard.framework.ISOException;
 import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacardx.crypto.Cipher;
-import javacardx.crypto.AEADCipher;
 import javacardx.apdu.ExtendedLength;
 import javacard.security.KeyBuilder;
 import javacard.security.KeyPair;
@@ -49,8 +48,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static byte nParties;
     public static byte threshold;
     // TODO AESKey or only Key
-    private static AESKey aeadSecretKey;
-    private static AEADCipher aead;
+    private static AESKey aesCtrKey;
+    private static Cipher aesCtr;
 
 	private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
@@ -265,10 +264,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
-        aead = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM, false);
+        aesCtr = Cipher.getInstance(Cipher.ALG_AES_CTR, false);
 
         // change to TYPE_AES_TRANSIENT_RESET
-        aeadSecretKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
+        aesCtrKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
 
 
         // TODO Use the following init instead?
@@ -298,19 +297,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) 2);
     }
 
+    // AEAD is mostly unsupported by available the JavaCards
     private void aeadEncryption() {
         for (short i = 0; i < 128; i++) {
             tmp[i] = 0;
         }
-        aeadSecretKey.setKey(tmp, (short) 0);
+        aesCtrKey.setKey(tmp, (short) 0);
 
-        aead.init(aeadSecretKey, Cipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
+        aesCtr.init(aesCtrKey, Cipher.MODE_ENCRYPT, tmp, (short) 0, (short) 12);
         byte[] msgBytes = {'t', 'h', 'i', 's', ' ' , 'i', 's', ' ', 'm', 'y', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e'};
         byte[] ctxtBuff = new byte[128];
-        short ctxtLen = aead.doFinal(msgBytes, (short) 0, (short) msgBytes.length, ctxtBuff, (short) 0);
+        short ctxtLen = aesCtr.doFinal(msgBytes, (short) 0, (short) msgBytes.length, ctxtBuff, (short) 0);
 
-        aead.init(aeadSecretKey, Cipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
-        short ptxtLen = aead.doFinal(ctxtBuff, (short) 0, ctxtLen, tmp, (short) 0);
+        aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, tmp, (short) 0, (short) 12);
+        short ptxtLen = aesCtr.doFinal(ctxtBuff, (short) 0, ctxtLen, tmp, (short) 0);
 
         System.out.println("Inside card plaintext: ");
         for (short i = 0; i < ptxtLen; i++ ) {
@@ -326,11 +326,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // // FIXME use dedicated key-identity card?
         ecdh.init(privDVRFKey);
         ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
-        aeadSecretKey.setKey(tmp, (short) 0);
+        aesCtrKey.setKey(tmp, (short) 0);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
         try {
-            aead.init(aeadSecretKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
+            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
@@ -349,7 +349,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short plaintextLen = 0;
         try {
-            plaintextLen = aead.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + 12 + 65), (short) p1 , tmp, (short) 0);
+            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + 12 + 65), (short) p1 , tmp, (short) 0);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
