@@ -25,7 +25,7 @@ public class DiscreteLogEquality {
     public static BigNat aBN, bBN;
     private byte[] tmp = new byte[128];
     public boolean initialized = false;
-    public static RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+    private RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
         'D', 'i', 's', 'c', 'r', 'e', 't', 'e', ' ',
         'l', 'o', 'g', ' ',
