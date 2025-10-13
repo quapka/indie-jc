@@ -18,6 +18,7 @@ public class Consts {
         public static final byte BAD = (byte) 0x99;
         public static final byte COMPUTE_MOD_MULT = (byte) 0xaa;
         public static final byte AEAD_DECRYPT = (byte) 0x04;
+        public static final byte VERIFY_COMMITMENT = (byte) 0x05;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {

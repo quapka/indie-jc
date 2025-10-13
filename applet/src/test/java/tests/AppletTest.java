@@ -308,4 +308,67 @@ public class AppletTest extends BaseTest {
 
         Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
     }
+
+    public byte[] nonceZkLogin() throws Exception {
+        byte[] seed = new byte[32];
+        SecureRandom prng = new SecureRandom(seed);
+
+        MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+        // Source: https://arxiv.org/pdf/2401.11735 page 8
+        // nonce ← 𝐻 (𝑣𝑘𝑢, T_max, 𝑟)
+        byte[] ephemeralPubKey = new byte[32];
+        byte[] timeMax = new byte[32];
+        byte[] random = new byte[32];
+
+        prng.nextBytes(ephemeralPubKey);
+        prng.nextBytes(timeMax); // User random value for the T_max time
+        prng.nextBytes(random);
+
+        hasher.update(ephemeralPubKey);
+        hasher.update(timeMax);
+        hasher.update(random);
+
+        return hasher.digest();
+    }
+
+    @Test
+    public void testVerifyCommitment() throws Exception {
+        // Generate ephemeral public
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
+        ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
+        kpg.initialize(ecGenSpec, new SecureRandom());
+        KeyPair keyPair = kpg.generateKeyPair();
+        ECPublicKey pubKey = (ECPublicKey) keyPair.getPublic();
+
+        // TODO does sending compressed point speed up the operations?
+        // Need to consider also the uncompressing inside the card.
+        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        ECPublicKeySpec pubSpec = keyFact.getKeySpec(pubKey, ECPublicKeySpec.class);
+        boolean compressed = false;
+        byte[] encodedPubKey = pubSpec.getQ().getEncoded(compressed);
+
+        MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+
+        byte[] zkNonce = nonceZkLogin();
+        hasher.update(zkNonce);
+        hasher.update(encodedPubKey);
+        byte[] merkleeTree = hasher.digest();
+
+        short compressedKeySize = 65;z
+        byte[] payload = new byte [zkNonce.length + encodedPubKey.length + merkleeTree.length];
+        printBuffer(payload, (short) payload.length);
+
+        // System.out.println(String.format("encodedPubKey length: %d", encodedPubKey.length));
+        System.arraycopy(zkNonce, 0, payload, 0, zkNonce.length);
+        System.arraycopy(encodedPubKey, 0, payload, zkNonce.length, encodedPubKey.length);
+        System.arraycopy(merkleeTree, 0, payload, zkNonce.length + encodedPubKey.length, merkleeTree.length);
+
+        // send zkNonce, merkleeTree, and pubKey and let the card verify it
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_COMMITMENT, zkNonce.length, encodedPubKey.length, payload, 0, payload.length);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+    }
 }

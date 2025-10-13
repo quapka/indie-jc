@@ -224,6 +224,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                 case Consts.INS.AEAD_DECRYPT:
                     aesCtrDecryption(apdu);
                     break;
+                case Consts.INS.VERIFY_COMMITMENT:
+                    verifyCommitment(apdu);
+                    break;
             }
         } else if ( cla == Consts.CLA.INDIE ) {
             switch (ins) {
@@ -345,6 +348,25 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
 		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, plaintextLen);
 		apdu.setOutgoingAndSend((short) 0, plaintextLen);
+    }
+
+    private void verifyCommitment(APDU apdu) {
+		byte[] apduBuffer = apdu.getBuffer();
+        byte zkNonceLength = apduBuffer[ISO7816.OFFSET_P1];
+        byte pubKeyLength = apduBuffer[ISO7816.OFFSET_P2];
+
+        MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
+
+        hasher.update(apduBuffer, (short) ISO7816.OFFSET_CDATA, zkNonceLength);
+        hasher.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + zkNonceLength), pubKeyLength, tmp, (short) 0);
+
+        if (Util.arrayCompare(apduBuffer, (short) (ISO7816.OFFSET_CDATA + zkNonceLength + pubKeyLength), tmp, (short) 0, (short) hasher.getLength()) == 0) {
+            Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Good.length);
+        } else {
+            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
+        }
     }
 
     private void setOIDCPublicKey() {
