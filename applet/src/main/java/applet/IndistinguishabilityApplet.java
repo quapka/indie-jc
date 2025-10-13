@@ -186,7 +186,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public boolean select() {
         if (initialized) {
-            dleq.curve.updateAfterReset();
+            DiscreteLogEquality.curve.updateAfterReset();
         }
         return true;
     }
