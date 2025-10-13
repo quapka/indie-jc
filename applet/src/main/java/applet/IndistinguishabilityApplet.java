@@ -266,7 +266,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
-        aesCtr = Cipher.getInstance(Cipher.ALG_AES_CTR, false);
+        aesCtr = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
 
         // change to TYPE_AES_TRANSIENT_RESET
         aesCtrKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
@@ -309,8 +309,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         aesCtrKey.setKey(tmp, (short) 0);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
+        byte p2  = apduBuffer[ISO7816.OFFSET_P2];
+
+        System.out.println(String.format("P1: %d", p1));
+        System.out.println(String.format("P2: %d", p2));
         try {
-            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
+            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) p2);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
@@ -326,10 +330,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
             }
         }
+        System.out.println("AAAAAAAAAaaaa");
 
         short plaintextLen = 0;
         try {
-            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + 12 + 65), (short) p1 , tmp, (short) 0);
+            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + p2 + 65), (short) p1, tmp, (short) 0);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
