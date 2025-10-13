@@ -268,7 +268,8 @@ public class AppletTest extends BaseTest {
         ECPublicKeySpec bcPubSpec = keyFact.getKeySpec(pubKey, ECPublicKeySpec.class);
         // TODO does sending compressed point speed up the operations?
         // Need to consider also the uncompressing inside the card.
-        byte[] encodedPubKey = bcPubSpec.getQ().getEncoded(false);
+        boolean compressed = false;
+        byte[] encodedPubKey = bcPubSpec.getQ().getEncoded(compressed);
 
         byte[] sharedSecret = ecdh.generateSecret();
         MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
