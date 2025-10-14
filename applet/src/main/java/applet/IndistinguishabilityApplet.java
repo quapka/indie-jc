@@ -345,16 +345,16 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
         aesCtrKey.setKey(tmp, (short) 0);
 
-        byte p1  = apduBuffer[ISO7816.OFFSET_P1];
+        byte ctxLen = apduBuffer[ISO7816.OFFSET_P1];
         byte nonceByteSize = apduBuffer[ISO7816.OFFSET_P2];
 
         aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) nonceByteSize);
 
-        short plaintextLen = 0;
-        plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + nonceByteSize + 65), (short) p1 , tmp, (short) 0);
+        short ptxtLen = 0;
+        ptxtLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + nonceByteSize + 65), (short) ctxLen , tmp, (short) 0);
 
-		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, plaintextLen);
-		apdu.setOutgoingAndSend((short) 0, plaintextLen);
+		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, ptxtLen);
+		apdu.setOutgoingAndSend((short) 0, ptxtLen);
     }
 
     private void verifyCommitment(APDU apdu) {
