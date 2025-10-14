@@ -30,6 +30,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
 
+    // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
+    // Cipher.ALG_AES_CTR not beinf found. The constants are defined in:
+    // https://docs.oracle.com/en/java/javacard/3.2/jcapi/api_classic/constant-values.html#javacardx.crypto.Cipher.ALG_AES_CBC_PKCS5
+    // However, the target card JCOP4 should support this algorithm, thus we
+    // set the constant ourselves, see:
+    // https://github.com/crocs-muni/jcalgtest_results/blob/main/javacard/Profiles/results/NXP_JCOP4_J3R180_SecID_Feitian_ALGSUPPORT__3b_d5_18_ff_81_91_fe_1f_c3_80_73_c8_21_10_0a_(provided_by_PetrS).csv#L81
+    public static final byte Cipher_ALG_AES_CTR = -16;
+
 	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
 	public static final byte[] Good = {'G', 'O', 'O', 'D'};
 	public static final byte[] Bad = {'B', 'A', 'D'};
@@ -266,7 +274,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
-        aesCtr = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
+        aesCtr = Cipher.getInstance(Cipher_ALG_AES_CTR, false);
 
         // change to TYPE_AES_TRANSIENT_RESET
         aesCtrKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
