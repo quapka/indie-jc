@@ -3,6 +3,10 @@ package applet;
 import javacard.framework.Util;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
+import javacard.framework.SystemException;
+import javacard.framework.TransactionException;
+import javacard.framework.CardRuntimeException;
+import javacard.framework.PINException;
 import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacardx.crypto.Cipher;
@@ -218,48 +222,74 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
 
         // FIXME Add try-except instructions
-        if ( cla == Consts.CLA.DEBUG ) {
-            switch (ins) {
-                case Consts.INS.GOOD:
-                    sendGood(apdu);
-                    break;
-                case Consts.INS.BAD:
-                    sendBad(apdu);
-                    break;
-                case Consts.INS.COMPUTE_MOD_MULT:
-                    dleq.calculateModMult();
-                    break;
-                case Consts.INS.AEAD_DECRYPT:
-                    aesCtrDecryption(apdu);
-                    break;
-                case Consts.INS.VERIFY_COMMITMENT:
-                    verifyCommitment(apdu);
-                    break;
+        try {
+            if ( cla == Consts.CLA.DEBUG ) {
+                switch (ins) {
+                    case Consts.INS.GOOD:
+                        sendGood(apdu);
+                        break;
+                    case Consts.INS.BAD:
+                        sendBad(apdu);
+                        break;
+                    case Consts.INS.COMPUTE_MOD_MULT:
+                        dleq.calculateModMult();
+                        break;
+                    case Consts.INS.AEAD_DECRYPT:
+                        aesCtrDecryption(apdu);
+                        break;
+                    case Consts.INS.VERIFY_COMMITMENT:
+                        verifyCommitment(apdu);
+                        break;
+                }
+            } else if ( cla == Consts.CLA.INDIE ) {
+                switch (ins) {
+                    case Consts.INS.SETUP:
+                        setup(apdu);
+                        break;
+                    case Consts.INS.GET_SETUP:
+                        getSetup(apdu);
+                        break;
+                    case Consts.INS.KEY_GEN:
+                        generateDVRFKeypair(apdu);
+                        break;
+                    case Consts.INS.GET_VERIFICATION_PUBKEY:
+                        System.out.println("About to getDerivationPubkey");
+                        getDerivationPubkey(apdu);
+                        break;
+                    case Consts.INS.GET_EXAMPLE_PROOF:
+                        System.out.println("About to computeDleq");
+                        computeDleq(apdu);
+                        break;
+                    default:
+                        break;
+                }
+            } else {
+                ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
             }
-        } else if ( cla == Consts.CLA.INDIE ) {
-            switch (ins) {
-                case Consts.INS.SETUP:
-                    setup(apdu);
-                    break;
-                case Consts.INS.GET_SETUP:
-                    getSetup(apdu);
-                    break;
-                case Consts.INS.KEY_GEN:
-                    generateDVRFKeypair(apdu);
-                    break;
-                case Consts.INS.GET_VERIFICATION_PUBKEY:
-                    System.out.println("About to getDerivationPubkey");
-                    getDerivationPubkey(apdu);
-                    break;
-                case Consts.INS.GET_EXAMPLE_PROOF:
-                    System.out.println("About to computeDleq");
-                    computeDleq(apdu);
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+        } catch (ISOException e) {
+            throw e; // Our exception from code, just re-emit
+        } catch (ArrayIndexOutOfBoundsException e) {
+            ISOException.throwIt(Consts.SW_ArrayIndexOutOfBoundsException);
+        } catch (ArithmeticException e) {
+            ISOException.throwIt(Consts.SW_ArithmeticException);
+        } catch (ArrayStoreException e) {
+            ISOException.throwIt(Consts.SW_ArrayStoreException);
+        } catch (NullPointerException e) {
+            ISOException.throwIt(Consts.SW_NullPointerException);
+        } catch (NegativeArraySizeException e) {
+            ISOException.throwIt(Consts.SW_NegativeArraySizeException);
+        } catch (CryptoException e) {
+            ISOException.throwIt((short) (Consts.SW_CryptoException_prefix | e.getReason()));
+        } catch (SystemException e) {
+            ISOException.throwIt((short) (Consts.SW_SystemException_prefix | e.getReason()));
+        } catch (PINException e) {
+            ISOException.throwIt((short) (Consts.SW_PINException_prefix | e.getReason()));
+        } catch (TransactionException e) {
+            ISOException.throwIt((short) (Consts.SW_TransactionException_prefix | e.getReason()));
+        } catch (CardRuntimeException e) {
+            ISOException.throwIt((short) (Consts.SW_CardRuntimeException_prefix | e.getReason()));
+        } catch (Exception e) {
+            ISOException.throwIt(Consts.SW_Exception);
         }
 
 	}
@@ -318,42 +348,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
         byte nonceByteSize = apduBuffer[ISO7816.OFFSET_P2];
 
-        try {
-            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) nonceByteSize);
-        } catch ( CryptoException e ) {
-            switch ( e.getReason() ) {
-                case CryptoException.INVALID_INIT:
-                    ISOException.throwIt(Consts.ERR.AEAD_INVALID_INIT);
-                    break;
-                case CryptoException.UNINITIALIZED_KEY:
-                    ISOException.throwIt(Consts.ERR.AEAD_UNINITIALIZED_KEY);
-                    break;
-                case CryptoException.ILLEGAL_USE:
-                    ISOException.throwIt(Consts.ERR.AEAD_ILLEGAL_USE);
-                    break;
-                default:
-                    ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
-            }
-        }
+        aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) nonceByteSize);
 
         short plaintextLen = 0;
-        try {
-            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + nonceByteSize + 65), (short) p1 , tmp, (short) 0);
-        } catch ( CryptoException e ) {
-            switch ( e.getReason() ) {
-                case CryptoException.INVALID_INIT:
-                    ISOException.throwIt(Consts.ERR.AEAD_INVALID_INIT);
-                    break;
-                case CryptoException.UNINITIALIZED_KEY:
-                    ISOException.throwIt(Consts.ERR.AEAD_UNINITIALIZED_KEY);
-                    break;
-                case CryptoException.ILLEGAL_USE:
-                    ISOException.throwIt(Consts.ERR.AEAD_ILLEGAL_USE);
-                    break;
-                default:
-                    ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
-            }
-        }
+        plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + nonceByteSize + 65), (short) p1 , tmp, (short) 0);
 
 		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, plaintextLen);
 		apdu.setOutgoingAndSend((short) 0, plaintextLen);
