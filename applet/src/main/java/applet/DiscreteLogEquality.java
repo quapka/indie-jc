@@ -14,6 +14,7 @@ import javacard.security.ECPublicKey;
 import javacard.security.ECPrivateKey;
 import javacard.security.RandomData;
 import javacard.security.MessageDigest;
+import javacard.framework.APDU;
 
 
 public class DiscreteLogEquality {
@@ -78,7 +79,8 @@ public class DiscreteLogEquality {
         System.out.println();
     }
 
-    public void calculateModMult() {
+    public void calculateModMult(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
         // a.setValue((short) 1);
         rng.generateData(tmp, (short) 0, (short) 32);
         aBN.fromByteArray(tmp, (short) 0, (short) 32);
@@ -92,6 +94,9 @@ public class DiscreteLogEquality {
         printBigNat(curve.rBN);
         aBN.modMult(bBN, curve.rBN);
         printBigNat(aBN);
+        aBN.copyToByteArray(apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, (short) 32);
     }
 
     /**

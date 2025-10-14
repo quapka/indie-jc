@@ -232,7 +232,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         sendBad(apdu);
                         break;
                     case Consts.INS.COMPUTE_MOD_MULT:
-                        dleq.calculateModMult();
+                        dleq.calculateModMult(apdu);
                         break;
                     case Consts.INS.AEAD_DECRYPT:
                         aesCtrDecryption(apdu);
