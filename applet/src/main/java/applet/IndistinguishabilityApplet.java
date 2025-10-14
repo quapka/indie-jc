@@ -275,7 +275,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
         aesCtr = Cipher.getInstance(Cipher_ALG_AES_CTR, false);
-
         // change to TYPE_AES_TRANSIENT_RESET
         aesCtrKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
 
@@ -317,8 +316,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         aesCtrKey.setKey(tmp, (short) 0);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
+        byte nonceByteSize = apduBuffer[ISO7816.OFFSET_P2];
+
         try {
-            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
+            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) nonceByteSize);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
@@ -337,7 +338,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short plaintextLen = 0;
         try {
-            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + 12 + 65), (short) p1 , tmp, (short) 0);
+            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + nonceByteSize + 65), (short) p1 , tmp, (short) 0);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:

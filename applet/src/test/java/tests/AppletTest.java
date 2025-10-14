@@ -277,7 +277,7 @@ public class AppletTest extends BaseTest {
 
         byte[] ecdhKey = Arrays.copyOf(derivedKey, 20);
 
-        byte nonceByteSize = 12;
+        byte nonceByteSize = 16;
         byte[] nonce = new byte[nonceByteSize];
         prng.nextBytes(nonce);
 
@@ -303,7 +303,7 @@ public class AppletTest extends BaseTest {
         System.arraycopy(nonce, 0, encPayload, encodedPubKey.length, nonceByteSize);
         System.arraycopy(ctxtBuff, 0, encPayload, nonceByteSize + encodedPubKey.length, ctxtLen);
 
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, 0x00, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, nonceByteSize, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
 
         Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
@@ -354,7 +354,7 @@ public class AppletTest extends BaseTest {
         hasher.update(encodedPubKey);
         byte[] merkleeTree = hasher.digest();
 
-        short compressedKeySize = 65;z
+        short compressedKeySize = 65;
         byte[] payload = new byte [zkNonce.length + encodedPubKey.length + merkleeTree.length];
         printBuffer(payload, (short) payload.length);
 
