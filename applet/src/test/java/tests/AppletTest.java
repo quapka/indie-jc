@@ -188,6 +188,39 @@ public class AppletTest extends BaseTest {
         Assert.assertEquals(responseAPDU.getData().length, 1 + 32 + 32);
     }
 
+    // FIXME Occasional failure:
+    // AppletTest > testDLEQAgainstGeneratedKey() STANDARD_OUT
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.CardManager:163 | Looking for physical cards...
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.CardManager:268 | Connecting...
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.CardManager:273 | Terminal connected
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.CardManager:275 | Establishing channel...
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.CardManager:277 | Channel established
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.CardManager:262 | Smartcard: Selecting applet...
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.Util:120 | --> [00A404000D01FFFF04050607080901020102] (18 B)
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.Util:130 | <-- 9000
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.Util:133 | Elapsed time 20 ms
+    // DEBUG | 2025-10-14 21:44:20 | [Test worker] client.Util:120 | --> [0002000000] (5 B)
+    // DEBUG | 2025-10-14 21:44:21 | [Test worker] client.Util:127 | <-- 040A7502F80BE6572C71A48939BF44B768C526FB73EBF9AE25E99B81B882EE2A6B3D14C3DDFD7FC2B602B4135BD222EB32942C14B45765986F04DD01CEAB2C86F2 9000 (65 B)
+    // DEBUG | 2025-10-14 21:44:21 | [Test worker] client.Util:133 | Elapsed time 228 ms
+
+    // #
+    // # A fatal error has been detected by the Java Runtime Environment:
+    // #
+    // #  SIGSEGV (0xb) at pc=0x00007fffb8145970, pid=476611, tid=0x00007fffb9d396c0
+    // #
+    // # JRE version: OpenJDK Runtime Environment (8.0_442) (build 1.8.0_442-06)
+    // # Java VM: OpenJDK 64-Bit Server VM (25.442-b06 mixed mode linux-amd64 compressed oops)
+    // # Problematic frame:
+    // # C  0x00007fffb8145970
+    // #
+    // # Core dump written. Default location: /home/qup/projects/indie-jc/applet/core or core.476611
+    // #
+    // # An error report file with more information is saved as:
+    // # /home/qup/projects/indie-jc/applet/hs_err_pid476611.log
+    // #
+    // # If you would like to submit a bug report, please visit:
+    // #   http://bugreport.java.com/bugreport/crash.jsp
+    // #
     @Test
     public void testDLEQAgainstGeneratedKey() throws Exception {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
