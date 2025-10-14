@@ -317,12 +317,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         aesCtrKey.setKey(tmp, (short) 0);
 
         byte p1  = apduBuffer[ISO7816.OFFSET_P1];
-        byte p2  = apduBuffer[ISO7816.OFFSET_P2];
-
-        System.out.println(String.format("P1: %d", p1));
-        System.out.println(String.format("P2: %d", p2));
         try {
-            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) p2);
+            aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) 12);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:
@@ -338,11 +334,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     ISOException.throwIt(Consts.ERR.SW_EXCEPTION);
             }
         }
-        System.out.println("AAAAAAAAAaaaa");
 
         short plaintextLen = 0;
         try {
-            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + p2 + 65), (short) p1, tmp, (short) 0);
+            plaintextLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + 12 + 65), (short) p1 , tmp, (short) 0);
         } catch ( CryptoException e ) {
             switch ( e.getReason() ) {
                 case CryptoException.INVALID_INIT:

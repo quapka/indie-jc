@@ -46,8 +46,8 @@ import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.crypto.engines.*;
 import org.bouncycastle.crypto.modes.AEADCipher;
-import org.bouncycastle.crypto.modes.CBCModeCipher;
-import org.bouncycastle.crypto.modes.CBCBlockCipher;
+import org.bouncycastle.crypto.modes.CTRModeCipher;
+import org.bouncycastle.crypto.modes.SICBlockCipher;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.math.BigInteger;
 
@@ -277,39 +277,34 @@ public class AppletTest extends BaseTest {
 
         byte[] ecdhKey = Arrays.copyOf(derivedKey, 20);
 
-        byte nonceByteSize = 16;
+        byte nonceByteSize = 12;
         byte[] nonce = new byte[nonceByteSize];
         prng.nextBytes(nonce);
 
         KeyParameter ctrKey = new KeyParameter(ecdhKey, 0, 16);
         short macSizeBits = 128;
-        CBCBlockCipher cipher = new CBCBlockCipher(new AESEngine());
+        CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
         ParametersWithIV params = new ParametersWithIV(ctrKey, nonce);
 
         boolean forEncryption = true;
         cipher.init(forEncryption, params);
         byte[] ctxtBuff = new byte[256];
 
-        // String message = "this is my messa";
-        // byte[] msgBytes = message.getBytes();
-        byte[] msgBytes = new byte[16];
+        String message = "this is my message";
+        byte[] msgBytes = message.getBytes();
 
-        int ctxtLen = cipher.processBlock(msgBytes, 0, ctxtBuff, 0);
-        System.out.println(String.format("Calculated ciphertext of length: %d", ctxtLen));
+        int ctxtLen = cipher.processBytes(msgBytes, 0, msgBytes.length, ctxtBuff, 0);
+        System.out.println("Calculated ciphertext.");
         printBuffer(ctxtBuff, (short) ctxtLen);
 
         byte[] encPayload = new byte [65 + nonceByteSize + ctxtLen];
-
         System.out.println(String.format("encodedPubKey length: %d", encodedPubKey.length));
-
         System.arraycopy(encodedPubKey, 0, encPayload, 0, encodedPubKey.length);
         System.arraycopy(nonce, 0, encPayload, encodedPubKey.length, nonceByteSize);
         System.arraycopy(ctxtBuff, 0, encPayload, nonceByteSize + encodedPubKey.length, ctxtLen);
 
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, (byte) nonceByteSize, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, 0x00, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
-        System.out.println("response");
-        printBuffer(responseAPDU.getData(), (short) responseAPDU.getData().length);
 
         Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
     }
@@ -359,7 +354,7 @@ public class AppletTest extends BaseTest {
         hasher.update(encodedPubKey);
         byte[] merkleeTree = hasher.digest();
 
-        short compressedKeySize = 65;
+        short compressedKeySize = 65;z
         byte[] payload = new byte [zkNonce.length + encodedPubKey.length + merkleeTree.length];
         printBuffer(payload, (short) payload.length);
 
