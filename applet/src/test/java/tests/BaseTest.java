@@ -11,6 +11,9 @@ import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 import java.util.ArrayList;
 
+import applet.IndistinguishabilityApplet;
+import applet.jcmathlib;
+
 /**
  * Base Test class.
  * Note: If simulator cannot be started try adding "-noverify" JVM parameter
@@ -28,7 +31,12 @@ public class BaseTest {
     protected CardManager statefulCard = null;
 
     public BaseTest() {
-
+        if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
+            setCardType(CardType.JCARDSIMLOCAL);
+            setSimulateStateful(true); // NOTE this is needed for the AppletTest.testAesCtrDecryption test
+        } else {
+             setCardType(CardType.PHYSICAL);
+        }
     }
 
     /**

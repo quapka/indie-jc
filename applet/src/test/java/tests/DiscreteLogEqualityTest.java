@@ -42,8 +42,8 @@ public class DiscreteLogEqualityTest extends BaseTest {
     public static short CURVE_K = SecP256r1.k;
 
     public DiscreteLogEqualityTest() throws Exception {
-        // Change card type here if you want to use physical card
-        // setCardType(CardType.JCARDSIMLOCAL);
+        super();
+
         curve = new ECCurve.Fp(new BigInteger(1, CURVE_P), new BigInteger(1, CURVE_A), new BigInteger(1, CURVE_B));
         BigInteger x = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1, CURVE_G.length / 2 + 1));
         BigInteger y = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1 + CURVE_G.length / 2, CURVE_G.length));
