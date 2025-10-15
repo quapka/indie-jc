@@ -27,6 +27,7 @@ import applet.Consts;
 import applet.jcmathlib.OperationSupport;
 import applet.jcmathlib.ResourceManager;
 
+// FIXME change all (short) 0 to ZERO final 0x00 byte value?
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
     public final static short CARD_TYPE = OperationSupport.SIMULATOR;
@@ -631,6 +632,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // 
     }
 
+    // FIXME do not duplicate the curve values to what is already in JCMathLib
     public static class SecP256r1 {
         public final static byte[] p = {
             (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
