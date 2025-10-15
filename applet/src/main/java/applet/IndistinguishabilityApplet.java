@@ -749,10 +749,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         return -1;
     }
 
-    public byte derEncodeRawEcdsaSignature(byte[] signature, byte[] encoded) {
+    public byte derEncodeRawEcdsaSignature(byte[] signature, byte[] out) {
         // SEQUENCE
         byte index = 0;
-        derSignature[index++] = 0x30;
+        out[index++] = 0x30;
         // NOTE assuming P256
         short rLen = 32;
         short sLen = 32;
@@ -775,27 +775,27 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // short wholeLen = sequenceLen;
         // wholeLen += (short) 1;
 
-        derSignature[index++] = (byte) sequenceLen;
-        derSignature[index++] = (byte) 0x02;
-        derSignature[index++] = (byte) rLen;
+        out[index++] = (byte) sequenceLen;
+        out[index++] = (byte) 0x02;
+        out[index++] = (byte) rLen;
 
         if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
-            derSignature[index++] = (byte) 0x00;
+            out[index++] = (byte) 0x00;
         }
 
         // copy r value
-        Util.arrayCopyNonAtomic(signature, (short) 0, derSignature, index, (short) 32);
+        Util.arrayCopyNonAtomic(signature, (short) 0, out, index, (short) 32);
         index += 32;
 
-        derSignature[index++] = (byte) 0x02;
-        derSignature[index++] = (byte) sLen;
+        out[index++] = (byte) 0x02;
+        out[index++] = (byte) sLen;
         
         if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
-            derSignature[index++] = (byte) 0x00;
+            out[index++] = (byte) 0x00;
         }
 
         // copy s value
-        Util.arrayCopyNonAtomic(signature, (short) 32, derSignature, index, (short) 32);
+        Util.arrayCopyNonAtomic(signature, (short) 32, out, index, (short) 32);
         index += 32;
         return index;
     }
