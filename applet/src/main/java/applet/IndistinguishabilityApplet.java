@@ -248,6 +248,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.DERIVE_SALT:
                         deriveSalt(apdu);
                         break;
+                    case Consts.INS.DECODE_JWT:
+                        decodeJwtBody(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -698,26 +701,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private static final byte PADDING = '=';
 
-    public void findValue(APDU apdu) {
+    public void decodeJwtBody(APDU apdu) {
 		byte[] buffer = loadApdu(apdu);
-		byte[] apduBuffer = apdu.getBuffer();
 
         short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
-        System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
-        System.out.println(String.format("secondDot: %d", secondDot));
 
         short nDecoded = 0;
         nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (firstDot + 1),
             (short) (secondDot - (firstDot + 1)),
-            procBuffer,
+            buffer,
             (short) 0
         );
 
-        short fieldLength = getValueFor(procBuffer, (short) 0, nDecoded, AUD_FIELD_NAME, apduBuffer, (short) 0);
-        apdu.setOutgoingAndSend((short) 0, fieldLength);
+        apdu.setOutgoingAndSend((short) 0, nDecoded);
     }
 
     public void deriveSalt(APDU apdu) {

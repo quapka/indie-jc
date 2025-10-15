@@ -134,31 +134,49 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testDecodeBase64UrlSafe() throws Exception {
-        // String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
-        String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
+        SignatureAlgorithm alg = Jwts.SIG.ES256;
+        KeyPair pair = alg.keyPair().build();
 
-        byte[] byteToken = token.getBytes();
-        // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
-        // byte[] data = {'d', 'a', 't', 'a'};
-        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, 0x02, 0x00, 0, byteToken);
+        String token = createToken(pair, alg);
+
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DECODE_JWT, 0x00, 0, token.getBytes());
         ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        String payload = createTokenPayload();
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        // FIXME there is a buggy behaviour in the decoding routine. Currently,
+        // the payload is of expected length, but if byte is added/removed, the decoded
+        // data are off by one (maybe two bytes) at the end. Some unexpected null bytes
+        // are added during the decoding
+        Assert.assertEquals(payload.getBytes().length, responseAPDU.getData().length);
     }
 
-    private String createToken(KeyPair pair, SignatureAlgorithm alg) {
-        byte[] nonce = new byte[16];
-        // NOTE create payload programmatically?
+    private String createTokenPayload() {
+        return createTokenPayload(new byte[16]);
+    }
+
+    private String createTokenPayload(byte[] nonce) {
         String payload = "{";
-        payload += "\"iss\": \"https://example.com\",";
+        payload += "\"iss\":\"https://aexample.com\",";
         payload += "\"aud\":[\"zkLogin\"],";
         payload += "\"name\":\"Firstname Lastname\",";
         payload += "\"nonce\":\"" + Hex.toHexString(nonce) + "\",";
-        payload += "\"iat\": 1745773527,";
-        payload += "\"exp\": 1745777127,";
-        payload += "\"auth_time\": 1745773526,";
-        payload += "\"at_hash\": \"E9FuK_jSk2tTaGXQQ0MzXA\",";
-        payload += "\"sub\": \"12\"}";
+        payload += "\"iat\":1745773527,";
+        payload += "\"exp\":1745777127,";
+        payload += "\"auth_time\":1745773526,";
+        payload += "\"at_hash\":\"E9FuK_jSk2tTaGXQQ0MzXA\",";
+        payload += "\"sub\":\"12\"}";
 
-        System.out.println(payload);
+        return payload;
+    }
+
+    private String createToken(KeyPair pair, SignatureAlgorithm alg) {
+        return createToken(pair, alg, new byte[16]);
+    }
+
+    private String createToken(KeyPair pair, SignatureAlgorithm alg, byte[] nonce) {
+        String payload = createTokenPayload(nonce);
 
         return Jwts.builder()
             .setHeaderParam("alg", "ES256")
@@ -200,7 +218,11 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testGettingExampleDleqProof() throws Exception {
-        String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
+        SignatureAlgorithm alg = Jwts.SIG.ES256;
+        KeyPair pair = alg.keyPair().build();
+
+        String token = createToken(pair, alg);
+
         byte[] byteToken = token.getBytes();
 
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_EXAMPLE_PROOF, 0x00, 0, byteToken);
