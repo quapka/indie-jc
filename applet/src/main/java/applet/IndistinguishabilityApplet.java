@@ -181,7 +181,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private ECPrivateKey privDVRFKey;
     private ECPublicKey pubDVRFKey;
 
-    private ECPublicKey OIDC_PUBLIC_KEY = null;
+    private ECPublicKey OIDC_PUBLIC_KEY  = (ECPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PUBLIC, KeyBuilder.LENGTH_EC_FP_256, false);
 
     private short sw = ISO7816.SW_NO_ERROR;
     private Base64UrlSafeDecoder base64UrlSafeDecoder;
@@ -385,12 +385,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private void setOIDCPublicKey(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         // FIXME move to constructor KeyBuilder
-        OIDC_PUBLIC_KEY = (ECPublicKey) KeyBuilder.buildKey(
-            KeyBuilder.TYPE_EC_FP_PUBLIC,
-            KeyBuilder.LENGTH_EC_FP_256,
-            false
-        );
-
         short offset = 0;
         OIDC_PUBLIC_KEY.setFieldFP(SecP256r1.p, offset, (short) SecP256r1.p.length);
         OIDC_PUBLIC_KEY.setA(SecP256r1.a, offset, (short) SecP256r1.a.length);
