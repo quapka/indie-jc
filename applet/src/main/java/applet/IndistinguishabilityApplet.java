@@ -223,8 +223,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte p1 = buffer[ISO7816.OFFSET_P1];
         byte p2 = buffer[ISO7816.OFFSET_P2];
 
-
-        // FIXME Add try-except instructions
         try {
             if ( cla == Consts.CLA.DEBUG ) {
                 switch (ins) {
