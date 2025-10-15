@@ -35,6 +35,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static DiscreteLogEquality dleq;
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
+    Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
 
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
     // Cipher.ALG_AES_CTR not beinf found. The constants are defined in:
