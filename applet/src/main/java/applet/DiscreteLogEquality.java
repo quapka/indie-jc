@@ -62,9 +62,8 @@ public class DiscreteLogEquality {
         aBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         bBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
-        ECPrivateKey privKey = curve.disposablePriv;
-        secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        short byteLength = privKey.getS(tmp, (short) 0);
+        secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        short byteLength = curve.disposablePriv.getS(tmp, (short) 0);
         secret.fromByteArray(tmp, (short) 0, byteLength);
         secret.mod(curve.rBN);
 
@@ -174,17 +173,13 @@ public class DiscreteLogEquality {
     }
 
     public short exampleProof(byte[] out) {
-        // FIXME set this curve elsewhere and reference it as _the curve_
-        ECPrivateKey privKey = curve.disposablePriv;
-        ECPublicKey pubKey = curve.disposablePub;
-
         // convert the ephemeral key to point and secret
         for (short i = 0; i < 32; i ++ ) {
             System.out.print(String.format("%02x", tmp[i]));
         }
         // G.multiplication(secret);
         System.out.println();
-        short byteLength = pubKey.getW(tmp, (short) 0);
+        short byteLength = curve.disposablePub.getW(tmp, (short) 0);
         tmpPoint.setW(tmp, (short) 0, byteLength);
 
         return proveEq(userPoint, tmpPoint, M, out);
