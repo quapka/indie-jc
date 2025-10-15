@@ -142,39 +142,60 @@ public class AppletTest extends BaseTest {
         // byte[] data = {'d', 'a', 't', 'a'};
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, 0x02, 0x00, 0, byteToken);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
+    }
 
-        System.out.println(String.format("byteInput length: %d", byteToken.length));
-        System.out.println(String.format("Received: %d", responseAPDU.getData().length));
-        System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
+    private String createToken(KeyPair pair, SignatureAlgorithm alg) {
+        byte[] nonce = new byte[16];
+        // NOTE create payload programmatically?
+        String payload = "{";
+        payload += "\"iss\": \"https://example.com\",";
+        payload += "\"aud\":[\"zkLogin\"],";
+        payload += "\"name\":\"Firstname Lastname\",";
+        payload += "\"nonce\":\"" + Hex.toHexString(nonce) + "\",";
+        payload += "\"iat\": 1745773527,";
+        payload += "\"exp\": 1745777127,";
+        payload += "\"auth_time\": 1745773526,";
+        payload += "\"at_hash\": \"E9FuK_jSk2tTaGXQQ0MzXA\",";
+        payload += "\"sub\": \"12\"}";
+
+        System.out.println(payload);
+
+        return Jwts.builder()
+            .setHeaderParam("alg", "ES256")
+            .setHeaderParam("typ", "JWT")
+            .setHeaderParam("kid", "example")
+            .setPayload(payload)
+            .signWith(pair.getPrivate(), alg)
+            .compact();
     }
 
     @Test
     public void testDerivingSalt() throws Exception {
-        // String token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
-        String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1NzczNTI3LCJleHAiOjE3NDU3NzcxMjcsImF1dGhfdGltZSI6MTc0NTc3MzUyNiwibm9uY2UiOiIyNTViZmFhNzk4ZWM0MzQxNjllMmNiOWRiMzNjN2VkNWExYTE2MjE5NmQ4ZTIwNzUxMjE2MGM3NTg1YTJiMTM3IiwiYXRfaGFzaCI6IkU5RnVLX2pTazJ0VGFHWFFRME16WEEiLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.mv2JmIh2lu0Ucphv1n6Gon6J2AwoM7EwkDjaRqIt_FJ3SYOWQSgUzqernYoq749c2sm9HpAEaGz1_8ohV19j8w";
-        // String token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImV4YW1wbGUifQ.eyJpc3MiOiJodHRwczovL2F1dGhsaWIub3JnIiwiYXVkIjpbInprTG9naW4iXSwiaWF0IjoxNzQ1ODI3NzQ0LCJleHAiOjE3NDU4MzEzNDQsImF1dGhfdGltZSI6MTc0NTgyNzc0Mywibm9uY2UiOiI4MDY4YWU4YTMxN2IyMjBmODQ0ZTg1OTczOWE3YTY0YmY1ZGRhNzU5YjEzZmM4MGRjMDllYjIwODM1MWZhY2ViIiwiYXRfaGFzaCI6IjZ0TlFBcXZZVDFGc1BhamJkcFllQmciLCJzdWIiOiIxMiIsIm5hbWUiOiJGaXJzdG5hbWUgTGFzdG5hbWUifQ.i6UOXl1M8Viohu-LPfBFKnCjUCptOF59dXqM8mrHP0hqOIY5Em8XZC8bpoxmy--KW0hn5QjO7_Psx907ZodWuw";
+        SignatureAlgorithm alg = Jwts.SIG.ES256;
+        KeyPair pair = alg.keyPair().build();
 
-        byte[] byteToken = token.getBytes();
-        // byte[] slice = Arrays.copyOfRange(byteToken, 0, 127);
-        // byte[] data = {'d', 'a', 't', 'a'};
-        System.out.println("Command:");
-        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, 0x03, 0x00, 0, byteToken);
+        String token = createToken(pair, alg);
 
-        for (short i = 0; i < cmd.getBytes().length; i++) {
-            System.out.print(String.format("%02x", cmd.getBytes()[i]));
-        }
-        System.out.println("end.");
+        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
+        boolean compressed = false;
+        // FIXME use compressed to speed up processing and shorten data payloads?
+        byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
+
+        // Set and implicitly get the public key
+        connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
+
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DERIVE_SALT, 0x00, 0, token.getBytes());
         ResponseAPDU responseAPDU = connect().transmit(cmd);
-        System.out.println(String.format("byteInput length: %d", byteToken.length));
-        System.out.println(String.format("Received: %d", responseAPDU.getData().length));
-        System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
 
         byte[] salt = responseAPDU.getData();
 
-        for (short i = 0; i < salt.length; i++) {
-            System.out.print(String.format("%02x", salt[i]));
+        Assert.assertEquals(salt.length, 32);
+        // For simulated tests, the on card keys are generated
+        // deterministically, thus we can assert against a known key
+        if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
+            Assert.assertEquals("6a5323256f3ff924017ae2ebbbd56e2556192e1f322e991b911e56069c17976d", Hex.toHexString(salt));
         }
-        System.out.println();
     }
 
     @Test

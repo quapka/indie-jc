@@ -245,6 +245,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.VERIFY_JWT:
                         verifyJWT(apdu);
                         break;
+                    case Consts.INS.DERIVE_SALT:
+                        deriveSalt(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
