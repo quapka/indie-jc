@@ -249,6 +249,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.SET_OIDC_PUBKEY:
                         setOIDCPublicKey(apdu);
                         break;
+                    case Consts.INS.GET_OIDC_PUBKEY:
+                        getOIDCPublicKey(apdu);
+                        break;
                     case Consts.INS.SETUP:
                         setup(apdu);
                         break;
