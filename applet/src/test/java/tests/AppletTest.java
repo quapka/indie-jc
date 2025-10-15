@@ -422,4 +422,40 @@ public class AppletTest extends BaseTest {
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
         Assert.assertTrue(Arrays.equals(uncompressedPubKey, responseAPDU.getData()));
     }
+
+    @Test
+    public void testJWTVerification() throws Exception {
+        SignatureAlgorithm alg = Jwts.SIG.ES256;
+        KeyPair pair = alg.keyPair().build();
+
+        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
+        boolean compressed = false;
+        // FIXME use compressed to speed up processing and shorten data payloads?
+        byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
+
+        // Set and implicitly get the public key
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        byte nonceByteSize = 16;
+        byte[] nonce = new byte[nonceByteSize];
+
+        byte[] seed = new byte[32];
+        SecureRandom prng = new SecureRandom(seed);
+        prng.nextBytes(nonce);
+
+        // Create the JWT
+        String payload = "{\"aud\":\"zkLogin\",\"name\":\"FirstnameLastName\",\"nonce\":\""+ Hex.toHexString(nonce) + "\"}";
+        String jwt = Jwts.builder()
+            .setPayload(payload)
+            .signWith(pair.getPrivate(), alg)
+            .compact();
+
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
+        responseAPDU = connect().transmit(cmd);
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+    }
 }
