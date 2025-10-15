@@ -408,7 +408,7 @@ public class AppletTest extends BaseTest {
         // FIXME use compressed to speed up processing and shorten data payloads?
         byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
 
-        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey, 0, uncompressedPubKey.length);
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         System.out.println(String.format("Key:\"%s\"", Hex.toHexString(uncompressedPubKey)));
