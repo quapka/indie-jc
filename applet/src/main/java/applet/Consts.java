@@ -12,6 +12,8 @@ public class Consts {
         public static final byte KEY_GEN = (byte) 0x02;
         public static final byte SETUP = (byte) 0x03;
         public static final byte GET_SETUP = (byte) 0x04;
+        // Set the uncompressed P256 public key for the JWT signature verification
+        public static final byte SET_OIDC_PUBKEY = (byte) 0x05;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;

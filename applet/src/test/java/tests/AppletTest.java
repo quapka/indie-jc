@@ -25,7 +25,6 @@ import java.security.spec.EllipticCurve;
 import java.security.spec.ECFieldFp;
 
 import org.bouncycastle.util.encoders.Hex;
-
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 import org.bouncycastle.jce.spec.ECPublicKeySpec;
 import org.bouncycastle.math.ec.ECCurve;
@@ -37,7 +36,6 @@ import org.bouncycastle.crypto.*;
 import org.bouncycastle.crypto.ec.CustomNamedCurves;
 import org.bouncycastle.jce.interfaces.ECPublicKey;
 import org.bouncycastle.jce.ECPointUtil;
-import org.bouncycastle.util.encoders.Hex;
 import org.bouncycastle.crypto.generators.*;
 import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
@@ -50,6 +48,17 @@ import org.bouncycastle.crypto.modes.CTRModeCipher;
 import org.bouncycastle.crypto.modes.SICBlockCipher;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.math.BigInteger;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.SignatureAlgorithm;
+import io.jsonwebtoken.io.Encoders;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.Claims;
+
+// import java.util.HashMap;
+// import java.util.Map;
+// import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
@@ -386,5 +395,26 @@ public class AppletTest extends BaseTest {
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
         Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+    }
+
+    @Test
+    public void testSetOIDCPublicKey() throws Exception {
+        SignatureAlgorithm alg = Jwts.SIG.ES256;
+        KeyPair pair = alg.keyPair().build();
+
+        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
+        boolean compressed = false;
+        // FIXME use compressed to speed up processing and shorten data payloads?
+        byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
+
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey, 0, uncompressedPubKey.length);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        System.out.println(String.format("Key:\"%s\"", Hex.toHexString(uncompressedPubKey)));
+        System.out.println(String.format("Card Key:\"%s\"", Hex.toHexString(responseAPDU.getData())));
+        // System.out.println(String.format("Card key:\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertTrue(Arrays.equals(uncompressedPubKey, responseAPDU.getData()));
     }
 }

@@ -43,6 +43,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     // set the constant ourselves, see:
     // https://github.com/crocs-muni/jcalgtest_results/blob/main/javacard/Profiles/results/NXP_JCOP4_J3R180_SecID_Feitian_ALGSUPPORT__3b_d5_18_ff_81_91_fe_1f_c3_80_73_c8_21_10_0a_(provided_by_PetrS).csv#L81
     public static final byte Cipher_ALG_AES_CTR = -16;
+    public static final byte uncompressPubKeySize = 65;
 
 	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
 	public static final byte[] Good = {'G', 'O', 'O', 'D'};
@@ -245,6 +246,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
+                    case Consts.INS.SET_OIDC_PUBKEY:
+                        setOIDCPublicKey(apdu);
+                        break;
                     case Consts.INS.SETUP:
                         setup(apdu);
                         break;
@@ -377,7 +381,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
     }
 
-    private void setOIDCPublicKey() {
+    private void setOIDCPublicKey(APDU apdu) {
+        byte[] buffer = apdu.getBuffer();
+        // FIXME move to constructor KeyBuilder
         OIDC_PUBLIC_KEY = (ECPublicKey) KeyBuilder.buildKey(
             KeyBuilder.TYPE_EC_FP_PUBLIC,
             KeyBuilder.LENGTH_EC_FP_256,
@@ -391,7 +397,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         OIDC_PUBLIC_KEY.setG(SecP256r1.G, offset, (short) SecP256r1.G.length);
         OIDC_PUBLIC_KEY.setR(SecP256r1.n, offset, (short) SecP256r1.n.length);
         OIDC_PUBLIC_KEY.setK(SecP256r1.h);
-        OIDC_PUBLIC_KEY.setW(OIDC_PUBLIC_POINT_DATA, offset, (short) OIDC_PUBLIC_POINT_DATA.length);
+        OIDC_PUBLIC_KEY.setW(buffer, (short) ISO7816.OFFSET_CDATA, (short) uncompressPubKeySize);
+
+        getOIDCPublicKey(apdu);
+    }
+
+    private void getOIDCPublicKey(APDU apdu) {
+        short keySize = OIDC_PUBLIC_KEY.getW(apdu.getBuffer(), (short) 0);
+        apdu.setOutgoingAndSend((short) 0, keySize);
     }
 
     public short deriveHashSecret(byte[] body, short bodySize, APDU apdu) {
@@ -545,7 +558,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private boolean verifySignature(byte[] message, short msgOffset, short msgLen, byte[] signature, short sigOffset, short sigLen) 
     {
-        setOIDCPublicKey();
         Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
         sigObj.init(OIDC_PUBLIC_KEY, Signature.MODE_VERIFY);
 
