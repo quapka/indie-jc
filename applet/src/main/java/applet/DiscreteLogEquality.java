@@ -27,6 +27,7 @@ public class DiscreteLogEquality {
     private byte[] tmp = new byte[128];
     public boolean initialized = false;
     private RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+    MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
 	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
         'D', 'i', 's', 'c', 'r', 'e', 't', 'e', ' ',
         'l', 'o', 'g', ' ',
@@ -145,7 +146,6 @@ public class DiscreteLogEquality {
      * @param out
      */
     private short hashCommitments(ECPoint H, ECPoint X, ECPoint Y, ECPoint com1, ECPoint com2) {
-        MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
         hasher.update(HASH_DLEQ_DOMAIN_SEPARATOR, (short) 0, (short) HASH_DLEQ_DOMAIN_SEPARATOR.length);
 
         // The curve generator is an implicit parameter

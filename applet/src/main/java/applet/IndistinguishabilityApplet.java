@@ -394,7 +394,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public short deriveHashSecret(byte[] body, short bodySize, APDU apdu) {
-        MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
         hasher.update(HASH_SECRET_DOMAIN_SEPARATOR, (short) 0, (short) HASH_SECRET_DOMAIN_SEPARATOR.length);
 
         short valueLen = getStringValueFor(body, (short) 0, bodySize, AUD_FIELD_NAME, tmp, (short) 0);
