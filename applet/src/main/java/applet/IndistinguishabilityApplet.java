@@ -33,6 +33,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     // public final static short CARD_TYPE = OperationSupport.JCOP4_P71;
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
+    KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
+    MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
 
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
     // Cipher.ALG_AES_CTR not beinf found. The constants are defined in:
@@ -339,7 +341,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private void aesCtrDecryption(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
 
-        KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
         // // FIXME use dedicated key-identity card?
         ecdh.init(privDVRFKey);
         ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
@@ -362,7 +363,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte zkNonceLength = apduBuffer[ISO7816.OFFSET_P1];
         byte pubKeyLength = apduBuffer[ISO7816.OFFSET_P2];
 
-        MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
 
         hasher.update(apduBuffer, (short) ISO7816.OFFSET_CDATA, zkNonceLength);
         hasher.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + zkNonceLength), pubKeyLength, tmp, (short) 0);
