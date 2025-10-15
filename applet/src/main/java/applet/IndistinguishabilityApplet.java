@@ -410,10 +410,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         hasher.reset();
         hasher.update(HASH_SECRET_DOMAIN_SEPARATOR, (short) 0, (short) HASH_SECRET_DOMAIN_SEPARATOR.length);
 
-        short valueLen = getStringValueFor(body, (short) 0, bodySize, AUD_FIELD_NAME, tmp, (short) 0);
+        short valueLen = getValueFor(body, (short) 0, bodySize, AUD_FIELD_NAME, tmp, (short) 0);
         hasher.update(tmp, (short) 0, valueLen);
 
-        valueLen = getStringValueFor(body, (short) 0, bodySize, NAME_FIELD_NAME, tmp, (short) 0);
+        valueLen = getValueFor(body, (short) 0, bodySize, NAME_FIELD_NAME, tmp, (short) 0);
         hasher.update(tmp, (short) 0, valueLen);
 
 		byte[] apduBuffer = apdu.getBuffer();
@@ -713,7 +713,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             (short) 0
         );
 
-        short fieldLength = getStringValueFor(procBuffer, (short) 0, nDecoded, AUD_FIELD_NAME, apduBuffer, (short) 0);
+        short fieldLength = getValueFor(procBuffer, (short) 0, nDecoded, AUD_FIELD_NAME, apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, fieldLength);
     }
 
@@ -799,7 +799,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) (proofLength + partialLength));
     }
 
-    public short getStringValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputLen) {
+    // FIXME do not copy, only give offset and length?
+    public short getValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputLen) {
 
         // NOTE assumes doublequotes and appearing in pairs
         byte DOUBLEQUOTE = '"';
