@@ -870,6 +870,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             derSignature[index++] = (byte) 0x00;
         }
 
+        // copy r value
         Util.arrayCopyNonAtomic(signature, (short) 0, derSignature, index, (short) 32);
         index += 32;
 
@@ -880,7 +881,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             derSignature[index++] = (byte) 0x00;
         }
 
-        System.out.println(String.format("Index of s: %d", index));
+        // copy s value
         Util.arrayCopyNonAtomic(signature, (short) 32, derSignature, index, (short) 32);
         index += 32;
         return index;
