@@ -547,22 +547,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
 
-    // // FIXME as the hash won't be precomputed
-    // private boolean verifySignaturePrehashed() {
-    //     setOIDCPublicKey();
-    //     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
-    //     sigObj.init(OIDC_PUBLIC_KEY, Signature.MODE_VERIFY);
-
-    //     return sigObj.verifyPreComputedHash(
-    //         precomputedDigest,
-    //         (short) 0,
-    //         (short) precomputedDigest.length,
-    //         derEncodedSignature,
-    //         (short) 0,
-    //         (short) derEncodedSignature.length
-    //     );
-    // }
-
     private void verifyJWT(APDU apdu) {
 		byte[] buffer = loadApdu(apdu);
 		byte[] apduBuffer = apdu.getBuffer();
