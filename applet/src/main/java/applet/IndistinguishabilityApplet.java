@@ -554,7 +554,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private boolean verifySignature(byte[] message, short msgOffset, short msgLen, byte[] signature, short sigOffset, short sigLen) 
     {
-        Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
         sigObj.init(OIDC_PUBLIC_KEY, Signature.MODE_VERIFY);
 
         return sigObj.verify(
