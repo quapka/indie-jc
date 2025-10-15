@@ -146,6 +146,7 @@ public class DiscreteLogEquality {
      * @param out
      */
     private short hashCommitments(ECPoint H, ECPoint X, ECPoint Y, ECPoint com1, ECPoint com2) {
+        hasher.reset();
         hasher.update(HASH_DLEQ_DOMAIN_SEPARATOR, (short) 0, (short) HASH_DLEQ_DOMAIN_SEPARATOR.length);
 
         // The curve generator is an implicit parameter

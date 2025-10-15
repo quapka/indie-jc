@@ -364,6 +364,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte pubKeyLength = apduBuffer[ISO7816.OFFSET_P2];
 
 
+        hasher.reset();
         hasher.update(apduBuffer, (short) ISO7816.OFFSET_CDATA, zkNonceLength);
         hasher.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + zkNonceLength), pubKeyLength, tmp, (short) 0);
 
@@ -394,6 +395,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public short deriveHashSecret(byte[] body, short bodySize, APDU apdu) {
+        hasher.reset();
         hasher.update(HASH_SECRET_DOMAIN_SEPARATOR, (short) 0, (short) HASH_SECRET_DOMAIN_SEPARATOR.length);
 
         short valueLen = getStringValueFor(body, (short) 0, bodySize, AUD_FIELD_NAME, tmp, (short) 0);
