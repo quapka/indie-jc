@@ -538,14 +538,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // }
 	// }
     
-    private void echo(APDU apdu) {
-		byte[] buffer = loadApdu(apdu);
-		byte[] apduBuffer = apdu.getBuffer();
-
-        Util.arrayCopyNonAtomic(buffer, apdu.getOffsetCdata(), apduBuffer, (short) 0, (short) (extApduSize - apdu.getOffsetCdata()));
-        apdu.setOutgoingAndSend((short) 0, (short) (extApduSize - apdu.getOffsetCdata()));
-    }
-
 
     private void verifyJWT(APDU apdu) {
 		byte[] buffer = loadApdu(apdu);
