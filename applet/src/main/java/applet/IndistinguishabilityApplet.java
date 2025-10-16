@@ -451,39 +451,34 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // }
 	// }
     
-
     private void verifyJWT(APDU apdu) {
 		byte[] buffer = loadApdu(apdu);
 		byte[] apduBuffer = apdu.getBuffer();
 
-        short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
-        short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
+        if (validJwt(buffer, (short) 0, (short) extApduSize)) {
+            Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Good.length);
+        } else {
+            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
+        }
+    }
+
+    private boolean validJwt(byte[] buffer, short offset, short length) {
+        short firstDot = indexOf(buffer, offset,  length, (byte) '.');
+        short secondDot = indexOf(buffer, (short) (firstDot + 1), length, (byte) '.');
 
         short nDecoded = 0;
 
         nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (secondDot + 1),
-            (short) (extApduSize - (secondDot + 1)),
+            (short) (length - (secondDot + 1)),
             procBuffer,
             (short) 0
         );
-        // encode signature
         short sigLen = derEncodeRawEcdsaSignature(procBuffer, derSignature);
-        System.out.println(sigLen);
-        for (short i = 0; i < sigLen; i++ ) {
-            System.out.print(String.format("%02x", derSignature[i]));
-        }
-        System.out.println();
-        if ( !verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen) ) {
-            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
-            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
-            return;
-        } else {
-            Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
-            apdu.setOutgoingAndSend((short) 0, (short) Good.length);
-        }
-
+        return verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen);
     }
 
     private boolean verifySignature(byte[] message, short msgOffset, short msgLen, byte[] signature, short sigOffset, short sigLen) 
