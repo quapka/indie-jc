@@ -194,7 +194,7 @@ public class AppletTest extends BaseTest {
 
         String token = createToken(pair, alg);
 
-        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        KeyFactory keyFact = KeyFactory.getInstance("ECDSA", "BC");
         ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
         boolean compressed = false;
         // FIXME use compressed to speed up processing and shorten data payloads?
@@ -402,7 +402,7 @@ public class AppletTest extends BaseTest {
     @Test
     public void testVerifyCommitment() throws Exception {
         // Generate ephemeral public
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDSA", "BC");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
         kpg.initialize(ecGenSpec, new SecureRandom());
         KeyPair keyPair = kpg.generateKeyPair();
@@ -410,7 +410,7 @@ public class AppletTest extends BaseTest {
 
         // TODO does sending compressed point speed up the operations?
         // Need to consider also the uncompressing inside the card.
-        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        KeyFactory keyFact = KeyFactory.getInstance("ECDSA", "BC");
         ECPublicKeySpec pubSpec = keyFact.getKeySpec(pubKey, ECPublicKeySpec.class);
         boolean compressed = false;
         byte[] encodedPubKey = pubSpec.getQ().getEncoded(compressed);
@@ -445,7 +445,7 @@ public class AppletTest extends BaseTest {
         SignatureAlgorithm alg = Jwts.SIG.ES256;
         KeyPair pair = alg.keyPair().build();
 
-        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        KeyFactory keyFact = KeyFactory.getInstance("ECDSA", "BC");
         ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
         boolean compressed = false;
         // FIXME use compressed to speed up processing and shorten data payloads?
@@ -471,7 +471,7 @@ public class AppletTest extends BaseTest {
         SignatureAlgorithm alg = Jwts.SIG.ES256;
         KeyPair pair = alg.keyPair().build();
 
-        KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
+        KeyFactory keyFact = KeyFactory.getInstance("ECDSA", "BC");
         ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
         boolean compressed = false;
         // FIXME use compressed to speed up processing and shorten data payloads?
