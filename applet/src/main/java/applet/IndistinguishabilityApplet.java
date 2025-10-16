@@ -468,9 +468,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short firstDot = indexOf(buffer, offset,  length, (byte) '.');
         short secondDot = indexOf(buffer, (short) (firstDot + 1), length, (byte) '.');
 
-        short nDecoded = 0;
-
-        nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
+        base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (secondDot + 1),
             (short) (length - (secondDot + 1)),
