@@ -33,6 +33,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
     public final static short CARD_TYPE = OperationSupport.SIMULATOR;
     // public final static short CARD_TYPE = OperationSupport.JCOP4_P71;
+
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
@@ -72,6 +73,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 	private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
     // indie-service HASH_SALT_SECRET
+    // FIXME generate inside the card as part of the setup
     private static final byte[] HASH_SALT_SECRET = {
         (byte) 0x89, (byte) 0x52, (byte) 0xd7, (byte) 0xb3,
         (byte) 0x7e, (byte) 0x1c, (byte) 0x86, (byte) 0x0c,
