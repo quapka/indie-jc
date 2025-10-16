@@ -151,7 +151,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.COMPUTE_MOD_MULT:
                         dleq.calculateModMult(apdu);
                         break;
-                    case Consts.INS.AEAD_DECRYPT:
+                    case Consts.INS.AES_CTR_DECRYPT:
                         aesCtrDecryption(apdu);
                         break;
                     case Consts.INS.VERIFY_COMMITMENT:

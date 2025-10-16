@@ -20,7 +20,7 @@ public class Consts {
         public static final byte GOOD = (byte) 0x88;
         public static final byte BAD = (byte) 0x99;
         public static final byte COMPUTE_MOD_MULT = (byte) 0xaa;
-        public static final byte AEAD_DECRYPT = (byte) 0x04;
+        public static final byte AES_CTR_DECRYPT = (byte) 0x04;
         public static final byte VERIFY_COMMITMENT = (byte) 0x05;
         public static final byte VERIFY_JWT = (byte) 0x06;
         public static final byte DERIVE_SALT = (byte) 0x07;

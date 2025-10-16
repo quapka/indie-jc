@@ -371,7 +371,7 @@ public class AppletTest extends BaseTest {
         System.arraycopy(nonce, 0, encPayload, encodedPubKey.length, nonceByteSize);
         System.arraycopy(ctxtBuff, 0, encPayload, nonceByteSize + encodedPubKey.length, ctxtLen);
 
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AEAD_DECRYPT, (byte) ctxtLen, nonceByteSize, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AES_CTR_DECRYPT, (byte) ctxtLen, nonceByteSize, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
 
         Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
