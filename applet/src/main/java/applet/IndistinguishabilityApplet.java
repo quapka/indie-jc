@@ -392,64 +392,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, keySize);
     }
 
-    private void encodeSignatureAsDer(byte[] r_s_buffer) {
-        // the DER encoding cannot be hardcoded, but needs to be calculated, unfortunately
-        // likely, could be done at the client though.
-    }
-
-    // private void loadIssuerPublic() {
-    // }
-    
-    // private void DistKeyGen() {
-    // }
-
-    // private PartialEval() {
-    // }
-
-	// private void sendPrivate(APDU apdu) {
-        // sw = ISO7816.SW_NO_ERROR;
-        // // byte[] privkeyBytes = { 'N', 'o', ' ', 'k', 'e', 'y', ' ', 's', 'e', 't'};
-        // byte[] privkeyBytes = new byte[KeyBuilder.LENGTH_EC_FP_256];
-        // byte[] pubkeyBytes = new byte[KeyBuilder.LENGTH_EC_FP_256];
-        // byte[] buffer = apdu.getBuffer();
-
-        // try {
-
-            // generateKeypair();
-            // ECPrivateKey privkey = (ECPrivateKey) ecKeyPair.getPrivate();
-            // // ECPublicKey pubkey = (ECPublicKey) ecKeyPair.getPublic();
-
-            // // byte[] S = {'n', (byte) 0x00, (byte) 0xff, (byte) 0xee};
-            // // privkey.setS(S, (short) 0, (short) 4);
-
-            // // short length = privkey.getS(buffer, (short) 0);
-            // // short length = pubkey.getW(pubkeyBytes, (short) 0);
-
-            // // short length = (short) privkeyBytes.length;
-            // // Util.arrayCopyNonAtomic(privkeyBytes, (short) 0, buffer, (short) 0, length);
-            // // apdu.setOutgoingAndSend((short) 0, length);
-            // //
-            // if ( verifySignaturePrehashed() ) {
-                // Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, (short) Good.length);
-                // apdu.setOutgoingAndSend((short) 0, (short) Good.length);
-            // } else {
-                // Util.arrayCopyNonAtomic(Bad, (short) 0, buffer, (short) 0, (short) Bad.length);
-                // apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
-            // }
-        // // } catch (CardRuntimeException ce) {
-        // //     sw = ce.getReason();
-        // //     // Util.setShort(sw, 2, 0);
-        // //     // apdu.setOutgoingAndSend((short) 0, length);
-        // } catch (CryptoException ce) {
-            // // switch (e.getReason()){
-            // //     case CryptoException.ILLEGAL_USE:
-
-            // // }
-            // Util.setShort(buffer, (short) 0, ce.getReason());
-            // // Util.arrayCopyNonAtomic(None, (short) 0, buffer, (short) 0, (short) None.length);
-            // apdu.setOutgoingAndSend((short) 0, (short) None.length);
-        // }
-	// }
     
     private void verifyJWT(APDU apdu) {
 		byte[] buffer = loadApdu(apdu);
