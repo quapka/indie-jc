@@ -89,45 +89,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 	private byte[] procBuffer = new byte[2048];
 	private short extApduSize = 0;
 
-    // FIXME remove
-    private static final byte[] precomputedDigest = {
-        (byte) 0x21, (byte) 0xc6, (byte) 0x73, (byte) 0x68,
-        (byte) 0xf4, (byte) 0x36, (byte) 0x57, (byte) 0x7f,
-        (byte) 0x44, (byte) 0x7f, (byte) 0x80, (byte) 0x51,
-        (byte) 0x62, (byte) 0xca, (byte) 0x13, (byte) 0xb8,
-        (byte) 0x0d, (byte) 0x04, (byte) 0x6a, (byte) 0x3f,
-        (byte) 0xe4, (byte) 0x67, (byte) 0x24, (byte) 0x7e,
-        (byte) 0x65, (byte) 0xea, (byte) 0x47, (byte) 0x7a,
-        (byte) 0xa7, (byte) 0x50, (byte) 0xfa, (byte) 0x2e
-    };
-
-    // FIXME remove
-    private static final byte[] derEncodedSignature = {
-        // der first
-        (byte) 0x30, (byte) 0x45, (byte) 0x02, (byte) 0x20,
-        // r
-        (byte) 0x0e, (byte) 0xd1, (byte) 0x21, (byte) 0x53,
-        (byte) 0x79, (byte) 0x63, (byte) 0x6c, (byte) 0x48,
-        (byte) 0x3c, (byte) 0x2f, (byte) 0x7f, (byte) 0x15,
-        (byte) 0x58, (byte) 0x07, (byte) 0xd4, (byte) 0x02,
-        (byte) 0xa3, (byte) 0xb2, (byte) 0x28, (byte) 0x03,
-        (byte) 0x3a, (byte) 0xf9, (byte) 0x7c, (byte) 0x7e,
-        (byte) 0x17, (byte) 0x81, (byte) 0x9a, (byte) 0xc3,
-        (byte) 0x16, (byte) 0x9e, (byte) 0xa6, (byte) 0x65,
-        // der second
-        (byte) 0x02, (byte) 0x21, (byte) 0x00,
-        // s
-        (byte) 0xc5,
-        (byte) 0x0a, (byte) 0x07, (byte) 0xd3, (byte) 0x8c,
-        (byte) 0x3c, (byte) 0x70, (byte) 0xe5, (byte) 0xd8,
-        (byte) 0xf1, (byte) 0x2d, (byte) 0xaf, (byte) 0x08,
-        (byte) 0x4a, (byte) 0x54, (byte) 0x80, (byte) 0xa6,
-        (byte) 0x65, (byte) 0x90, (byte) 0xc5, (byte) 0xf2,
-        (byte) 0x93, (byte) 0x50, (byte) 0x9a, (byte) 0x8f,
-        (byte) 0x3f, (byte) 0x7f, (byte) 0x8a, (byte) 0x83,
-        (byte) 0xa3, (byte) 0x54, (byte) 0xd5
-    };
-
     private boolean initialized = false;
 
     private KeyPair ecKeyPair;
