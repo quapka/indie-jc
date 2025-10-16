@@ -12,6 +12,7 @@ public class Base64UrlSafeDecoder
 
     public Base64UrlSafeDecoder() {}
 
+    // FIXME add some kind of check for when output would get overwriten if the input is too long
     public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
         // This implemntation expects the input to have the correct alphabet
         short n_written = 0;

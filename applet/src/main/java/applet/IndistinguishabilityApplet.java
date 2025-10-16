@@ -465,6 +465,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     private boolean validJwt(byte[] buffer, short offset, short length) {
+        // The expected JWT format in the buffer is
+        // {header}.{body}.{signature}
         short firstDot = indexOf(buffer, offset,  length, (byte) '.');
         short secondDot = indexOf(buffer, (short) (firstDot + 1), length, (byte) '.');
 
