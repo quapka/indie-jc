@@ -36,6 +36,7 @@ public class Consts {
         public static final short AEAD_INVALID_INIT = (short) 0xe001;
         public static final short AEAD_UNINITIALIZED_KEY = (short) 0xe002;
         public static final short AEAD_ILLEGAL_USE = (short) 0xe003;
+        public static final short INPUT_OUTPUT_BUFFER_MATCH = (short) 0xe004;
     }
 
     public final static short SW_Exception = (short) 0xff01;
