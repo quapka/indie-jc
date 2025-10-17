@@ -19,9 +19,9 @@ public class Base64UrlSafeDecoder
     public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
         // FIXME implement Base64 decoding where input and output buffers can point to the same buffer?
         // Maybe use some class local temporary array?
-        if ( input == output ) {
-            ISOException.throwIt(Consts.ERR.INPUT_OUTPUT_BUFFER_MATCH);
-        }
+        // if ( input == output ) {
+        //     ISOException.throwIt(Consts.ERR.INPUT_OUTPUT_BUFFER_MATCH);
+        // }
         // This implemntation expects the input to have the correct alphabet
         short n_written = 0;
 

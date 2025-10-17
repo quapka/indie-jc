@@ -9,6 +9,8 @@ import java.util.Arrays;
 
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class Base64UrlSafeDecoderTest {
     @Test
@@ -56,5 +58,28 @@ public class Base64UrlSafeDecoderTest {
         byte[] slice = Arrays.copyOfRange(out, 0, gotSize);
 
         Assert.assertArrayEquals(expected, slice);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
+    public void testVaryingSizeDecoding(int size) throws Exception {
+        Base64UrlSafeDecoder jcDecoder = new Base64UrlSafeDecoder();
+
+        byte[] bytes = new byte[size];
+        for (int i = 0; i < size; i++) {
+            bytes[i] = (byte) size;
+        }
+        String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        byte[] expected = Base64.getUrlDecoder().decode(encoded);
+
+        // short inputLen = (short) encoded.getBytes().length;
+        // byte[] expected = Base64.getUrlDecoder().decode(encoded);
+        byte[] in = Arrays.copyOfRange(encoded.getBytes(), 0, size);
+        byte[] out = new byte[size];
+
+        // short gotSize = jcDecoder.decodeBase64Urlsafe(in, (short) 0, (short) in.length, out, (short) 0);
+
+        // byte[] slice = Arrays.copyOfRange(out, 0, gotSize);
+        Assert.assertArrayEquals(bytes, expected);
     }
 }

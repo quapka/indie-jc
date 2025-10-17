@@ -501,4 +501,116 @@ public class AppletTest extends BaseTest {
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
         Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
     }
+
+    @Test
+    public void testEncryptedJwtVerification() throws Exception {
+        byte[] seed = new byte[32];
+        SecureRandom prng = new SecureRandom(seed);
+
+        SignatureAlgorithm alg = Jwts.SIG.ES256; //or ES256 or ES384
+        KeyPair pair = alg.keyPair().build();
+
+        KeyFactory ecKeyFact = KeyFactory.getInstance("ECDSA", "BC");
+        ECPublicKeySpec pubSpec = ecKeyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
+        boolean compressed = false;
+        // FIXME use compressed to speed up processing and shorten data payloads?
+        byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
+
+        // Set and implicitly get the public key
+        connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
+
+        // Encrypt the token first and then verify it inside the card
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        byte[] data = responseAPDU.getData();
+
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
+        KeyFactory echdKeyFact = KeyFactory.getInstance("ECDH", "BC");
+        ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
+        ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
+        ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
+        ECPublicKey cardChannelKey = (ECPublicKey) echdKeyFact.generatePublic(dvrfPubSpec);
+
+        // TODO the RNG seed does not produce fixed keys for the test
+        kpg.initialize(ecGenSpec, new SecureRandom());
+        KeyPair epheClientChannelKey = kpg.generateKeyPair();
+        ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
+
+        KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
+        ecdh.init(epheClientChannelKey.getPrivate());
+        ecdh.doPhase(cardChannelKey, true);
+
+        ECPublicKeySpec epheClientPubKeySpec = echdKeyFact.getKeySpec(epheClientPubKey, ECPublicKeySpec.class);
+        // TODO does sending compressed point speed up the operations?
+        // Need to consider also the uncompressing inside the card.
+        compressed = false;
+        byte[] encodedClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
+
+        byte[] sharedSecret = ecdh.generateSecret();
+        MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+        byte[] fullChannelKey = sha1.digest(sharedSecret);
+
+        byte[] channelKey = Arrays.copyOf(fullChannelKey, 20);
+        System.out.println("Channel key");
+        for (short i = 0; i < 20; i++) {
+            System.out.print(String.format("%02X", channelKey[i]));
+        }
+        System.out.println();
+
+        byte channelNonceByteSize = 16;
+        byte[] channelNonce = new byte[channelNonceByteSize];
+        prng.nextBytes(channelNonce);
+
+        KeyParameter ctrKey = new KeyParameter(channelKey, 0, 16);
+        short macSizeBits = 128;
+        CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
+        ParametersWithIV params = new ParametersWithIV(ctrKey, channelNonce);
+
+        boolean forEncryption = true;
+        cipher.init(forEncryption, params);
+
+        byte tokenNonceByteSize = 16;
+        byte[] tokenNonce = new byte[tokenNonceByteSize];
+        prng.nextBytes(tokenNonce);
+
+        System.out.println("Channel IV");
+        for (short i = 0; i < channelNonceByteSize; i++) {
+            System.out.print(String.format("%02X", channelNonce[i]));
+        }
+        System.out.println();
+
+        String payload = createToken(pair, alg, tokenNonce);
+        String jwt = Jwts.builder()
+            .setPayload(payload)
+            .signWith(pair.getPrivate(), alg) // <-- Bob's EC private key
+            .compact();
+
+        System.out.println(String.format("Token length: %d", jwt.getBytes().length));
+        System.out.println("In-test token");
+        // for (short i = 0; i < ; i++) {
+        //     System.out.print(String.format("%02X", procBuffer[i]));
+        // }
+        System.out.println(jwt);
+
+        byte[] ctxtBuff = new byte[2048];
+        int ctxtLen = cipher.processBytes(jwt.getBytes(), 0, jwt.getBytes().length, ctxtBuff, 0);
+
+        byte[] encPayload = new byte [65 + channelNonceByteSize + ctxtLen];
+        // System.out.println(String.format("encodedClientPubPoint length: %d", encodedClientPubPoint.length));
+        System.arraycopy(encodedClientPubPoint, 0, encPayload, 0, encodedClientPubPoint.length);
+        System.arraycopy(channelNonce, 0, encPayload, encodedClientPubPoint.length, channelNonceByteSize);
+        System.arraycopy(ctxtBuff, 0, encPayload, channelNonceByteSize + encodedClientPubPoint.length, ctxtLen);
+
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
+        responseAPDU = connect().transmit(cmd);
+
+        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_ENCRYPTED_JWT, 0x00, 0x00, encPayload, 0, encodedClientPubPoint.length + channelNonceByteSize + ctxtLen);
+        responseAPDU = connect().transmit(cmd);
+
+        printBuffer(responseAPDU.getBytes(), (short) 4);
+
+        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+    }
 }
