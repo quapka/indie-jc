@@ -152,7 +152,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         dleq.calculateModMult(apdu);
                         break;
                     case Consts.INS.AES_CTR_DECRYPT:
-                        aesCtrDecryption(apdu);
+                        sendDecrypted(apdu);
                         break;
                     case Consts.INS.VERIFY_COMMITMENT:
                         verifyCommitment(apdu);
@@ -268,24 +268,31 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) 2);
     }
 
-    private void aesCtrDecryption(APDU apdu) {
+    // private void decryptAesPayload(APDU apdu) {
+    // }
+
+    private void sendDecrypted(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        byte ctxtLen = apduBuffer[ISO7816.OFFSET_P1];
 
-        // // FIXME use dedicated key-identity card?
-        ecdh.init(privDVRFKey);
-        ecdh.generateSecret(apduBuffer, (short) ISO7816.OFFSET_CDATA, (short) 65, tmp,(short)  0);
-        aesCtrKey.setKey(tmp, (short) 0);
-
-        byte ctxLen = apduBuffer[ISO7816.OFFSET_P1];
-        byte nonceByteSize = apduBuffer[ISO7816.OFFSET_P2];
-
-        aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, apduBuffer, (short) (ISO7816.OFFSET_CDATA + 65), (short) nonceByteSize);
-
-        short ptxtLen = 0;
-        ptxtLen = aesCtr.doFinal(apduBuffer, (short) (ISO7816.OFFSET_CDATA + nonceByteSize + 65), (short) ctxLen , tmp, (short) 0);
+        short ptxtLen = aesCtrDecryptInner(apduBuffer, ISO7816.OFFSET_CDATA, ctxtLen, tmp, (short) 0);
 
 		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, ptxtLen);
 		apdu.setOutgoingAndSend((short) 0, ptxtLen);
+    }
+
+    private short aesCtrDecryptInner(byte[] buffer, short offset, short ctxtLen, byte[] out, short outOff) {
+        short pointLen = 65;
+        byte nonceByteSize = 16;
+
+        // FIXME use dedicated key-identity card?
+        ecdh.init(privDVRFKey);
+        ecdh.generateSecret(buffer, offset, pointLen, tmp, (short) 0);
+        aesCtrKey.setKey(tmp, (short) 0);
+
+        aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, buffer, (short) (offset + pointLen), (short) nonceByteSize);
+
+        return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), (short) ctxtLen, out, outOff);
     }
 
     private void verifyCommitment(APDU apdu) {
