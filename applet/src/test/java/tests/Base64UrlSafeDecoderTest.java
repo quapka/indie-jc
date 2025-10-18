@@ -9,9 +9,10 @@ import java.util.Arrays;
 
 import org.junit.Assert;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.Rule;
+import org.junit.jupiter.api.*;
 
 public class Base64UrlSafeDecoderTest {
     @Test
@@ -98,6 +99,47 @@ public class Base64UrlSafeDecoderTest {
         for (short i = 0; i < expected.length; i++ ) {
             Assert.assertEquals(expected[i], inOut[i]);
         }
+    }
+
+    @Test
+    // @BenchmarkOptions(concurrency = 1, warmupRounds = 0, benchmarkRounds = 10)
+    public void testBenchmarkDecoding() throws Exception {
+
+        String encoded = "Dk8SWM_Z3oZB-uwzAmTL9e4c1AGqpBAKNe2x56k9dWnCUL3gpRRpO-kUsgWtCDaUTjrNWsrbHtdpSlgoxKoYy6fXokmmylaS_Bw1x8nC--wZQAtoZCsA96yRFRz3ywFjS1lRzRc6s7YE10cRVMAD_qE68Y9WTo50G_GQlGruZg3h4pO2DYrDMNGhArE89o2kGCReFZIhUplYEREveCEoC77p59D2kIPX9vo7kuiKIfkYPd-dnVJ24ghil4YuySlk3austhHrhKFJE7zasBDuIRz1pA0SXvEGVHZoLNAAf4JcIK7E8WAq4WdznmtgkCnJBGP8GB3egCBpcZNBVc2NQv137Qz-nXk9LbCTerpjNcyVTU9hASlQ4viCSozmH5dPpi3JPPM2_eVAL_W48N-Tx_fD7PGTP2SJtnMerGOoTGfhpuYMYQBxFYb73Iou0PjaNUYcd7wLJ9zdQW-g3ndeCl1kf3srtTL0q6mzJA7A_l_AfT2Y-u6rH6rNoywdcyoza8LzwwjtsFCdTOYBIRZLVe2F9nPfoIdi3ZX6xRyV9-aBScXABWNScRF6tgtt_irvcsSyW5FdVd48hAWfiQFn2buOWicAjI94_F5W8-ok8xXtUfSRSWRDeg_KIhVH5wTlVaQu1y59OHEa5MK2BECsmV3yOf3UxUCqpcyEPOsyI88yGk5IlSIhHmriDQQca9aJp517dxWDpv_OIZuHQhFoqFiOQ_-Txa0Vr2cKMwdRTW8SmH-ggft1wWCc7o7JQboecs3VzlXj-YbxCo3ZjSaXHcsait-hq4bLs2jCzjM5dUBNgzmaYVOTQ_pQspLrdChwYowpj5M7PcUkOQzI5xMPhFt7mDwNvgNO2iDdbVK0Zo9LSSEkit2leZWClVKAWJpiM3EQNQVjojpkSF-eZrZzSF_8tH5K_Au868hXFkuKzXYPcYu4yS9oJa4Q_nC_4AuaWIfWe6w5ac2P-2USzIt63UzIE9UsJsDcleLEQGs3AdhYe_hJIL1FqO7h9M850Z-H7YWFZNYSjiY3-9cgajcdrmMhh_sm0uPx-ZdUYP1ifUkZi7-mw5PlsXYwOTUxgXPa4BJKT9TW0JCmGu2MN7BXtZkrtn3DbitdfMWwQChTb64cYjCtU3o1Em3kj7A4MdI7W14JcPg3m_UyT0zCLNQlRcdSSeRiS38Yy5mwiQnaC5_xfQDJWkhreseoJRkNLrfkdKLrTNKWPQfCxVb141zngBOZDWc2BAk7L_hjiRF4yC8dYU2QCJZLAVem2uq0PCm4GFM6DKtxJ92hwqipb3Fgo55ZDn1-7aEXEwm_QKGvVSOBVCBOLB-adBgRW7TVC7FcNQp3_kF7aTiDNzq7flF44w";
+
+        // Random rand = new Random();
+        // int size = 1024;
+
+        // byte[] bytes = new byte[size];
+        // bytes = new byte[size];
+        // rand.nextBytes(bytes);
+
+        Base64UrlSafeDecoder jcDecoder = new Base64UrlSafeDecoder();
+
+        // String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        byte[] expected = Base64.getUrlDecoder().decode(encoded);
+        // System.out.println(encoded);
+
+        short inputLen = (short) encoded.getBytes().length;
+        byte[] in = new byte[inputLen];
+        byte[] out = new byte[expected.length];
+
+        in = Arrays.copyOfRange(encoded.getBytes(), 0, inputLen);
+
+        long starTime = 0;
+        long endTime = 0;
+        int numTests = 100;
+        long[] results = new long[numTests];
+        starTime = System.nanoTime();
+        for (int i = 0; i < numTests; i++) {
+            jcDecoder.decodeBase64Urlsafe(in, (short) 0, inputLen, out, (short) 0);
+        }
+        long sum = LongStream.of(results).sum();
+        System.out.println("Average decoding time: " + ((System.nanoTime() - starTime) / results.length) + " ns");
+        // 76474
+
+        // Assert.assertArrayEquals(expected, out);
+        // Assert.assertEquals(expected.length, decodedSize);
     }
 
     // TODO
