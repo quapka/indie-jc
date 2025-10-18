@@ -495,6 +495,7 @@ public class AppletTest extends BaseTest {
             .signWith(pair.getPrivate(), alg)
             .compact();
 
+        System.out.print(jwt);
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
         responseAPDU = connect().transmit(cmd);
 

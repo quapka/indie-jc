@@ -12,63 +12,64 @@ public class Base64UrlSafeDecoder
         'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'
     };
 
-
     public Base64UrlSafeDecoder() {}
 
     // FIXME add some kind of check for when output would get overwriten if the input is too long
     public short decodeBase64Urlsafe(byte[] input, short inputOffset, short inputLength, byte[] output, short outputOffset) {
-        // FIXME implement Base64 decoding where input and output buffers can point to the same buffer?
-        // Maybe use some class local temporary array?
-        // if ( input == output ) {
-        //     ISOException.throwIt(Consts.ERR.INPUT_OUTPUT_BUFFER_MATCH);
-        // }
-        // This implemntation expects the input to have the correct alphabet
         short n_written = 0;
-
-        short high = 0;
+        byte high = 0;
         short low = 0;
+        byte index = 0;
+        byte remainder = (byte) (inputLength % 4);
 
-        byte pad = 0;
-        short index = 0;
-
-        for (short i = 0; i < inputLength; i += 4) {
-            // base = 0;
+        for (short i = 0; i < (short) ((inputLength / 4) * 4); i += 4) {
             high = 0;
             low = 0;
             for (byte j = 0; j < 4; j++) {
-                // NOTE if the search is slow, try using Util.arrayFindGeneric?
-                try {
-                    index = (short) base64CharToValue(input[(short) (inputOffset + j + i)]);
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    pad += (byte) 1;
-                    index = 0;
-                }
-                if (index == 255) {
-                    return (byte) 255;
-                }
+                index = base64CharToValue(input[(short) (inputOffset + i + j)]);
 
                 if (j == 3) {
-                    low |= index & 0x3F;
+                    low |= index;
                 } else if (j == 2) {
                     low |= index << 6;
                 } else if (j == 1) {
                     low |= index << 12;
-                    // high |= (index << 12) >> 16;
                     high |= index >> 4;
                 } else if (j == 0) {
-                    // high |= (index << 18) >> 16;
                     high |= index << 2;
                 }
             }
-
-            output[(short) (outputOffset + n_written + 0)] = (byte) (high >> 0 & 0xFF);
-            output[(short) (outputOffset + n_written + 1)] = (byte) (low  >> 8 & 0xFF);
-            output[(short) (outputOffset + n_written + 2)] = (byte) (low  >> 0 & 0xFF);
-
+            output[(short) (outputOffset + n_written + 0)] = (byte) ((high    ) & 0xFF);
+            output[(short) (outputOffset + n_written + 1)] = (byte) ((low >> 8) & 0xFF);
+            output[(short) (outputOffset + n_written + 2)] = (byte) ((low     ) & 0xFF);
             n_written += 3;
         }
 
-        return (short) (n_written - pad);
+        if ( remainder == 3 ) {
+            // ------ --|---- ----|00 000000
+            // ------|-- ----|---- 00|000000
+            low  = (short) (base64CharToValue(input[(short) (inputOffset + inputLength - 3)]) << 10);
+            low |= (short) (base64CharToValue(input[(short) (inputOffset + inputLength - 2)]) <<  4);
+            low |= (short) (base64CharToValue(input[(short) (inputOffset + inputLength - 1)]) >>  2);
+
+            output[(short) (outputOffset + n_written + 0)] = (byte) ((low >> 8) & 0xFF);
+            output[(short) (outputOffset + n_written + 1)] = (byte) ((low >> 0) & 0xFF);
+
+            n_written += 2;
+        } else if ( remainder == 2 ) {
+            // ------ --|0000 0000|00 000000
+            // ------|-- 0000|0000 00|000000
+            low  = (short) (base64CharToValue(input[(short) (inputOffset + inputLength - 2)]) << 2);
+            low |= (short) (base64CharToValue(input[(short) (inputOffset + inputLength - 1)]) >> 4);
+
+            output[(short) (outputOffset + n_written + 0)] = (byte) (low);
+
+            n_written += 1;
+        } else if ( remainder == 1 ) {
+            ISOException.throwIt(Consts.ERR.INVALID_INPUT);
+        }
+
+        return n_written;
     }
 
     // FIXME is there a quicker way to do this byte resolution? Long switch-case?
@@ -78,10 +79,12 @@ public class Base64UrlSafeDecoder
                 return i;
             }
         }
-        // FIXME returning 0 here might not be fully correct, but seems to work fine.
-        // if ( c == '=' ) {
-        //     return 0;
-        // }
+
+        if (c == '=') {
+            return 0;
+        }
+
+        ISOException.throwIt(Consts.ERR.INVALID_INPUT);
         return 0;
     }
 }

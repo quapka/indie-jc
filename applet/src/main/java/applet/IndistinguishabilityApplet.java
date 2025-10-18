@@ -476,15 +476,30 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // The expected JWT format in the buffer is
         // {header}.{body}.{signature}
         short firstDot = indexOf(buffer, offset,  length, (byte) '.');
+        System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), length, (byte) '.');
+        System.out.println(String.format("secondDot: %d", secondDot));
 
-        base64UrlSafeDecoder.decodeBase64Urlsafe(
+        short nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (secondDot + 1),
             (short) (length - (secondDot + 1)),
             procBuffer,
             (short) 0
         );
+
+        System.out.println("Base64 signature");
+        for (short i = (short) (secondDot + 1); i < length; i++) {
+            System.out.print(String.format("%02X", buffer[i]));
+        }
+        System.out.println();
+
+        System.out.println("Decoded signature:");
+        for (short i = 0; i < nDecoded; i++) {
+            System.out.print(String.format("%02X", procBuffer[i]));
+        }
+        System.out.println();
+
         short sigLen = derEncodeRawEcdsaSignature(procBuffer, derSignature);
         return verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen);
     }
@@ -513,13 +528,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 		apdu.setOutgoingAndSend((short) 0, length);
 	}
 
-    private boolean verifyJWT(byte[] token) {
-        // the Signing input cannot be prehashed, but has to be hashed on the card
-        // thus the card has to get the token in base64 URL safe and
-        // and it cannot receive the decoded value cause it would have to then trust the
-        // contents anyway
-        return false;
-    }
+    // private boolean verifyJWT(byte[] token) {
+    //     // the Signing input cannot be prehashed, but has to be hashed on the card
+    //     // thus the card has to get the token in base64 URL safe and
+    //     // and it cannot receive the decoded value cause it would have to then trust the
+    //     // contents anyway
+    //     return false;
+    // }
 
     private void base64UrlsafeDecode(byte[] encoded, short length) {
         // 
