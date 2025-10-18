@@ -344,7 +344,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // }
         // System.out.println();
 
-        return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), (short) ctxtLen, out, outOff);
+        return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ctxtLen, out, outOff);
     }
 
     private void verifyCommitment(APDU apdu) {
