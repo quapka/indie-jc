@@ -67,6 +67,7 @@ dependencies {
     testImplementation 'org.bouncycastle:bcprov-jdk18on:1.82'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.1'
     testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.0"
+    // testImplementation "com.carrotsearch:junit-benchmarks:0.7.2"
 
     testImplementation 'com.github.martinpaljak:apdu4j:21.05.06'
     testImplementation 'com.github.martinpaljak:apdu4j-pcsc:21.05.06'
