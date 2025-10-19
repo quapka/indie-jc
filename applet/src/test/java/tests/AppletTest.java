@@ -5,7 +5,12 @@ import applet.IndistinguishabilityApplet;
 import applet.Consts;
 import applet.jcmathlib;
 import org.junit.Assert;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.stream.*;
 import java.util.Base64;
@@ -617,12 +622,10 @@ public class AppletTest extends BaseTest {
         Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
     }
 
+    @Disabled("Don't run routinely")
     @Test
     public void testBenchmarkDecoding() throws Exception {
-        // String encoded = "Dk8SWM_Z3oZB-uwzAmTL9e4c1AGqpBAKNe2x56k9dWnCUL3gpRRpO-kUsgWtCDaUTjrNWsrbHtdpSlgoxKoYy6fXokmmylaS_Bw1x8nC--wZQAtoZCsA96yRFRz3ywFjS1lRzRc6s7YE10cRVMAD_qE68Y9WTo50G_GQlGruZg3h4pO2DYrDMNGhArE89o2kGCReFZIhUplYEREveCEoC77p59D2kIPX9vo7kuiKIfkYPd-dnVJ24ghil4YuySlk3austhHrhKFJE7zasBDuIRz1pA0SXvEGVHZoLNAAf4JcIK7E8WAq4WdznmtgkCnJBGP8GB3egCBpcZNBVc2NQv137Qz-nXk9LbCTerpjNcyVTU9hASlQ4viCSozmH5dPpi3JPPM2_eVAL_W48N-Tx_fD7PGTP2SJtnMerGOoTGfhpuYMYQBxFYb73Iou0PjaNUYcd7wLJ9zdQW-g3ndeCl1kf3srtTL0q6mzJA7A_l_AfT2Y-u6rH6rNoywdcyoza8LzwwjtsFCdTOYBIRZLVe2F9nPfoIdi3ZX6xRyV9-aBScXABWNScRF6tgtt_irvcsSyW5FdVd48hAWfiQFn2buOWicAjI94_F5W8-ok8xXtUfSRSWRDeg_KIhVH5wTlVaQu1y59OHEa5MK2BECsmV3yOf3UxUCqpcyEPOsyI88yGk5IlSIhHmriDQQca9aJp517dxWDpv_OIZuHQhFoqFiOQ_-Txa0Vr2cKMwdRTW8SmH-ggft1wWCc7o7JQboecs3VzlXj-YbxCo3ZjSaXHcsait-hq4bLs2jCzjM5dUBNgzmaYVOTQ_pQspLrdChwYowpj5M7PcUkOQzI5xMPhFt7mDwNvgNO2iDdbVK0Zo9LSSEkit2leZWClVKAWJpiM3EQNQVjojpkSF-eZrZzSF_8tH5K_Au868hXFkuKzXYPcYu4yS9oJa4Q_nC_4AuaWIfWe6w5ac2P-2USzIt63UzIE9UsJsDcleLEQGs3AdhYe_hJIL1FqO7h9M850Z-H7YWFZNYSjiY3-9cgajcdrmMhh_sm0uPx-ZdUYP1ifUkZi7-mw5PlsXYwOTUxgXPa4BJKT9TW0JCmGu2MN7BXtZkrtn3DbitdfMWwQChTb64cYjCtU3o1Em3kj7A4MdI7W14JcPg3m_UyT0zCLNQlRcdSSeRiS38Yy5mwiQnaC5_xfQDJWkhreseoJRkNLrfkdKLrTNKWPQfCxVb141zngBOZDWc2BAk7L_hjiRF4yC8dYU2QCJZLAVem2uq0PCm4GFM6DKtxJ92hwqipb3Fgo55ZDn1-7aEXEwm_QKGvVSOBVCBOLB-adBgRW7TVC7FcNQp3_kF7aTiDNzq7flF44w";
-        String encoded = "Dk8SWM_Z3oZB-uwzAmTL9e4c1AGqpBAKNe2x56k9dWnCUL3gpRRpO-kUsgWtCDaUTjrNWsrbHtdpSlgoxKoYy6fXokmmylaS_Bw1x8nC--wZQAtoZCsA96yRFRz3ywFjS1lRzRc6s7YE10cRVMAD_qE68Y9WTo50G_GQlGruZg3h4pO2DYrDMNGhArE89o2kGCReFZIhUplYEREveCEoC77p59D2kIPX9vo7kuiKIfkYPd";//-dnVJ24ghil4YuySlk3austhHrhKFJE7zasBDuIRz1pA0SXvEGVHZoLNAAf4JcIK7E8WAq4WdznmtgkCnJBGP8GB3egCBpcZNBVc2NQv137Qz-nXk9LbCTerpjNcyVTU9hASlQ4viCSozmH5dPpi3JPPM2_eVAL_W48N-Tx_fD7PGTP2SJtnMerGOoTGfhpuYMYQBxFYb73Iou0PjaNUYcd7wLJ9zdQW-g3ndeCl1kf3srtTL0q6mzJA7A_l_AfT2Y-u6rH6rNoywdcyoza8LzwwjtsFCdTOYBIRZLVe2F9nPfoIdi3ZX6xRyV9-aBScXABWNScRF6tgtt_irvcsSyW5FdVd48hAWfiQFn2buOWicAjI94_F5W8-ok8xXtUfSRSWRDeg_KIhVH5wTlVaQu1y59OHEa5MK2BECsmV3yOf3UxUCqpcyEPOsyI88yGk5IlSIhHmriDQQca9aJp517dxWDpv_OIZuHQhFoqFiOQ_-Txa0Vr2cKMwdRTW8SmH-ggft1wWCc7o7JQboecs3VzlXj-YbxCo3ZjSaXHcsait-hq4bLs2jCzjM5dUBNgzmaYVOTQ_pQspLrdChwYowpj5M7PcUkOQzI5xMPhFt7mDwNvgNO2iDdbVK0Zo9LSSEkit2leZWClVKAWJpiM3EQNQVjojpkSF-eZrZzSF_8tH5K_Au868hXFkuKzXYPcYu4yS9oJa4Q_nC_4AuaWIfWe6w5ac2P-2USzIt63UzIE9UsJsDcleLEQGs3AdhYe_hJIL1FqO7h9M850Z-H7YWFZNYSjiY3-9cgajcdrmMhh_sm0uPx-ZdUYP1ifUkZi7-mw5PlsXYwOTUxgXPa4BJKT9TW0JCmGu2MN7BXtZkrtn3DbitdfMWwQChTb64cYjCtU3o1Em3kj7A4MdI7W14JcPg3m_UyT0zCLNQlRcdSSeRiS38Yy5mwiQnaC5_xfQDJWkhreseoJRkNLrfkdKLrTNKWPQfCxVb141zngBOZDWc2BAk7L_hjiRF4yC8dYU2QCJZLAVem2uq0PCm4GFM6DKtxJ92hwqipb3Fgo55ZDn1-7aEXEwm_QKGvVSOBVCBOLB-adBgRW7TVC7FcNQp3_kF7aTiDNzq7flF44w";
-
-        // Base64UrlSafeDecoder jcDecoder = new Base64UrlSafeDecoder();
+        String encoded = "Dk8SWM_Z3oZB-uwzAmTL9e4c1AGqpBAKNe2x56k9dWnCUL3gpRRpO-kUsgWtCDaUTjrNWsrbHtdpSlgoxKoYy6fXokmmylaS_Bw1x8nC--wZQAtoZCsA96yRFRz3ywFjS1lRzRc6s7YE10cRVMAD_qE68Y9WTo50G_GQlGruZg3h4pO2DYrDMNGhArE89o2kGCReFZIhUplYEREveCEoC77p59D2kIPX9vo7kuiKIfkYPd";
 
         byte[] expected = Base64.getUrlDecoder().decode(encoded);
 
@@ -631,12 +634,13 @@ public class AppletTest extends BaseTest {
         long endTime = 0;
         int numTests = 20;
         long[] results = new long[numTests];
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DECODE_JWT, 0x00, 0, ("." + encoded + ".").getBytes());
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
         for (int i = 0; i < numTests; i++) {
             starTime = System.nanoTime();
-            CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DECODE_JWT, 0x00, 0, ("." + encoded + ".").getBytes());
-            ResponseAPDU responseAPDU = connect().transmit(cmd);
-            Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+            responseAPDU = connect().transmit(cmd);
             results[i] = System.nanoTime() - starTime;
+            Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
         }
         // 646138521
         // Inline switch

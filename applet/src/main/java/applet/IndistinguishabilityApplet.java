@@ -41,7 +41,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
 
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
-    // Cipher.ALG_AES_CTR not beinf found. The constants are defined in:
+    // Cipher.ALG_AES_CTR not being found. The constants are defined in:
     // https://docs.oracle.com/en/java/javacard/3.2/jcapi/api_classic/constant-values.html#javacardx.crypto.Cipher.ALG_AES_CBC_PKCS5
     // However, the target card JCOP4 should support this algorithm, thus we
     // set the constant ourselves, see:

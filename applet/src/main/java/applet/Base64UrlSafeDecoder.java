@@ -80,8 +80,8 @@ public class Base64UrlSafeDecoder
     }
 
     // FIXME is there a quicker way to do this byte resolution? Long switch-case?
-    private byte base64CharToValue(byte c) {
-        switch (c) {
+    private byte base64CharToValue(byte value) {
+        switch (value) {
             case 'A': return 0;
             case 'B': return 1;
             case 'C': return 2;
