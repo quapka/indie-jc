@@ -26,6 +26,7 @@ public class Consts {
         public static final byte DERIVE_SALT = (byte) 0x07;
         public static final byte DECODE_JWT = (byte) 0x08;
         public static final byte VERIFY_ENCRYPTED_JWT = (byte) 0x09;
+        public static final byte VERIFY_ENCRYPTED_JWT_AND_COMMITMENT = (byte) 0x0a;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {

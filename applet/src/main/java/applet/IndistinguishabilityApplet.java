@@ -170,6 +170,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.VERIFY_ENCRYPTED_JWT:
                         verifyEncryptedJwt(apdu);
                         break;
+                    case Consts.INS.VERIFY_ENCRYPTED_JWT_AND_COMMITMENT:
+                        verifyEncryptedJwtAndCommitment(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -285,6 +288,32 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 		apdu.setOutgoingAndSend((short) 0, ptxtLen);
     }
 
+    private void verifyEncryptedJwtAndCommitment(APDU apdu) {
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
+        short ctxtLen = (short) (extApduSize - 16 - 65);
+
+        short ptxtLen = aesCtrDecryptInner(buffer, (short) 0, ctxtLen, tmp, (short) 0);
+
+        boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
+        if ( !jwtIsvalid ) {
+            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
+            return;
+        }
+        // verify commitment
+
+
+        if ( jwtIsvalid ) {
+            Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Good.length);
+        } else {
+            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
+        }
+    }
+
+
     private void verifyEncryptedJwt(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
@@ -313,37 +342,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte nonceByteSize = 16;
 
         // FIXME use dedicated key-identity card?
-        System.out.println("1");
         ecdh.init(privDVRFKey);
-
-        System.out.println("2");
         ecdh.generateSecret(buffer, offset, pointLen, tmp, (short) 0);
-
-        System.out.println("3");
         aesCtrKey.setKey(tmp, (short) 0);
-        System.out.println("Card key");
-        for (short i = 0; i < 20; i++) {
-            System.out.print(String.format("%02X", tmp[i]));
-        }
-        System.out.println();
-
-        System.out.println("4");
         aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, buffer, (short) (offset + pointLen), (short) nonceByteSize);
-
-        System.out.println("Card IV");
-        for (short i = 0; i < nonceByteSize; i++) {
-            System.out.print(String.format("%02X", buffer[i + offset + pointLen]));
-        }
-        System.out.println();
-
-        System.out.println("5");
-        System.out.println(String.format("ctxLen: %d", ctxtLen));
-
-        // System.out.println("Decrypted");
-        // for (short i = 0; i < nonceByteSize; i++) {
-        //     System.out.print(String.format("%02X", buffer[i + offset + pointLen]));
-        // }
-        // System.out.println();
 
         return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ctxtLen, out, outOff);
     }
