@@ -313,6 +313,7 @@ public class AppletTest extends BaseTest {
         }
         System.out.println();
     }
+
     @Test
     public void testAesCtrDecryption() throws Exception {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
@@ -587,11 +588,7 @@ public class AppletTest extends BaseTest {
         }
         System.out.println();
 
-        String payload = createToken(pair, alg, tokenNonce);
-        String jwt = Jwts.builder()
-            .setPayload(payload)
-            .signWith(pair.getPrivate(), alg) // <-- Bob's EC private key
-            .compact();
+        String jwt = createToken(pair, alg, tokenNonce);
 
         System.out.println(String.format("Token length: %d", jwt.getBytes().length));
         System.out.println("In-test token");
