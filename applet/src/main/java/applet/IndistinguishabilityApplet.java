@@ -27,6 +27,7 @@ import applet.Consts;
 import applet.jcmathlib.OperationSupport;
 import applet.jcmathlib.ResourceManager;
 import applet.jcmathlib.SecP256r1;
+// import applet.Utils;
 
 // FIXME change all (short) 0 to ZERO final 0x00 byte value?
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
@@ -500,7 +501,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         System.out.println();
 
-        short sigLen = derEncodeRawEcdsaSignature(procBuffer, derSignature);
+        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, derSignature);
         return verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen);
     }
 
@@ -579,7 +580,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             (short) 0
         );
         // encode signature
-        short sigLen = derEncodeRawEcdsaSignature(procBuffer, derSignature);
+        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, derSignature);
         System.out.println(sigLen);
         for (short i = 0; i < sigLen; i++ ) {
             System.out.print(String.format("%02x", derSignature[i]));
@@ -680,56 +681,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         return -1;
     }
 
-    public byte derEncodeRawEcdsaSignature(byte[] signature, byte[] out) {
-        // SEQUENCE
-        byte index = 0;
-        out[index++] = 0x30;
-        // NOTE assuming P256
-        short rLen = 32;
-        short sLen = 32;
-
-        // byte mask = 0x80;
-
-        // NOTE maybe flip == 0 to != 0?
-        if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
-            rLen += 1;
-        }
-        if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
-            sLen += 1;
-        }
-        // FIXME sequenceLen is byte
-        short sequenceLen = (short) 2;
-        sequenceLen += rLen;
-        sequenceLen += (short) 2;
-        sequenceLen += sLen;
-
-        // short wholeLen = sequenceLen;
-        // wholeLen += (short) 1;
-
-        out[index++] = (byte) sequenceLen;
-        out[index++] = (byte) 0x02;
-        out[index++] = (byte) rLen;
-
-        if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
-            out[index++] = (byte) 0x00;
-        }
-
-        // copy r value
-        Util.arrayCopyNonAtomic(signature, (short) 0, out, index, (short) 32);
-        index += 32;
-
-        out[index++] = (byte) 0x02;
-        out[index++] = (byte) sLen;
-        
-        if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
-            out[index++] = (byte) 0x00;
-        }
-
-        // copy s value
-        Util.arrayCopyNonAtomic(signature, (short) 32, out, index, (short) 32);
-        index += 32;
-        return index;
-    }
 
     public void decode(APDU apdu) {
         // byte[5] APDU header | byte[X] Token header | . | byte[Y] Token body | . | byte[Z] Token signature
