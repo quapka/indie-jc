@@ -21,6 +21,7 @@ public class Base64UrlSafeDecoder
             low = 0;
             for (byte j = 0; j < 4; j++) {
                 value = input[(short) (inputOffset + i + j)];
+                // Convert Base64 character to its 6-bit value inplace
                 if ( value >= 65 && value <= 90) {
                     index = (byte) (value - 65);
                 } else if ( value >= 97 && value <= 122) {
@@ -46,7 +47,7 @@ public class Base64UrlSafeDecoder
                     high |= index << 2;
                 }
             }
-            output[(short) (outputOffset + n_written + 0)] = (byte) ((high    ));
+            output[(short) (outputOffset + n_written + 0)] = high;
             output[(short) (outputOffset + n_written + 1)] = (byte) ((low >> 8));
             output[(short) (outputOffset + n_written + 2)] = (byte) ((low     ));
             n_written += 3;
@@ -79,7 +80,6 @@ public class Base64UrlSafeDecoder
         return n_written;
     }
 
-    // FIXME is there a quicker way to do this byte resolution? Long switch-case?
     private byte base64CharToValue(byte value) {
         switch (value) {
             case 'A': return 0;
