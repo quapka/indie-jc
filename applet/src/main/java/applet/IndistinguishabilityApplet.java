@@ -334,7 +334,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, uncompressedECPointSize, (short) 32) == 0;
 
         if ( jwtIsvalid && pubkeyIsValid) {
-            short hashSize = deriveHashSecret(tmp, nDecoded, apdu);
+            short hashSize = deriveHashSecret(tmp, nDecoded, apduBuffer);
             apdu.setOutgoingAndSend((short) 0, (short) hashSize);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
@@ -418,7 +418,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, keySize);
     }
 
-    public short deriveHashSecret(byte[] body, short bodySize, APDU apdu) {
+    public short deriveHashSecret(byte[] body, short bodySize, byte[] out) {
+        // default to 0 output offset
+        return  deriveHashSecret(body, bodySize, out, (short) 0);
+    }
+
+    public short deriveHashSecret(byte[] body, short bodySize, byte[] out, short outOffset) {
         hasher.reset();
         hasher.update(HASH_SECRET_DOMAIN_SEPARATOR, (short) 0, (short) HASH_SECRET_DOMAIN_SEPARATOR.length);
 
@@ -428,8 +433,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         valueLen = getValueFor(body, (short) 0, bodySize, NAME_FIELD_NAME, tmp, (short) 0);
         hasher.update(tmp, (short) 0, valueLen);
 
-		byte[] apduBuffer = apdu.getBuffer();
-        hasher.doFinal(HASH_SALT_SECRET, (short) 0, (short) HASH_SALT_SECRET.length, apduBuffer, (short) 0);
+        hasher.doFinal(HASH_SALT_SECRET, (short) 0, (short) HASH_SALT_SECRET.length, out, outOffset);
         return hasher.getLength();
 
     }
@@ -633,7 +637,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             (short) 0
         );
 
-        short hashSize = deriveHashSecret(procBuffer, nDecoded, apdu);
+        short hashSize = deriveHashSecret(procBuffer, nDecoded, apduBuffer);
 
         apdu.setOutgoingAndSend((short) 0, hashSize);
     }
