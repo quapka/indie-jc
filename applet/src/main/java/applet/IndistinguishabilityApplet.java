@@ -334,7 +334,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, uncompressedECPointSize, (short) 32) == 0;
 
         if ( jwtIsvalid && pubkeyIsValid) {
-            short hashSize = deriveHashSecret(tmp, nDecoded, apduBuffer);
+            // derive salt
+            short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize));
+            // and encrypt it
+            aesCtrEncryptInner(buffer, (short) 0, hashSize, apduBuffer, (short) 0);
             apdu.setOutgoingAndSend((short) 0, (short) hashSize);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
@@ -376,6 +379,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, buffer, (short) (offset + pointLen), (short) nonceByteSize);
 
         return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ctxtLen, out, outOff);
+    }
+
+    // Encrypt and decrypt is almost the same, except the mode, refactor into a single function?
+    private short aesCtrEncryptInner(byte[] buffer, short offset, short ptxtLen, byte[] out, short outOff) {
+        short pointLen = 65;
+        byte nonceByteSize = 16;
+
+        // FIXME use dedicated key-identity card?
+        ecdh.init(privDVRFKey);
+        ecdh.generateSecret(buffer, offset, pointLen, tmp, (short) 0);
+        aesCtrKey.setKey(tmp, (short) 0);
+        aesCtr.init(aesCtrKey, Cipher.MODE_ENCRYPT, buffer, (short) (offset + pointLen), (short) nonceByteSize);
+
+        return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ptxtLen, out, outOff);
     }
 
     private void verifyCommitment(APDU apdu) {
