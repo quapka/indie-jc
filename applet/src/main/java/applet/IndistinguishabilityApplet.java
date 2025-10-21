@@ -298,18 +298,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - zkNonceSize);
 
-        // System.out.println("Hashed commitment merkle tree:");
-        // for (short i = 0; i < hasher.getLength(); i++) {
-        //     System.out.print(String.format("%02X", buffer[i]));
-        // }
-        // System.out.println();
-
         short ptxtLen = aesCtrDecryptInner(buffer, (short) 0, ctxtLen, tmp, (short) 0);
-        // System.out.println("Decrypted plaintext: " + ptxtLen);
-        // for (short i = 0; i < ptxtLen; i++) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // System.out.println();
 
         boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
         if ( !jwtIsvalid ) {
@@ -317,9 +306,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
             return;
         }
-        // boolean jwtIsvalid = true;
 
-        // verify commitment
         // FIXME add domain seprator?
         hasher.reset();
         // zkNonce
@@ -327,24 +314,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // clientPubpoint
         hasher.doFinal(buffer, (short) 0, uncompressedECPointSize, procBuffer, (short) 0);
 
-        System.out.println("Hashed commitment merkle tree:");
-        for (short i = 0; i < hasher.getLength(); i++) {
-            System.out.print(String.format("%02X", procBuffer[i]));
-        }
-        System.out.println();
-
-
-        // System.out.println("BAaaaM");
         short firstDot = indexOf(tmp, (short) 0,  ptxtLen, (byte) '.');
         short secondDot = indexOf(tmp, (short) (firstDot + 1), ptxtLen, (byte) '.');
-        // System.out.println("First dot at: " + firstDot + ", second dot at: " + secondDot);
-        // System.out.println("Range: " + (short) (secondDot - (firstDot + 1)));
-
-        // System.out.println("Encoded plaintext: " + ptxtLen);
-        // for (short i = 0; i < ptxtLen; i++) {
-        //     System.out.print(String.format("%02x", tmp[i]));
-        // }
-        // System.out.println();
         short nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             tmp,
             (short) (firstDot + 1),
@@ -353,30 +324,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             (short) 0
         );
 
-        System.out.println("Decoded plaintext: " + nDecoded);
-        for (short i = 0; i < nDecoded; i++) {
-            System.out.print(String.format("%c", tmp[i]));
-        }
-        System.out.println();
-
-
         // NOTE: As part of some attack the nonce could be empty. Therefore,
         // the size comparison needs to be hardcoded and not inferred from the
         // value itself.
         short valueLen = getValueFor(tmp, (short) 0, nDecoded, NONCE_FIELD_NAME, procBuffer, uncompressedECPointSize);
 
-        System.out.println("recomputed");
-        for (short i = uncompressedECPointSize; i < (short) (uncompressedECPointSize + valueLen); i++) {
-            System.out.print(String.format("%02X", procBuffer[i]));
-        }
-
         Utils.fromUppercaseHex(procBuffer, uncompressedECPointSize, (short) 64, procBuffer,  uncompressedECPointSize);
-
-        System.out.println("\nJWT nonce: " + valueLen);
-        for (short i = 0; i < 32; i++) {
-            System.out.print(String.format("%02X", procBuffer[i]));
-        }
-        System.out.println();
 
         boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, uncompressedECPointSize, (short) 32) == 0;
 
@@ -722,8 +675,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) (proofLength + partialLength));
     }
 
-    // FIXME do not copy, only give offset and length?
-    public short getValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputLen) {
+    /**
+     * Iterates through JSON `input`, starting at `inputOffset` until `key`
+     * enclosed in double quotes is found. If the `key` is found its value is
+     * copied to the `output` buffer.
+     *
+     *
+     */
+    public short getValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputOffset) {
 
         // NOTE assumes doublequotes and appearing in pairs
         byte DOUBLEQUOTE = '"';
@@ -751,7 +710,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     System.out.print(String.format("%c", input[i]));
                 }
                 // Util.arrayCopyNonAtomic(input, (short) (start + 1), output, (short) 0, (short) (end - start));
-                Util.arrayCopyNonAtomic(input, (short) (start + 1), output, (short) 0, (short) (end - start - 1));
+            // FIXME do not copy, only give offset and length?
+                Util.arrayCopyNonAtomic(input, (short) (start + 1), output, outputOffset, (short) (end - start - 1));
                 return (short) (end - start - 1);
             }
             start = indexOf(input, (short) (end + 1), inputLen, DOUBLEQUOTE);
@@ -871,7 +831,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short recvLen = apdu.setIncomingAndReceive(); // + apdu.getOffsetCdata());
         if (apdu.getOffsetCdata() == ISO7816.OFFSET_CDATA) {
             extApduSize = recvLen;
-            System.out.println(String.format("extApduSize: %d", extApduSize));
             Util.arrayCopyNonAtomic(apduBuffer, (short) ISO7816.OFFSET_CDATA, extApduBuffer, (short) 0, recvLen);
             return extApduBuffer;
         }
@@ -885,7 +844,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             recvLen = apdu.receiveBytes((short) 0);
         }
         extApduSize = written;
-        System.out.println(String.format("extApduSize: %d", extApduSize));
         return extApduBuffer;
     }
 

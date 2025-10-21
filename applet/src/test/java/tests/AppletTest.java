@@ -701,11 +701,6 @@ public class AppletTest extends BaseTest {
         byte[] fullChannelKey = sha1.digest(sharedSecret);
 
         byte[] channelKey = Arrays.copyOf(fullChannelKey, 20);
-        System.out.println("Channel key");
-        for (short i = 0; i < 20; i++) {
-            System.out.print(String.format("%02X", channelKey[i]));
-        }
-        System.out.println();
 
         byte channelNonceByteSize = 16;
         byte[] channelNonce = new byte[channelNonceByteSize];
@@ -725,23 +720,7 @@ public class AppletTest extends BaseTest {
         hasher.update(encodedClientPubPoint);
         byte[] tokenNonce = hasher.digest();
 
-        System.out.println("Channel IV");
-        for (short i = 0; i < channelNonceByteSize; i++) {
-            System.out.print(String.format("%02X", channelNonce[i]));
-        }
-        System.out.println();
-
-        System.out.println("Orig merkleeTree");
-        for (short i = 0; i < tokenNonce.length; i++) {
-            System.out.print(String.format("%02X", tokenNonce[i]));
-        }
-        System.out.println();
-
         String jwt = createToken(pair, alg, tokenNonce);
-
-        System.out.println(String.format("Token length: %d", jwt.getBytes().length));
-        System.out.println("In-test token");
-        System.out.println(jwt);
 
         byte[] ctxtBuff = new byte[2048];
         int ctxtLen = cipher.processBytes(jwt.getBytes(), 0, jwt.getBytes().length, ctxtBuff, 0);
@@ -761,16 +740,6 @@ public class AppletTest extends BaseTest {
 
         System.arraycopy(zkNonce, 0, encPayload, payloadLength, zkNonce.length);
         payloadLength += zkNonce.length;
-        System.out.println("Ctxtlen: " + ctxtLen);
-        System.out.println("zkNonce: " + zkNonce.length);
-
-        // System.arraycopy(tokenNonce, 0, encPayload, payloadLength, tokenNonce.length);
-        // payloadLength += tokenNonce.length;
-
-        // cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
-        // responseAPDU = connect().transmit(cmd);
-
-        // Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
 
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_ENCRYPTED_JWT_AND_COMMITMENT, 0x00, 0x00, encPayload, 0, payloadLength);
         responseAPDU = connect().transmit(cmd);
