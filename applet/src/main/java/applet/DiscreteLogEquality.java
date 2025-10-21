@@ -16,7 +16,6 @@ import javacard.security.RandomData;
 import javacard.security.MessageDigest;
 import javacard.framework.APDU;
 
-
 public class DiscreteLogEquality {
     public static ECCurve curve;
     // FIXME M is H actually :D
@@ -26,7 +25,6 @@ public class DiscreteLogEquality {
     public static BigNat aBN, bBN;
     private byte[] tmp = new byte[128];
     public boolean initialized = false;
-    private RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
 	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
         'D', 'i', 's', 'c', 'r', 'e', 't', 'e', ' ',
@@ -82,11 +80,11 @@ public class DiscreteLogEquality {
     public void calculateModMult(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         // a.setValue((short) 1);
-        rng.generateData(tmp, (short) 0, (short) 32);
+        IndistinguishabilityApplet.rng.generateData(tmp, (short) 0, (short) 32);
         aBN.fromByteArray(tmp, (short) 0, (short) 32);
 
         // b.setValue((short) 2);
-        rng.generateData(tmp, (short) 0, (short) 32);
+        IndistinguishabilityApplet.rng.generateData(tmp, (short) 0, (short) 32);
         bBN.fromByteArray(tmp, (short) 0, (short) 32);
 
         printBigNat(aBN);
@@ -109,7 +107,7 @@ public class DiscreteLogEquality {
      */
     public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, byte[] out) {
         // choose random r <- ZZ_q
-        rng.generateData(tmp, (short) 0, (short) 32);
+        IndistinguishabilityApplet.rng.generateData(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
         // FIXME measure, whether the modding is necessary. The consequent point multiplication is possible either way.
         // r.mod(curve.rBN);
