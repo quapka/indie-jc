@@ -334,14 +334,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, uncompressedECPointSize, (short) 32) == 0;
 
         if ( jwtIsvalid && pubkeyIsValid) {
-            Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
-            apdu.setOutgoingAndSend((short) 0, (short) Good.length);
+            short hashSize = deriveHashSecret(tmp, nDecoded, apdu);
+            apdu.setOutgoingAndSend((short) 0, (short) hashSize);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
         }
     }
-
 
     private void verifyEncryptedJwt(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
