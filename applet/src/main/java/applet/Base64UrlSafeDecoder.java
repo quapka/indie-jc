@@ -16,6 +16,7 @@ public class Base64UrlSafeDecoder
         byte remainder = (byte) (inputLength % 4);
         byte value = 0;
 
+        System.out.println("About to decode from Base64: " + inputLength + " bytes");
         for (short i = 0; i < (short) ((inputLength / 4) * 4); i += 4) {
             high = 0;
             low = 0;
@@ -34,6 +35,10 @@ public class Base64UrlSafeDecoder
                     index = 63;
                 } else if ( value == '=' ) {
                     index = 0;
+                } else {
+                    System.out.println(String.format("Invalid base64url character: 0x%02X", value));
+                    ISOException.throwIt(Consts.ERR.INVALID_INPUT);
+                    return 0;
                 }
 
                 if (j == 3) {

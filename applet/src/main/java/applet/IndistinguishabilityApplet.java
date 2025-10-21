@@ -291,9 +291,25 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private void verifyEncryptedJwtAndCommitment(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
-        short ctxtLen = (short) (extApduSize - 16 - 65);
+        // the sizes are in bytes
+        short aesCtrNonceSize = 16;
+        short uncompressedECPointSize = 65;
+        short zkNonceSize = 32;
+
+        short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - zkNonceSize);
+
+        // System.out.println("Hashed commitment merkle tree:");
+        // for (short i = 0; i < hasher.getLength(); i++) {
+        //     System.out.print(String.format("%02X", buffer[i]));
+        // }
+        // System.out.println();
 
         short ptxtLen = aesCtrDecryptInner(buffer, (short) 0, ctxtLen, tmp, (short) 0);
+        // System.out.println("Decrypted plaintext: " + ptxtLen);
+        // for (short i = 0; i < ptxtLen; i++) {
+        //     System.out.print(String.format("%02x", tmp[i]));
+        // }
+        // System.out.println();
 
         boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
         if ( !jwtIsvalid ) {
@@ -301,10 +317,70 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
             return;
         }
+        // boolean jwtIsvalid = true;
+
         // verify commitment
+        // FIXME add domain seprator?
+        hasher.reset();
+        // zkNonce
+        hasher.update(buffer, (short) (extApduSize - zkNonceSize), (short) zkNonceSize);
+        // clientPubpoint
+        hasher.doFinal(buffer, (short) 0, (short) uncompressedECPointSize, procBuffer, (short) 0);
+
+        System.out.println("Hashed commitment merkle tree:");
+        for (short i = 0; i < hasher.getLength(); i++) {
+            System.out.print(String.format("%02X", procBuffer[i]));
+        }
+        System.out.println();
 
 
-        if ( jwtIsvalid ) {
+        // System.out.println("BAaaaM");
+        short firstDot = indexOf(tmp, (short) 0,  ptxtLen, (byte) '.');
+        short secondDot = indexOf(tmp, (short) (firstDot + 1), ptxtLen, (byte) '.');
+        // System.out.println("First dot at: " + firstDot + ", second dot at: " + secondDot);
+        // System.out.println("Range: " + (short) (secondDot - (firstDot + 1)));
+
+        // System.out.println("Encoded plaintext: " + ptxtLen);
+        // for (short i = 0; i < ptxtLen; i++) {
+        //     System.out.print(String.format("%02x", tmp[i]));
+        // }
+        // System.out.println();
+        short nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
+            tmp,
+            (short) (firstDot + 1),
+            (short) (secondDot - (firstDot + 1)),
+            tmp,
+            (short) 0
+        );
+
+        System.out.println("Decoded plaintext: " + nDecoded);
+        for (short i = 0; i < nDecoded; i++) {
+            System.out.print(String.format("%c", tmp[i]));
+        }
+        System.out.println();
+
+
+        // NOTE: As part of some attack the nonce could be empty. Therefore,
+        // the size comparison needs to be hardcoded and not inferred from the
+        // value itself.
+        short valueLen = getValueFor(tmp, (short) 0, nDecoded, NONCE_FIELD_NAME, procBuffer, (short) uncompressedECPointSize);
+
+        System.out.println("recomputed");
+        for (short i = uncompressedECPointSize; i < uncompressedECPointSize + valueLen; i++) {
+            System.out.print(String.format("%02X", procBuffer[i]));
+        }
+
+        Utils.fromUppercaseHex(procBuffer, (short) uncompressedECPointSize, (short) 64, procBuffer, (short) uncompressedECPointSize);
+
+        System.out.println("\nJWT nonce: " + valueLen);
+        for (short i = 0; i < 32; i++) {
+            System.out.print(String.format("%02X", procBuffer[i]));
+        }
+        System.out.println();
+
+        boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, (short) uncompressedECPointSize, (short) 32) == 0;
+
+        if ( jwtIsvalid && pubkeyIsValid) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
             apdu.setOutgoingAndSend((short) 0, (short) Good.length);
         } else {
@@ -351,6 +427,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     private void verifyCommitment(APDU apdu) {
+        // FIXME What is the expected NONCE encoding? Hexadecimal or base64 encoded?
 		byte[] apduBuffer = apdu.getBuffer();
         byte zkNonceLength = apduBuffer[ISO7816.OFFSET_P1];
         byte pubKeyLength = apduBuffer[ISO7816.OFFSET_P2];

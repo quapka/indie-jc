@@ -168,7 +168,7 @@ public class AppletTest extends BaseTest {
         payload += "\"iss\":\"https://aexample.com\",";
         payload += "\"aud\":[\"zkLogin\"],";
         payload += "\"name\":\"Firstname Lastname\",";
-        payload += "\"nonce\":\"" + Hex.toHexString(nonce) + "\",";
+        payload += "\"nonce\":\"" + Hex.toHexString(nonce).toUpperCase() + "\",";
         payload += "\"iat\":1745773527,";
         payload += "\"exp\":1745777127,";
         payload += "\"auth_time\":1745773526,";
@@ -719,10 +719,6 @@ public class AppletTest extends BaseTest {
         boolean forEncryption = true;
         cipher.init(forEncryption, params);
 
-        byte tokenNonceByteSize = 16;
-        // byte[] tokenNonce = new byte[tokenNonceByteSize];
-        // prng.nextBytes(tokenNonce);
-
         byte[] zkNonce = nonceZkLogin();
         MessageDigest hasher = MessageDigest.getInstance("SHA-256");
         hasher.update(zkNonce);
@@ -735,37 +731,51 @@ public class AppletTest extends BaseTest {
         }
         System.out.println();
 
-        String payload = createToken(pair, alg, tokenNonce);
-        String jwt = Jwts.builder()
-            .setPayload(payload)
-            .signWith(pair.getPrivate(), alg) // <-- Bob's EC private key
-            .compact();
+        System.out.println("Orig merkleeTree");
+        for (short i = 0; i < tokenNonce.length; i++) {
+            System.out.print(String.format("%02X", tokenNonce[i]));
+        }
+        System.out.println();
+
+        String jwt = createToken(pair, alg, tokenNonce);
 
         System.out.println(String.format("Token length: %d", jwt.getBytes().length));
         System.out.println("In-test token");
-        // for (short i = 0; i < ; i++) {
-        //     System.out.print(String.format("%02X", procBuffer[i]));
-        // }
         System.out.println(jwt);
 
         byte[] ctxtBuff = new byte[2048];
         int ctxtLen = cipher.processBytes(jwt.getBytes(), 0, jwt.getBytes().length, ctxtBuff, 0);
 
-        byte[] encPayload = new byte [65 + channelNonceByteSize + ctxtLen];
-        // System.out.println(String.format("encodedClientPubPoint length: %d", encodedClientPubPoint.length));
-        System.arraycopy(encodedClientPubPoint, 0, encPayload, 0, encodedClientPubPoint.length);
-        System.arraycopy(channelNonce, 0, encPayload, encodedClientPubPoint.length, channelNonceByteSize);
-        System.arraycopy(ctxtBuff, 0, encPayload, channelNonceByteSize + encodedClientPubPoint.length, ctxtLen);
+        // Build the payload
+        // List<Byte> temp = new ArrayList<>();
+        byte[] encPayload = new byte [encodedClientPubPoint.length + channelNonceByteSize + ctxtLen + zkNonce.length];
+        short payloadLength = 0;
+        System.arraycopy(encodedClientPubPoint, 0, encPayload, payloadLength, encodedClientPubPoint.length);
+        payloadLength += encodedClientPubPoint.length;
 
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
+        System.arraycopy(channelNonce, 0, encPayload, payloadLength, channelNonceByteSize);
+        payloadLength += channelNonceByteSize;
+
+        System.arraycopy(ctxtBuff, 0, encPayload, payloadLength, ctxtLen);
+        payloadLength += ctxtLen;
+
+        System.arraycopy(zkNonce, 0, encPayload, payloadLength, zkNonce.length);
+        payloadLength += zkNonce.length;
+        System.out.println("Ctxtlen: " + ctxtLen);
+        System.out.println("zkNonce: " + zkNonce.length);
+
+        // System.arraycopy(tokenNonce, 0, encPayload, payloadLength, tokenNonce.length);
+        // payloadLength += tokenNonce.length;
+
+        // cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
+        // responseAPDU = connect().transmit(cmd);
+
+        // Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+
+        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_ENCRYPTED_JWT_AND_COMMITMENT, 0x00, 0x00, encPayload, 0, payloadLength);
         responseAPDU = connect().transmit(cmd);
 
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
-
-        cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_ENCRYPTED_JWT, 0x00, 0x00, encPayload, 0, encodedClientPubPoint.length + channelNonceByteSize + ctxtLen);
-        responseAPDU = connect().transmit(cmd);
-
-        printBuffer(responseAPDU.getBytes(), (short) 4);
+        // printBuffer(responseAPDU.getBytes(), (short) 3);
 
         Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
     }
