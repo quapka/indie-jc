@@ -323,9 +323,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // FIXME add domain seprator?
         hasher.reset();
         // zkNonce
-        hasher.update(buffer, (short) (extApduSize - zkNonceSize), (short) zkNonceSize);
+        hasher.update(buffer, (short) (extApduSize - zkNonceSize), zkNonceSize);
         // clientPubpoint
-        hasher.doFinal(buffer, (short) 0, (short) uncompressedECPointSize, procBuffer, (short) 0);
+        hasher.doFinal(buffer, (short) 0, uncompressedECPointSize, procBuffer, (short) 0);
 
         System.out.println("Hashed commitment merkle tree:");
         for (short i = 0; i < hasher.getLength(); i++) {
@@ -363,14 +363,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // NOTE: As part of some attack the nonce could be empty. Therefore,
         // the size comparison needs to be hardcoded and not inferred from the
         // value itself.
-        short valueLen = getValueFor(tmp, (short) 0, nDecoded, NONCE_FIELD_NAME, procBuffer, (short) uncompressedECPointSize);
+        short valueLen = getValueFor(tmp, (short) 0, nDecoded, NONCE_FIELD_NAME, procBuffer, uncompressedECPointSize);
 
         System.out.println("recomputed");
-        for (short i = uncompressedECPointSize; i < uncompressedECPointSize + valueLen; i++) {
+        for (short i = uncompressedECPointSize; i < (short) (uncompressedECPointSize + valueLen); i++) {
             System.out.print(String.format("%02X", procBuffer[i]));
         }
 
-        Utils.fromUppercaseHex(procBuffer, (short) uncompressedECPointSize, (short) 64, procBuffer, (short) uncompressedECPointSize);
+        Utils.fromUppercaseHex(procBuffer, uncompressedECPointSize, (short) 64, procBuffer,  uncompressedECPointSize);
 
         System.out.println("\nJWT nonce: " + valueLen);
         for (short i = 0; i < 32; i++) {
@@ -378,7 +378,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         System.out.println();
 
-        boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, (short) uncompressedECPointSize, (short) 32) == 0;
+        boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, uncompressedECPointSize, (short) 32) == 0;
 
         if ( jwtIsvalid && pubkeyIsValid) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
