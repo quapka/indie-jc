@@ -339,8 +339,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             // derive salt
             short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize));
             // and encrypt it
-            aesCtrEncryptInner(buffer, (short) 0, hashSize, apduBuffer, (short) 0);
-            apdu.setOutgoingAndSend((short) 0, (short) hashSize);
+            ctxtLen = aesCtrEncryptInner(buffer, (short) 0, hashSize, apduBuffer, (short) 0);
+            apdu.setOutgoingAndSend((short) 0, (short) ctxtLen);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
@@ -387,14 +387,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private short aesCtrEncryptInner(byte[] buffer, short offset, short ptxtLen, byte[] out, short outOff) {
         short pointLen = 65;
         byte nonceByteSize = 16;
+        // generate new nonce directly to the output
+        rng.generateData(out, (short) 0, nonceByteSize);
+
+        System.out.println("nonce");
+        for (short i = 0; i < nonceByteSize; i++) {
+            System.out.print(String.format("%02X", out[i]));
+        }
+        System.out.println();
 
         // FIXME use dedicated key-identity card?
         ecdh.init(privDVRFKey);
         ecdh.generateSecret(buffer, offset, pointLen, tmp, (short) 0);
         aesCtrKey.setKey(tmp, (short) 0);
-        aesCtr.init(aesCtrKey, Cipher.MODE_ENCRYPT, buffer, (short) (offset + pointLen), (short) nonceByteSize);
+        aesCtr.init(aesCtrKey, Cipher.MODE_ENCRYPT, out, (short) 0, (short) nonceByteSize);
 
-        return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ptxtLen, out, outOff);
+        return (short) (nonceByteSize + aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ptxtLen, out, nonceByteSize));
     }
 
     private void verifyCommitment(APDU apdu) {

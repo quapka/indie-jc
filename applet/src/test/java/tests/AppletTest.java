@@ -744,14 +744,17 @@ public class AppletTest extends BaseTest {
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_ENCRYPTED_JWT_AND_COMMITMENT, 0x00, 0x00, encPayload, 0, payloadLength);
         responseAPDU = connect().transmit(cmd);
 
+        System.arraycopy(responseAPDU.getData(), 0, channelNonce, 0, channelNonceByteSize);
+        params = new ParametersWithIV(ctrKey, channelNonce);
+
         forEncryption = false;
         cipher.init(forEncryption, params);
+
         byte[] ptxtBuff = new byte[32];
-        int ptxtLen = cipher.processBytes(responseAPDU.getData(), 0, responseAPDU.getData().length, ptxtBuff, 0);
+        int ptxtLen = cipher.processBytes(responseAPDU.getData(), channelNonceByteSize, responseAPDU.getData().length - channelNonceByteSize, ptxtBuff, 0);
         // NOTE This hardcoded salt works for the hash-based derivation that
         // uses hardcoded secret and a test user
         byte[] expectedSalt = Hex.decode("6a5323256f3ff924017ae2ebbbd56e2556192e1f322e991b911e56069c17976d");
-        // byte[] derivedSalt = responseAPDU.getData();
 
         Assert.assertArrayEquals(expectedSalt, ptxtBuff);
     }
