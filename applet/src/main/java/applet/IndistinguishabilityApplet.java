@@ -41,7 +41,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
-    public static RandomData rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+    public static RandomData rng;
 
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
     // Cipher.ALG_AES_CTR not being found. The constants are defined in:
@@ -241,6 +241,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         rm = new ResourceManager((short) 256);
         // rm = new ResourceManager((short) 256, (short) 2056);
+        rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         dleq = new DiscreteLogEquality();
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
@@ -309,7 +310,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             return;
         }
 
-        // FIXME add domain seprator?
+        // FIXME add domain separator?
         hasher.reset();
         // zkNonce
         hasher.update(buffer, (short) (extApduSize - zkNonceSize), zkNonceSize);
@@ -340,7 +341,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize));
             // and encrypt it
             ctxtLen = aesCtrEncryptInner(buffer, (short) 0, hashSize, apduBuffer, (short) 0);
-            apdu.setOutgoingAndSend((short) 0, (short) ctxtLen);
+            apdu.setOutgoingAndSend((short) 0, ctxtLen);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
