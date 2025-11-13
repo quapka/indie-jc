@@ -175,6 +175,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.VERIFY_ENCRYPTED_JWT_AND_COMMITMENT:
                         verifyEncryptedJwtAndCommitment(apdu);
                         break;
+                    case Consts.INS.IS_INITIALIZED:
+                        getInitialized(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -590,6 +593,17 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 		short length = (short) Bad.length;
 		Util.arrayCopyNonAtomic(Bad, (short) 0, buffer, (short) 0, length);
 		apdu.setOutgoingAndSend((short) 0, length);
+	}
+
+	private void getInitialized(APDU apdu) {
+		byte[] buffer = apdu.getBuffer();
+        if ( initialized ) {
+            Util.setShort(buffer, (short) 0, (short) 0xffff);
+            apdu.setOutgoingAndSend((short) 0, (short) 2);
+        } else {
+            Util.setShort(buffer, (short) 0, (short) 0x0000);
+            apdu.setOutgoingAndSend((short) 0, (short) 2);
+        }
 	}
 
     // private boolean verifyJWT(byte[] token) {

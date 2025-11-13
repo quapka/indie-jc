@@ -140,6 +140,15 @@ public class AppletTest extends BaseTest {
     }
 
     @Test
+    public void testIsInitialized() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.IS_INITIALIZED, 0, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertTrue(Arrays.equals(new byte[] {(byte) 0xFF, (byte) 0xFF}, responseAPDU.getData()));
+    }
+
+    @Test
     public void testDecodeBase64UrlSafe() throws Exception {
         SignatureAlgorithm alg = Jwts.SIG.ES256;
         KeyPair pair = alg.keyPair().build();
