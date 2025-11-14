@@ -100,9 +100,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private ECPrivateKey privDVRFKey;
     private ECPublicKey pubDVRFKey;
 
-    private ECPublicKey OIDC_PUBLIC_KEY  = (ECPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PUBLIC, KeyBuilder.LENGTH_EC_FP_256, false);
+    private ECPublicKey OIDC_PUBLIC_KEY = (ECPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PUBLIC, KeyBuilder.LENGTH_EC_FP_256, false);
 
-    private short sw = ISO7816.SW_NO_ERROR;
     private Base64UrlSafeDecoder base64UrlSafeDecoder;
 
 	public static void install(byte[] bArray, short bOffset, byte bLength)
