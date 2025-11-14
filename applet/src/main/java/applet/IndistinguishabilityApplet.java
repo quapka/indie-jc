@@ -50,7 +50,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     // set the constant ourselves, see:
     // https://github.com/crocs-muni/jcalgtest_results/blob/main/javacard/Profiles/results/NXP_JCOP4_J3R180_SecID_Feitian_ALGSUPPORT__3b_d5_18_ff_81_91_fe_1f_c3_80_73_c8_21_10_0a_(provided_by_PetrS).csv#L81
     public static final byte Cipher_ALG_AES_CTR = -16;
-    public static final byte uncompressPubKeySize = 65;
+    public static final short uncompressPubKeySize = 65;
 
 	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
 	public static final byte[] Good = {'G', 'O', 'O', 'D'};
@@ -439,7 +439,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         OIDC_PUBLIC_KEY.setG(SecP256r1.G, offset, (short) SecP256r1.G.length);
         OIDC_PUBLIC_KEY.setR(SecP256r1.r, offset, (short) SecP256r1.r.length);
         OIDC_PUBLIC_KEY.setK(SecP256r1.k);
-        OIDC_PUBLIC_KEY.setW(buffer, (short) ISO7816.OFFSET_CDATA, (short) uncompressPubKeySize);
+        OIDC_PUBLIC_KEY.setW(buffer, (short) ISO7816.OFFSET_CDATA, uncompressPubKeySize);
 
         getOIDCPublicKey(apdu);
     }
