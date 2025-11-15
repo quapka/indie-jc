@@ -12,7 +12,7 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
-        distribution: '<distribution>'
+        distribution: temurin
         java-version: 8
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
