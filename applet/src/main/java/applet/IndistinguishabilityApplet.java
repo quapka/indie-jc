@@ -285,6 +285,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private void sendDecrypted(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        short _bytesRead = apdu.setIncomingAndReceive();
         byte ctxtLen = apduBuffer[ISO7816.OFFSET_P1];
 
         short ptxtLen = aesCtrDecryptInner(apduBuffer, ISO7816.OFFSET_CDATA, ctxtLen, tmp, (short) 0);
@@ -411,6 +412,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private void verifyCommitment(APDU apdu) {
         // FIXME What is the expected NONCE encoding? Hexadecimal or base64 encoded?
 		byte[] apduBuffer = apdu.getBuffer();
+        short _bytesRead = apdu.setIncomingAndReceive();
         byte zkNonceLength = apduBuffer[ISO7816.OFFSET_P1];
         byte pubKeyLength = apduBuffer[ISO7816.OFFSET_P2];
 
@@ -430,6 +432,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private void setOIDCPublicKey(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
+        short _bytesRead = apdu.setIncomingAndReceive();
         // FIXME move to constructor KeyBuilder
         short offset = 0;
         OIDC_PUBLIC_KEY.setFieldFP(SecP256r1.p, offset, (short) SecP256r1.p.length);
