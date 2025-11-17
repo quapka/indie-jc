@@ -69,6 +69,7 @@ java \
     --vsmartcard-port "$vsmartcardPort" \
     &
 JCardEngine_PID=$!
+echo "Started JCardEngine with PID: $JCardEngine_PID"
 
 # Run tests against the physical card
 ./gradlew \
