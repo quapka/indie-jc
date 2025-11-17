@@ -22,7 +22,7 @@ EOF
 }
 
 # kudos to: https://stackoverflow.com/a/52674277
-options=$(getopt --longoptions "build,install,reader:" --options "b,i,r:" --alternative -- "$@")
+options=$(getopt --longoptions "help,build,install,reader:" --options "h,b,i,r:" --alternative -- "$@")
 eval set -- "$options"
 
 export readerIndex=2

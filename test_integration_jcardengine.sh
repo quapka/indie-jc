@@ -20,7 +20,7 @@ EOF
 }
 
 # kudos to: https://stackoverflow.com/a/52674277
-options=$(getopt --longoptions "build,reader:" --options "b,r:" --alternative -- "$@")
+options=$(getopt --longoptions "help,build,reader:" --options "h,b,r:" --alternative -- "$@")
 eval set -- "$options"
 
 export readerIndex=0
