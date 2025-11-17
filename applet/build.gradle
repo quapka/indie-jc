@@ -111,9 +111,23 @@ task gpVersion(type: sk.neuromancer.gradle.javacard.gp.GpExec) {
 final def packageAID = '01:FF:FF:04:05:06:07:08:09:01:02'
 final def appletAID = "${packageAID}:01:02"
 
+final def buildCardType = "build.cardType"
+final def testCardType = "test.cardType"
+final def testReaderIndex = "test.ReaderIndex"
+
 test {
     systemProperty 'package.aid', packageAID
     systemProperty 'applet.aid', appletAID
+    if (project.hasProperty(buildCardType)) {
+        systemProperty buildCardType, project.findProperty(buildCardType)
+    }
+    if (project.hasProperty(testCardType)) {
+        systemProperty testCardType, project.findProperty(testCardType)
+    }
+
+    if (project.hasProperty(testReaderIndex)) {
+        systemProperty testReaderIndex, project.findProperty(testReaderIndex)
+    }
 
     // useTestNG()
     useJUnitPlatform {
@@ -127,15 +141,6 @@ test {
         check.dependsOn it
         shouldRunAfter test
     }
-}
-
-task setPhysicalCard {
-    System.setProperty('testcard.type', 'physical')
-}
-
-task testPhysical {
-    dependsOn setPhysicalCard
-    dependsOn test
 }
 
 // JavaCard SDKs and libraries
@@ -172,8 +177,24 @@ task preprocessJavaSources(type: Copy) {
     }
 }
 
+task updateBuildCardType(type: Copy) {
+    from 'src/main/java/applet/CardType.java'
+    into "$buildDir/processed-sources/applet"
+
+    filter { line ->
+        line.replaceAll(
+            "\s*public final static short CARD_TYPE =.*;",
+            "    public final static short CARD_TYPE = OperationSupport.${project.findProperty(buildCardType)};"
+        )
+    }
+}
+
 tasks.named('buildJavaCard').configure {
     dependsOn preprocessJavaSources
+    // If build.cardType is specified, update the source before build
+    if (project.hasProperty(buildCardType)) {
+        dependsOn updateBuildCardType
+    }
 }
 
 javacard {

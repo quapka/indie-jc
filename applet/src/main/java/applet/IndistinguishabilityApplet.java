@@ -33,8 +33,7 @@ import applet.jcmathlib.SecP256r1;
 // FIXME change all (short) 0 to ZERO final 0x00 byte value?
 public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 {
-    public final static short CARD_TYPE = OperationSupport.SIMULATOR;
-    // public final static short CARD_TYPE = OperationSupport.JCOP4_P71;
+    public final static short CARD_TYPE = CardType.CARD_TYPE;
 
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;

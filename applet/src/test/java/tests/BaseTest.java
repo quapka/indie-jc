@@ -25,17 +25,30 @@ public class BaseTest {
     private static String APPLET_AID = System.getProperty("applet.aid").replaceAll(":", "");
     private static byte APPLET_AID_BYTE[] = Util.hexStringToByteArray(APPLET_AID);
 
+    private static String testCardType = System.getProperty("test.cardType");
+    private static String testReaderIndex = System.getProperty("test.ReaderIndex");
+
     protected CardType cardType = CardType.JCARDSIMLOCAL;
 
     protected boolean simulateStateful = false;
     protected CardManager statefulCard = null;
 
     public BaseTest() {
-        if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
-            setCardType(CardType.JCARDSIMLOCAL);
-            setSimulateStateful(true); // NOTE this is needed for the AppletTest.testAesCtrDecryption test
+        // Check if the test card type is forced via system property
+        if ( testCardType != null && !testCardType.isEmpty() ){
+            CardType requestedType = CardType.valueOf(testCardType);
+            setCardType(requestedType);
+            if ( requestedType == CardType.JCARDSIMLOCAL ){
+                setSimulateStateful(true);
+            }
         } else {
-             setCardType(CardType.PHYSICAL);
+            // Infer the card type from the applet settings
+            if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
+                setCardType(CardType.JCARDSIMLOCAL);
+                setSimulateStateful(true); // NOTE this is needed for the AppletTest.testAesCtrDecryption test
+            } else {
+                setCardType(CardType.PHYSICAL);
+            }
         }
     }
 
@@ -77,7 +90,12 @@ public class BaseTest {
 
         runCfg.setTestCardType(cardType);
 
-        runCfg.setTargetReaderIndex(2);
+        int testReaderIndexValue = 0;
+        try {
+            testReaderIndexValue = Integer.parseInt(testReaderIndex);
+        } catch ( NumberFormatException ex ){
+        }
+        runCfg.setTargetReaderIndex(testReaderIndexValue);
 
         if (cardType == CardType.REMOTE){
             runCfg.setRemoteAddress("http://127.0.0.1:9901");
