@@ -29,7 +29,7 @@ sourceCompatibility = 1.8
 // Common settings, definitions
 final def rootPath = rootDir.absolutePath
 final def libs = rootPath + '/libs'
-final def libsSdk = rootPath + '/libs-sdks'
+final def libsSdk = rootPath + '/ext/libs-sdks'
 
 // Repositories for your project
 repositories {

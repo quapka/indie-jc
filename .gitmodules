@@ -1,3 +1,7 @@
-[submodule "libs-sdks"]
-	path = libs-sdks
+[submodule "ext/libs-sdks"]
+	path = ext/libs-sdks
 	url = https://github.com/martinpaljak/oracle_javacard_sdks.git
+[submodule "ext/jcardengine"]
+	path = ext/jcardengine
+	url = https://github.com/quapka/jcardengine.git
+	branch = fewer-rsa-checks
