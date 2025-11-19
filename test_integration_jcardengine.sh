@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+stty -echoctl # hide ^C
+
 showHelp() {
 cat << EOF  
 Usage: ./$0 [-hbr] [-- ...]
@@ -18,6 +20,15 @@ Examples:
 ./test_integration_jcardengine.sh --reader 2 -- --info --tests AppletTest.testSetup
 EOF
 }
+
+stop_jcardengine() {
+    if test "$JCardEngine_PID"; then
+        echo "Stopping JCardEngine with with PID: $JCardEngine_PID"
+        kill -9 "$JCardEngine_PID"
+    fi
+}
+
+trap 'stop_jcardengine' SIGINT EXIT
 
 # kudos to: https://stackoverflow.com/a/52674277
 options=$(getopt --longoptions "help,build,reader:" --options "h,b,r:" --alternative -- "$@")
@@ -78,6 +89,3 @@ echo "Started JCardEngine with PID: $JCardEngine_PID"
     -Ptest.cardType=PHYSICAL \
     -Ptest.ReaderIndex="$readerIndex" \
     $@
-
-# Clean up
-kill -9 $JCardEngine_PID
