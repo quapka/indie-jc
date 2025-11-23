@@ -7,6 +7,7 @@ public class Consts {
         public static final byte DEBUG = (byte) 0x88;
     }
     public class INS {
+        // NOTE the following are production instructions
         public static final byte GET_VERIFICATION_PUBKEY = (byte) 0x00;
         public static final byte GET_EXAMPLE_PROOF = (byte) 0x01;
         public static final byte KEY_GEN = (byte) 0x02;
@@ -15,6 +16,7 @@ public class Consts {
         // Set the uncompressed P256 public key for the JWT signature verification
         public static final byte SET_OIDC_PUBKEY = (byte) 0x05;
         public static final byte GET_OIDC_PUBKEY = (byte) 0x06;
+        public static final byte GET_CURRENT_EPOCH = (byte) 0x07;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;

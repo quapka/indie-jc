@@ -42,6 +42,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
     public static RandomData rng;
 
+    private static byte[] currentEpoch = new byte[64];
+
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
     // Cipher.ALG_AES_CTR not being found. The constants are defined in:
     // https://docs.oracle.com/en/java/javacard/3.2/jcapi/api_classic/constant-values.html#javacardx.crypto.Cipher.ALG_AES_CBC_PKCS5
@@ -202,6 +204,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         System.out.println("About to computeDleq");
                         computeDleq(apdu);
                         break;
+                    case Consts.INS.GET_CURRENT_EPOCH:
+                        getCurrentEpoch(apdu);
                     default:
                         break;
                 }
@@ -583,8 +587,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
 	private void sendGood(APDU apdu) {
-		byte[] buffer = apdu.getBuffer();
-		short length = (short) Good.length;
+		byte[] buffer = apdu.getBuffer(); short length = (short) Good.length;
 		Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, length);
 		apdu.setOutgoingAndSend((short) 0, length);
 	}
@@ -696,6 +699,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short pubKeyLength = pubKey.getW(apduBuffer, (short) 0);
 
         apdu.setOutgoingAndSend((short) 0, pubKeyLength);
+    }
+
+    public void getCurrentEpoch(APDU apdu) {
+		byte[] buffer = apdu.getBuffer();
+		short length = (short) currentEpoch.length;
+		Util.arrayCopyNonAtomic(currentEpoch, (short) 0, buffer, (short) 0, length);
+		apdu.setOutgoingAndSend((short) 0, length);
     }
 
     public void computeDleq(APDU apdu) {

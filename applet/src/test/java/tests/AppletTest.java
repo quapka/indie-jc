@@ -767,4 +767,15 @@ public class AppletTest extends BaseTest {
 
         Assert.assertArrayEquals(expectedSalt, ptxtBuff);
     }
+
+    @Test
+    public void testGetCurrentEmptyEpoch() throws Exception {
+        byte[] expectedEpoch = new byte[64];
+        // Encrypt the token first and then verify it inside the card
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_CURRENT_EPOCH, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        byte[] data = responseAPDU.getData();
+
+        Assert.assertArrayEquals(expectedEpoch, data);
+    }
 }
