@@ -778,4 +778,11 @@ public class AppletTest extends BaseTest {
 
         Assert.assertArrayEquals(expectedEpoch, data);
     }
+
+    @Test
+    public void testGenerateMusig2Key() throws Exception {
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        byte[] data = responseAPDU.getData();
+    }
 }

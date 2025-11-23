@@ -1,5 +1,10 @@
 # JavaCard Template project with Gradle
 
+## Acknowledgements
+
+Musig2 implementation was sources from:
+https://github.com/SPXcz/musig2-applet
+
 [![Build Status](https://travis-ci.org/ph4r05/javacard-gradle-template.svg?branch=master)](https://travis-ci.org/ph4r05/javacard-gradle-template)
 
 This is simple JavaCard project template using Gradle build system.

@@ -44,6 +44,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private static byte[] currentEpoch = new byte[64];
 
+    private Musig2 musig2;
+
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
     // Cipher.ALG_AES_CTR not being found. The constants are defined in:
     // https://docs.oracle.com/en/java/javacard/3.2/jcapi/api_classic/constant-values.html#javacardx.crypto.Cipher.ALG_AES_CBC_PKCS5
@@ -206,6 +208,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         break;
                     case Consts.INS.GET_CURRENT_EPOCH:
                         getCurrentEpoch(apdu);
+                        break;
+                    case Consts.INS.GENERATE_KEY_MUSIG2:
+                        generateKeys(apdu);
+                        break;
                     default:
                         break;
                 }
@@ -248,6 +254,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // rm = new ResourceManager((short) 256, (short) 2056);
         rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         dleq = new DiscreteLogEquality();
+        musig2 = new Musig2(dleq.curve, rm);
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
@@ -285,6 +292,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     // private void decryptAesPayload(APDU apdu) {
     // }
+    public void generateKeys (APDU apdu) {
+        byte[] apduBuffer = loadApdu(apdu);
+        musig2.individualPubkey(apduBuffer, apdu.getOffsetCdata());
+
+        ISOException.throwIt(ISO7816.SW_NO_ERROR);
+    }
 
     private void sendDecrypted(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
