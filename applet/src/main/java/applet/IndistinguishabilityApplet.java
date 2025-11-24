@@ -600,7 +600,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
 	private void sendGood(APDU apdu) {
-		byte[] buffer = apdu.getBuffer(); short length = (short) Good.length;
+        byte[] buffer = apdu.getBuffer();
+        short length = (short) Good.length;
 		Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, length);
 		apdu.setOutgoingAndSend((short) 0, length);
 	}
