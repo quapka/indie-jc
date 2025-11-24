@@ -128,7 +128,7 @@ public class AppletTest extends BaseTest {
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+        Assert.assertArrayEquals(IndistinguishabilityApplet.Good, responseAPDU.getData());
     }
 
     @Test
@@ -137,7 +137,7 @@ public class AppletTest extends BaseTest {
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Bad, responseAPDU.getData()));
+        Assert.assertArrayEquals(IndistinguishabilityApplet.Bad, responseAPDU.getData());
     }
 
     @Test
@@ -146,7 +146,7 @@ public class AppletTest extends BaseTest {
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(new byte[] {(byte) 0xFF, (byte) 0xFF}, responseAPDU.getData()));
+        Assert.assertArrayEquals(new byte[] {(byte) 0xFF, (byte) 0xFF}, responseAPDU.getData());
     }
 
     @Test
@@ -392,7 +392,7 @@ public class AppletTest extends BaseTest {
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.AES_CTR_DECRYPT, (byte) ctxtLen, nonceByteSize, encPayload, 0, encodedPubKey.length + nonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
 
-        Assert.assertTrue(Arrays.equals(msgBytes, responseAPDU.getData()));
+        Assert.assertArrayEquals(msgBytes, responseAPDU.getData());
     }
 
     public byte[] nonceZkLogin() throws Exception {
@@ -455,7 +455,7 @@ public class AppletTest extends BaseTest {
         System.out.println(String.format("\"%s\"", new String(responseAPDU.getData(), "UTF-8")));
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+        Assert.assertArrayEquals(IndistinguishabilityApplet.Good, responseAPDU.getData());
     }
 
     @Test
@@ -474,14 +474,14 @@ public class AppletTest extends BaseTest {
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(uncompressedPubKey, responseAPDU.getData()));
+        Assert.assertArrayEquals(uncompressedPubKey, responseAPDU.getData());
 
         // Explicitly get the public key again
         cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_OIDC_PUBKEY, 0x00, 0x00);
         responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(uncompressedPubKey, responseAPDU.getData()));
+        Assert.assertArrayEquals(uncompressedPubKey, responseAPDU.getData());
     }
 
     @Test
@@ -518,7 +518,7 @@ public class AppletTest extends BaseTest {
         responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+        Assert.assertArrayEquals(IndistinguishabilityApplet.Good, responseAPDU.getData());
     }
 
     @Test
@@ -619,14 +619,14 @@ public class AppletTest extends BaseTest {
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_JWT, 0x00, 0x00, jwt.getBytes());
         responseAPDU = connect().transmit(cmd);
 
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+        Assert.assertArrayEquals(IndistinguishabilityApplet.Good, responseAPDU.getData());
 
         cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.VERIFY_ENCRYPTED_JWT, 0x00, 0x00, encPayload, 0, encodedClientPubPoint.length + channelNonceByteSize + ctxtLen);
         responseAPDU = connect().transmit(cmd);
 
         printBuffer(responseAPDU.getBytes(), (short) 4);
 
-        Assert.assertTrue(Arrays.equals(IndistinguishabilityApplet.Good, responseAPDU.getData()));
+        Assert.assertArrayEquals(IndistinguishabilityApplet.Good, responseAPDU.getData());
     }
 
     @Disabled("Don't run routinely")
