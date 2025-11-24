@@ -296,20 +296,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) 2);
     }
 
-    // private void decryptAesPayload(APDU apdu) {
-    // }
     public void generateMusig2Key(APDU apdu) {
-        // byte[] apduBuffelr = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
         apdu.setIncomingAndReceive();
-        // short offsetData = apdu.getOffsetCdata();
-        // musig2.individualPubkey(apduBuffer, apdu.getOffsetCdata());
+
         musig2.individualPubkey(apduBuffer, (short) 0);
 
         musig2.getPlainPubKey(apduBuffer, (short) 0);
-
-        // apdu.setOutgoingLength(Constants.XCORD_LEN);
-        // apdu.sendBytesLong(apduBuffer, offsetData, Constants.XCORD_LEN);
         apdu.setOutgoingAndSend((short) 0, Constants.XCORD_LEN);
 
     }
