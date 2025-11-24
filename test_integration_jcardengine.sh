@@ -5,7 +5,7 @@ stty -echoctl # hide ^C
 
 showHelp() {
 cat << EOF  
-Usage: ./$0 [-hnr] [-- ...]
+Usage: $0 [-hnr] [-- ...]
 Test against a real physical JavaCard JCOP4
 
 -h, --help                  Show help
