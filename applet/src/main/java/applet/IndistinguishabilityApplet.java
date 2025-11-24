@@ -209,6 +209,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_CURRENT_EPOCH:
                         getCurrentEpoch(apdu);
                         break;
+                    case Consts.INS.GENERATE_NONCE_MUSIG2:
+                        generateEpochNonce(apdu);
+                        break;
+                    case Consts.INS.GET_PUBLIC_NONCE_SHARE:
+                        getPublicNonceShare(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -725,6 +731,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void getCurrentEpoch(APDU apdu) {
+    public void generateEpochNonce(APDU apdu) {
+        musig2.nonceGen();
+    }
+
+    private void getPublicNonceShare (APDU apdu) {
+        byte[] apduBuffer = loadApdu(apdu);
+        short offsetData = apdu.getOffsetCdata();
+        musig2.getPublicNonceShare(apduBuffer, offsetData);
+
+        apdu.setOutgoing();
+        apdu.setOutgoingLength((short) (Constants.POINT_LEN * Constants.V));
+        apdu.sendBytesLong(apduBuffer, offsetData, (short) (Constants.XCORD_LEN * Constants.V));
+    }
+
 		byte[] buffer = apdu.getBuffer();
 
 		short length = (short) currentEpoch.length;

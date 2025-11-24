@@ -18,6 +18,8 @@ public class Consts {
         public static final byte GET_OIDC_PUBKEY = (byte) 0x06;
         public static final byte GET_CURRENT_EPOCH = (byte) 0x07;
         public static final byte GENERATE_KEY_MUSIG2 = (byte) 0x08;
+        public static final byte GENERATE_NONCE_MUSIG2 = (byte) 0x0a;
+        public static final byte GET_PUBLIC_NONCE_SHARE = (byte) 0x0d;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
