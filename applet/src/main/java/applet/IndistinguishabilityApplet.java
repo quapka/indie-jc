@@ -215,6 +215,12 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_PUBLIC_NONCE_SHARE:
                         getPublicNonceShare(apdu);
                         break;
+                    case Consts.INS.SET_MUSIG2_AGG_NONCE:
+                        setPublicNonce(apdu);
+                        break;
+                    case Consts.INS.SET_MUSIG2_AGG_KEY:
+                        setAggPubKey(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -304,7 +310,17 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         musig2.getPlainPubKey(apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, Constants.XCORD_LEN);
+    }
 
+    private void setAggPubKey(APDU apdu) {
+        byte[] apduBuffer = loadApdu(apdu);
+
+        musig2.setGroupPubKey(apduBuffer, apdu.getOffsetCdata());
+    }
+
+    private void setPublicNonce(APDU apdu) {
+        byte[] apduBuffer = loadApdu(apdu);
+        musig2.setNonceAggregate(apduBuffer, apdu.getOffsetCdata());
     }
 
     private void sendDecrypted(APDU apdu) {

@@ -19,6 +19,8 @@ public class Consts {
         public static final byte GET_CURRENT_EPOCH = (byte) 0x07;
         public static final byte GENERATE_KEY_MUSIG2 = (byte) 0x08;
         public static final byte GENERATE_NONCE_MUSIG2 = (byte) 0x0a;
+        public static final byte SET_MUSIG2_AGG_KEY = (byte) 0x0b;
+        public static final byte SET_MUSIG2_AGG_NONCE = (byte) 0x0c;
         public static final byte GET_PUBLIC_NONCE_SHARE = (byte) 0x0d;
 
         // NOTE the following are debug instructions
