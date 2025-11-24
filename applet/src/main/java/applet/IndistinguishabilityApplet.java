@@ -726,8 +726,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public void getCurrentEpoch(APDU apdu) {
 		byte[] buffer = apdu.getBuffer();
+
 		short length = (short) currentEpoch.length;
 		Util.arrayCopyNonAtomic(currentEpoch, (short) 0, buffer, (short) 0, length);
+
 		apdu.setOutgoingAndSend((short) 0, length);
     }
 

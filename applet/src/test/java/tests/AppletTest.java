@@ -772,8 +772,8 @@ public class AppletTest extends BaseTest {
     @Test
     public void testGetCurrentEmptyEpoch() throws Exception {
         byte[] expectedEpoch = new byte[64];
-        // Encrypt the token first and then verify it inside the card
-        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_CURRENT_EPOCH, 0x00, 0);
+
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_CURRENT_EPOCH, 0x00, 0x00);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
         byte[] data = responseAPDU.getData();
 
