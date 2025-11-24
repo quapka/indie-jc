@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Disabled;
 import java.util.stream.*;
 import java.util.Base64;
 import applet.jcmathlib.*;
+import applet.Constants;
 // import javacard.security.*;
 
 import javax.crypto.KeyAgreement;
@@ -784,5 +785,7 @@ public class AppletTest extends BaseTest {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2, 0x00, 0);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
         byte[] data = responseAPDU.getData();
+
+        Assert.assertEquals(Constants.XCORD_LEN, data.length);
     }
 }
