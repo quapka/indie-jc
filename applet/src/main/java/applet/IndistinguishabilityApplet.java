@@ -55,20 +55,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static final byte Cipher_ALG_AES_CTR = -16;
     public static final short uncompressPubKeySize = 65;
 
-	private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
-	public static final byte[] Good = {'G', 'O', 'O', 'D'};
-	public static final byte[] Bad = {'B', 'A', 'D'};
-	private static final byte[] None = {'N', 'o', 'n', 'e'};
+    private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
+    public static final byte[] Good = {'G', 'O', 'O', 'D'};
+    public static final byte[] Bad = {'B', 'A', 'D'};
+    private static final byte[] None = {'N', 'o', 'n', 'e'};
 
     private byte[] salt = new byte[32];
     // at least shal handle 65 bytes of uncompressed points
     private byte[] tmp = new byte[2048];
     // TODO is the maximal ECDSA DER encoded signature 72 bytes?
-	private byte[] derSignature = new byte[72];
+    private byte[] derSignature = new byte[72];
 
-	private static final byte[] NONCE_FIELD_NAME = {'n', 'o', 'n', 'c', 'e'};
-	private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
-	private static final byte[] NAME_FIELD_NAME = {'n', 'a', 'm', 'e'};
+    private static final byte[] NONCE_FIELD_NAME = {'n', 'o', 'n', 'c', 'e'};
+    private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
+    private static final byte[] NAME_FIELD_NAME = {'n', 'a', 'm', 'e'};
 
     public static byte nParties;
     public static byte threshold;
@@ -76,7 +76,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private static AESKey aesCtrKey;
     private static Cipher aesCtr;
 
-	private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
+    private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
     // indie-service HASH_SALT_SECRET
     // FIXME generate inside the card as part of the setup
@@ -93,9 +93,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private byte[] tokenNonce = new byte[32];
 
-	private byte[] extApduBuffer = new byte[2048];
-	private byte[] procBuffer = new byte[2048];
-	private short extApduSize = 0;
+    private byte[] extApduBuffer = new byte[2048];
+    private byte[] procBuffer = new byte[2048];
+    private short extApduSize = 0;
 
     private boolean initialized = false;
 
@@ -107,18 +107,18 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private Base64UrlSafeDecoder base64UrlSafeDecoder;
 
-	public static void install(byte[] bArray, short bOffset, byte bLength)
-	{
-		new IndistinguishabilityApplet(bArray, bOffset, bLength);
-	}
+    public static void install(byte[] bArray, short bOffset, byte bLength)
+    {
+        new IndistinguishabilityApplet(bArray, bOffset, bLength);
+    }
 
-	public IndistinguishabilityApplet(byte[] bArray, short bOffset, byte bLength) {
+    public IndistinguishabilityApplet(byte[] bArray, short bOffset, byte bLength) {
         OperationSupport.getInstance().setCard(CARD_TYPE);
         if (!OperationSupport.getInstance().DEFERRED_INITIALIZATION) {
             initialize();
         }
-		register();
-	}
+        register();
+    }
 
     public boolean select() {
         if (initialized) {
@@ -128,8 +128,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     // FIXME implement, deselect() and possibly other Applet.* methods?
-	public void process(APDU apdu)
-	{
+    public void process(APDU apdu)
+    {
         if ( selectingApplet() ) {
             return;
         }
@@ -250,7 +250,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             ISOException.throwIt(Consts.SW_Exception);
         }
 
-	}
+    }
 
     private void initialize() {
         if ( initialized ) {
@@ -310,7 +310,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         // apdu.setOutgoingLength(Constants.XCORD_LEN);
         // apdu.sendBytesLong(apduBuffer, offsetData, Constants.XCORD_LEN);
-		apdu.setOutgoingAndSend((short) 0, Constants.XCORD_LEN);
+        apdu.setOutgoingAndSend((short) 0, Constants.XCORD_LEN);
 
     }
 
@@ -321,8 +321,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short ptxtLen = aesCtrDecryptInner(apduBuffer, ISO7816.OFFSET_CDATA, ctxtLen, tmp, (short) 0);
 
-		Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, ptxtLen);
-		apdu.setOutgoingAndSend((short) 0, ptxtLen);
+        Util.arrayCopyNonAtomic(tmp, (short) 0, apduBuffer, (short) 0, ptxtLen);
+        apdu.setOutgoingAndSend((short) 0, ptxtLen);
     }
 
     private void verifyEncryptedJwtAndCommitment(APDU apdu) {
@@ -442,7 +442,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private void verifyCommitment(APDU apdu) {
         // FIXME What is the expected NONCE encoding? Hexadecimal or base64 encoded?
-		byte[] apduBuffer = apdu.getBuffer();
+        byte[] apduBuffer = apdu.getBuffer();
         short _bytesRead = apdu.setIncomingAndReceive();
         byte zkNonceLength = apduBuffer[ISO7816.OFFSET_P1];
         byte pubKeyLength = apduBuffer[ISO7816.OFFSET_P2];
@@ -553,8 +553,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     
     private void verifyJWT(APDU apdu) {
-		byte[] buffer = loadApdu(apdu);
-		byte[] apduBuffer = apdu.getBuffer();
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
 
         System.out.println("Plaintex JWT verify");
         for (short i = 0; i < extApduSize; i++) {
@@ -614,22 +614,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         );
     }
 
-	private void sendGood(APDU apdu) {
+    private void sendGood(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         short length = (short) Good.length;
-		Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, length);
-		apdu.setOutgoingAndSend((short) 0, length);
-	}
+        Util.arrayCopyNonAtomic(Good, (short) 0, buffer, (short) 0, length);
+        apdu.setOutgoingAndSend((short) 0, length);
+    }
 
-	private void sendBad(APDU apdu) {
-		byte[] buffer = apdu.getBuffer();
-		short length = (short) Bad.length;
-		Util.arrayCopyNonAtomic(Bad, (short) 0, buffer, (short) 0, length);
-		apdu.setOutgoingAndSend((short) 0, length);
-	}
+    private void sendBad(APDU apdu) {
+        byte[] buffer = apdu.getBuffer();
+        short length = (short) Bad.length;
+        Util.arrayCopyNonAtomic(Bad, (short) 0, buffer, (short) 0, length);
+        apdu.setOutgoingAndSend((short) 0, length);
+    }
 
-	private void getInitialized(APDU apdu) {
-		byte[] buffer = apdu.getBuffer();
+    private void getInitialized(APDU apdu) {
+        byte[] buffer = apdu.getBuffer();
         if ( initialized ) {
             Util.setShort(buffer, (short) 0, (short) 0xffff);
             apdu.setOutgoingAndSend((short) 0, (short) 2);
@@ -637,7 +637,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             Util.setShort(buffer, (short) 0, (short) 0x0000);
             apdu.setOutgoingAndSend((short) 0, (short) 2);
         }
-	}
+    }
 
     // private boolean verifyJWT(byte[] token) {
     //     // the Signing input cannot be prehashed, but has to be hashed on the card
@@ -654,7 +654,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private static final byte PADDING = '=';
 
     public void decodeJwtBody(APDU apdu) {
-		byte[] buffer = loadApdu(apdu);
+        byte[] buffer = loadApdu(apdu);
 
         short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
@@ -672,8 +672,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void deriveSalt(APDU apdu) {
-		byte[] buffer = loadApdu(apdu);
-		byte[] apduBuffer = apdu.getBuffer();
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
 
         short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
         System.out.println(String.format("firstDot: %d", firstDot));
@@ -722,7 +722,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
      * in particular, the discrete log of equality proof verification.
      */
     public void getDerivationPubkey(APDU apdu) {
-		byte[] apduBuffer = apdu.getBuffer();
+        byte[] apduBuffer = apdu.getBuffer();
 
         ECPublicKey pubKey = DiscreteLogEquality.curve.disposablePub;
         short pubKeyLength = pubKey.getW(apduBuffer, (short) 0);
@@ -745,18 +745,18 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void getCurrentEpoch(APDU apdu) {
-		byte[] buffer = apdu.getBuffer();
+        byte[] buffer = apdu.getBuffer();
 
-		short length = (short) currentEpoch.length;
-		Util.arrayCopyNonAtomic(currentEpoch, (short) 0, buffer, (short) 0, length);
+        short length = (short) currentEpoch.length;
+        Util.arrayCopyNonAtomic(currentEpoch, (short) 0, buffer, (short) 0, length);
 
-		apdu.setOutgoingAndSend((short) 0, length);
+        apdu.setOutgoingAndSend((short) 0, length);
     }
 
     public void computeDleq(APDU apdu) {
         System.out.println("computeDleq");
-		byte[] buffer = loadApdu(apdu);
-		byte[] apduBuffer = apdu.getBuffer();
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
         // FIXME for now the user provides already a point on the curve
         // however, in the TVRF the input is hashed-to-curve first
         // 1. get value from user
@@ -824,8 +824,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public void decode(APDU apdu) {
         // byte[5] APDU header | byte[X] Token header | . | byte[Y] Token body | . | byte[Z] Token signature
-		byte[] buffer = loadApdu(apdu);
-		byte[] apduBuffer = apdu.getBuffer();
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
         // byte[] token = (byte[]) (buffer + apdu.getOffsetCdata());
         // short tokenSize = extApduSize - apdu.getOffsetCdata();
 

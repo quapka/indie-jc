@@ -26,7 +26,7 @@ public class DiscreteLogEquality {
     private byte[] tmp = new byte[128];
     public boolean initialized = false;
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
-	public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
+    public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
         'D', 'i', 's', 'c', 'r', 'e', 't', 'e', ' ',
         'l', 'o', 'g', ' ',
         'e', 'q', 'u', 'a', 'l', 'i', 't', 'y'
