@@ -254,7 +254,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // rm = new ResourceManager((short) 256, (short) 2056);
         rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         dleq = new DiscreteLogEquality();
-        musig2 = new Musig2(dleq.curve, rm);
+        musig2 = new Musig2(DiscreteLogEquality.curve, rm);
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
