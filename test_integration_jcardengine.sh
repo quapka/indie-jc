@@ -5,12 +5,12 @@ stty -echoctl # hide ^C
 
 showHelp() {
 cat << EOF  
-Usage: ./$0 [-hbr] [-- ...]
+Usage: ./$0 [-hnr] [-- ...]
 Test against a real physical JavaCard JCOP4
 
 -h, --help                  Show help
 
---b, --build                Build a fresh version of the JavaCard
+--n, --nobuild              Don't build a fresh version of the JavaCard
 
 -r, --reader <index>        Index (0 or 1) of the JavaCard reader to use (default: 0)
 
@@ -31,10 +31,11 @@ stop_jcardengine() {
 trap 'stop_jcardengine' SIGINT EXIT
 
 # kudos to: https://stackoverflow.com/a/52674277
-options=$(getopt --longoptions "help,build,reader:" --options "h,b,r:" --alternative -- "$@")
+options=$(getopt --longoptions "help,nobuild,reader:" --options "h,n,r:" --alternative -- "$@")
 eval set -- "$options"
 
 export readerIndex=0
+export build=1
 
 while true
 do
@@ -43,8 +44,8 @@ do
             showHelp
             exit 0
             ;;
-        -b|--build)
-            export build=1
+        -n|--nobuild)
+            export build=0
             ;;
         -r|--reader) 
             shift
