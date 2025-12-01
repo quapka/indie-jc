@@ -882,7 +882,6 @@ public class AppletTest extends BaseTest {
         return hasher.digest();
     }
 
-    // FIXME add tagged hash functions
     public BigInteger getACoeff(ECPoint[] pubkeys, ECPoint current_key) throws NoSuchAlgorithmException {
         HashCustomTest hasher = new HashCustomTest();
         hasher.init("KeyAgg list");
@@ -893,7 +892,7 @@ public class AppletTest extends BaseTest {
         }
         // The BIP-0327 uses another tagger hashing
         byte[] digest = hasher.digest();
-        BigInteger inte = (new BigInteger(digest)).mod(curveOrder);
+        BigInteger inte = (new BigInteger(1, digest)).mod(curveOrder);
         return inte;
     }
 
@@ -924,8 +923,6 @@ public class AppletTest extends BaseTest {
         // Hash the message to be signed
         byte[] digest = hasher.digest(message);
         BigInteger coefB = (new BigInteger(1, digest)).mod(curveOrder);
-        // .fromByteArray(tmpArray, (short) 0, Constants.HASH_LEN);
-        // coefB.mod(CURVE_R);
         return coefB;
     }
 
@@ -938,21 +935,10 @@ public class AppletTest extends BaseTest {
         hasher.init(HashCustom.BIP_CHALLENGE);
 
         hasher.update(coefR.normalize().getXCoord().getEncoded());
-        // hasher.update(Arrays.copyOfRange(coefR.getEncoded(true), 1, 33));
         hasher.update(aggregatedKey.normalize().getXCoord().getEncoded());
-        // hasher.update(Arrays.copyOfRange(aggregatedKey.getEncoded(true), 1, 33));
 
         byte[] digest = hasher.digest(message);
-        // System.out.println("digest E");
-        // System.out.println(Hex.toHexString((new BigInteger(Hex.decode("cbacf3658e7a22467b1061819c1d494523980e8b499bc4906033cfd15128a471")).mod(curveOrder).toByteArray())));
-        // System.out.println(Hex.toHexString(curveOrder.toByteArray()));
-        BigInteger E = new BigInteger(1, digest).mod(curveOrder);
-        // Assert.assertEquals("E does not have the expected byte-length 32", 32, E.toByteArray().length);
-        // System.out.println(Hex.toHexString(curveOrder.toByteArray()));
-        // System.out.println(Hex.toHexString(new BigInteger(Hex.toHexString(curveOrder.toByteArray()), 16).toByteArray()));
-        // Assert.assertEquals("curveOrder does not have the expected byte-length 32", 32, curveOrder.toByteArray().length);
-        return E;
-        // return (new BigInteger(1, hasher.digest(message))).mod(curveOrder);
+        return new BigInteger(1, digest).mod(curveOrder);
     }
 
     private BigInteger signPartially(BigInteger secret, BigInteger[] secretNonces, byte[] message, ECPoint coefR, BigInteger challengeE, BigInteger coefA, ECPoint aggKey, BigInteger coefB) {
@@ -1262,114 +1248,4 @@ public class AppletTest extends BaseTest {
             aggregatedSignature)
         );
     }
-
-    // @Test
-    // public void testMusig2Signature() throws Exception {
-    //     // generate data to sign
-    //     byte[] message = new byte[32];
-
-    //     // "generate" secret and public key
-    //     byte[] secretBytes = Hex.decode("931c495d1d390e13b46943163301b1f2bc4bc6ffada7edf091744958e8f8bd88");
-    //     BigInteger secret = new BigInteger(1, secretBytes);
-    //     ECPoint publicKey = getPublic(secret);
-
-    //     // get card public key
-    //     CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2, 0x00, 0);
-    //     System.out.println("testMusig2Signature 0");
-    //     ResponseAPDU responseAPDU = connect().transmit(cmd);
-    //     ECPoint cardPublicKey = curve.decodePoint(responseAPDU.getData());
-    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-
-    //     // aggregate public keys and set them to card
-    //     ECPoint[] keys = new ECPoint[] { publicKey, cardPublicKey };
-    //     ECPoint aggregatedKey = aggregateKeys(keys);
-    //     BigInteger coefA = getACoeff(keys, cardPublicKey);
-
-    //     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    //     outputStream.write(aggregatedKey.getEncoded(true));
-    //     // FIXME the coefA can be less than 32 bytes
-    //     outputStream.write(coefA.toByteArray());
-    //     byte payload[] = outputStream.toByteArray();
-
-    //     System.out.println(String.format("aggregatedKey length: %d", aggregatedKey.getEncoded(true).length));
-    //     System.out.println(String.format("coefA length: %d", coefA.toByteArray().length));
-    //     System.out.println(String.format("payload length: %d", payload.length));
-
-    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, 0, 0, payload);
-    //     responseAPDU = connect().transmit(cmd);
-    //     System.out.println("testMusig2Signature 1");
-    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-
-    //     // generate nonce
-    //     byte[] seed = new byte[32];
-    //     SecureRandom prng = new SecureRandom(seed);
-
-    //     BigInteger[] secretNonces = new BigInteger[Constants.V];
-    //     for (int i = 0; i < Constants.V; i++) {
-    //         byte[] tmp = new byte[32];
-    //         prng.nextBytes(tmp);
-    //         secretNonces[i] = new BigInteger(1, tmp);
-    //     }
-
-    //     ECPoint[] publicNonces = new ECPoint[Constants.V];
-    //     for (int i = 0; i < Constants.V; i++) {
-    //         publicNonces[i] = Generator.multiply(secretNonces[i]);
-    //     }
-
-    //     // get nonce from card
-    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2, 0, 0);
-    //     responseAPDU = connect().transmit(cmd);
-    //     System.out.println("2");
-    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-
-    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_NONCE_SHARE, 0, 0);
-    //     responseAPDU = connect().transmit(cmd);
-    //     System.out.println("3");
-    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-
-    //     ECPoint[] cardPublicNonces = new ECPoint[Constants.V];
-    //     byte[] encodedCardNonceOne = new byte[33];
-    //     byte[] encodedCardNonceTwo = new byte[33];
-    //     System.arraycopy(responseAPDU.getData(), 0, encodedCardNonceOne, 0, 33);
-    //     System.arraycopy(responseAPDU.getData(), 33, encodedCardNonceTwo, 0, 33);
-
-    //     cardPublicNonces[0] = curve.decodePoint(encodedCardNonceOne);
-    //     cardPublicNonces[1] = curve.decodePoint(encodedCardNonceTwo);
-
-    //     // aggregate nonces and set them to card
-    //     ECPoint[] aggregatedNonces = new ECPoint[Constants.V];
-    //     aggregatedNonces[0] = publicNonces[0].add(cardPublicNonces[0]);
-    //     aggregatedNonces[1] = publicNonces[1].add(cardPublicNonces[1]);
-
-    //     outputStream.reset();
-    //     outputStream.write(aggregatedNonces[0].getEncoded(true));
-    //     outputStream.write(aggregatedNonces[1].getEncoded(true));
-    //     payload = outputStream.toByteArray();
-    //     System.out.println(Hex.toHexString(payload));
-
-    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_NONCE, 0, 0, payload);
-    //     responseAPDU = connect().transmit(cmd);
-    //     System.out.println("4");
-    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        
-    //     // sign
-    //     BigInteger partialSig = sign(secret, secretNonces, message, aggregatedNonces, aggregatedKey, coefA);
-
-    //     // signPartial on card and get the result
-    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SIGN_NEXT_EPOCH_MUSIG2, 0, 0, message); 
-    //     responseAPDU = connect().transmit(cmd);
-
-    //     BigInteger cardPartialSig = new BigInteger(responseAPDU.getData());
-    //     BigInteger[] partialSigs = new BigInteger[] {partialSig, cardPartialSig };
-
-    //     byte[] sig = aggregateSignatures(message, partialSigs, aggregatedNonces, aggregatedKey);
-    //     System.out.println("Signature:");
-    //     System.out.println(Hex.toHexString(sig));
-    //     System.out.println("Pubkey:");
-    //     System.out.println(Hex.toHexString(aggregatedKey.normalize()getXCoord().getEncoded()));
-
-    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-    // }
-
-
 }
