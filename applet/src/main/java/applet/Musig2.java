@@ -79,6 +79,7 @@ public class Musig2 {
             pubNonce[i] = new ECPoint(curve);
             aggNonce[i] = new ECPoint(curve);
             secNonce[i] = new BigNat(modulo.length(), JCSystem.MEMORY_TYPE_PERSISTENT, rm);
+
         }
     }
 
@@ -147,7 +148,8 @@ public class Musig2 {
         // Digest randomly generated data
         if (Constants.DEBUG == Constants.STATE_TRUE && statePreloaded == Constants.STATE_TRUE) {
             if (Constants.DEBUG != Constants.STATE_FALSE) {
-                rand.fromByteArray(Constants.RAND_TEST, (short) 0, Constants.SHARE_LEN);
+                // rand.fromByteArray(Constants.RAND_TEST, (short) 0, Constants.SHARE_LEN);
+                return;
             } else {
                 ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             }
@@ -196,52 +198,66 @@ public class Musig2 {
         }
     }
 
-    public short sign (byte[] messageBuffer,
+    public short sign(byte[] messageBuffer,
                       short inOffset,
                       short msgLength,
                       byte[] outBuffer,
                       short outOffset) {
-
+ 
+        System.out.println("sign 0");
         if (stateReadyForSigning != Constants.STATE_TRUE) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
+        System.out.println("sign 1");
 
         if (stateNoncesAggregated != Constants.STATE_TRUE) {
             ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
         }
+        System.out.println("sign 2");
 
         if (msgLength > Constants.MAX_MESSAGE_LEN) {
             ISOException.throwIt(Constants.E_MESSAGE_TOO_LONG);
             return (short) -1;
         }
+        System.out.println("sign 3");
 
         if ((short) (inOffset + msgLength) > Constants.MAX_JC_BUFFER_LEN) {
             ISOException.throwIt(Constants.E_BUFFER_OVERLOW);
             return (short) -1;
         }
+        System.out.println("sign 4");
 
         if ((short) (outOffset + Constants.XCORD_LEN + Constants.SHARE_LEN) > Constants.MAX_JC_BUFFER_LEN) {
             ISOException.throwIt(Constants.E_BUFFER_OVERLOW);
             return (short) -1;
         }
+        System.out.println("sign 5");
 
         for (short i = 0; i < Constants.V; i++) {
             if (secNonce[i].isZero()) {
                 ISOException.throwIt(Constants.E_POSSIBLE_SECNONCE_REUSE);
             }
         }
+        System.out.println("sign 6");
 
         generateCoefB(messageBuffer, inOffset, msgLength);
+        // System.out.println("sign 7");
         generateCoefR();
+        // System.out.println("sign 8");
         generateChallengeE(messageBuffer, inOffset, msgLength);
+        // System.out.println("sign 9");
         signPartially();
+        // System.out.println("sign 10");
 
         writePartialSignatureOut(outBuffer, outOffset);
+        System.out.println("sign 11");
 
         eraseNonce();
+        System.out.println("sign 12");
 
         stateReadyForSigning = Constants.STATE_FALSE;
         stateNoncesAggregated = Constants.STATE_FALSE;
+        System.out.println("sign 13");
 
         return modulo.length();
     }
@@ -264,10 +280,44 @@ public class Musig2 {
         // Must be encoded using xbytes
         digestPoint(groupPubKey, false);
 
+        // groupPubKey.encode(tmpArray, (short) 0, true);
+        // System.out.println("Card: groupPubKey.compressed");
+        // for ( int i = 0; i < (short) 33; i++ ) {
+        //     System.out.print(String.format("%02X", tmpArray[i]));
+        // }
+        // System.out.println();
+
+        // groupPubKey.getX(tmpArray, (short) 0);
+        // System.out.println("Card: groupPubKey.X");
+        // for ( int i = 0; i < (short) 32; i++ ) {
+        //     System.out.print(String.format("%02X", tmpArray[i]));
+        // }
+        // System.out.println();
+
+        // System.out.println("Card: message");
+        // for ( int i = offset; i < (short) offset + length; i++ ) {
+        //     System.out.print(String.format("%02X", messageBuffer[i]));
+        // }
+        // System.out.println();
         // Hash the message to be signed
         digest.doFinal(messageBuffer, offset, length, tmpArray, (short) 0);
+        // System.out.println("Card: doFinal digest");
+        // for ( int i = offset; i < (short) offset + length; i++ ) {
+        //     System.out.print(String.format("%02X", tmpArray[i]));
+        // }
+        // System.out.println();
         coefB.fromByteArray(tmpArray, (short) 0, Constants.HASH_LEN);
         coefB.mod(modulo);
+
+
+//         byte[] expCoefB = new byte[] { (byte) 0x24, (byte) 0x5F, (byte) 0x37, (byte) 0x41, (byte) 0xE5, (byte) 0xAB, (byte) 0x1D, (byte) 0x19, (byte) 0x2C, (byte) 0x06, (byte) 0x94, (byte) 0xC5, (byte) 0x7B, (byte) 0x3F, (byte) 0xEA, (byte) 0x8D, (byte) 0x54, (byte) 0x68, (byte) 0xF0, (byte) 0xFA, (byte) 0x2D, (byte) 0xE8, (byte) 0xD7, (byte) 0xB0, (byte) 0x18, (byte) 0x24, (byte) 0xDB, (byte) 0x80, (byte) 0xFA, (byte) 0xC5, (byte) 0x8A, (byte) 0xBC };
+
+//         coefB.copyToByteArray(tmpArray, (short) 0);
+//         System.out.println("Card: generateCoefB");
+//         for ( int i = 0; i < (short) 32; i++ ) {
+//             System.out.print(String.format("%02X", tmpArray[i]));
+//         }
+//         System.out.println();
     }
 
     private void generateCoefR () {
@@ -281,6 +331,13 @@ public class Musig2 {
         coefR.copy(aggNonce[1]);
 
         coefR.multAndAdd(coefB, aggNonce[0]);
+
+//         coefR.encode(tmpArray, (short) 0, true);
+//         System.out.println("Card: generateCoefR");
+//         for ( int i = 0; i < (short) 33; i++ ) {
+//             System.out.print(String.format("%02X", tmpArray[i]));
+//         }
+//         System.out.println();
     }
 
     private void generateChallengeE (byte[] messageBuffer, short offset, short length) {
@@ -298,6 +355,13 @@ public class Musig2 {
         digest.doFinal(messageBuffer, offset, length, tmpArray, (short) 0);
         challangeE.fromByteArray(tmpArray, (short) 0, Constants.HASH_LEN);
         challangeE.mod(modulo);
+
+//         challangeE.copyToByteArray(tmpArray, (short) 0);
+//         System.out.println("Card: generateChallengeE");
+//         for ( int i = 0; i < (short) 32; i++ ) {
+//             System.out.print(String.format("%02X", tmpArray[i]));
+//         }
+//         System.out.println();
     }
 
     // Creates the partial signature itself
@@ -311,10 +375,18 @@ public class Musig2 {
             }
         }
 
+        // don't copy to optimize? is challengeE expected to be used anyway?
         partialSig.copy(challangeE);
 
         // CoefA is a public coeficient and is often equal to 1
         if (!coefA.isOne()) {
+            System.out.println("Card: signPartially coefA is not none");
+            coefA.copyToByteArray(tmpArray, (short) 0);
+            System.out.println("Card: signPartially coefA");
+            for ( int i = 0; i < (short) 32; i++ ) {
+                System.out.print(String.format("%02X", tmpArray[i]));
+            }
+            System.out.println();
             partialSig.modMult(coefA, modulo);
         }
 
@@ -330,6 +402,13 @@ public class Musig2 {
         tmpBigNat.modMult(secNonce[1], modulo);
 
         partialSig.modAdd(tmpBigNat, modulo);
+
+        // partialSig.copyToByteArray(tmpArray, (short) 0);
+        // System.out.println("Card: signPartially");
+        // for ( int i = 0; i < (short) 32; i++ ) {
+        //     System.out.print(String.format("%02X", tmpArray[i]));
+        // }
+        // System.out.println();
     }
 
     // Format: psig
@@ -431,13 +510,18 @@ public class Musig2 {
     // Public key, coefA (33+32)
     public void setGroupPubKey (byte[] firstRoundData, short offset) {
 
+        // System.out.println("setGroupKey 0");
         if ((short)(offset + Constants.XCORD_LEN + Constants.SHARE_LEN) > Constants.MAX_JC_BUFFER_LEN) {
             ISOException.throwIt(Constants.E_BUFFER_OVERLOW);
         }
+        // System.out.println("setGroupKey 1");
 
         this.groupPubKey.decode(firstRoundData, offset, Constants.XCORD_LEN);
+        // System.out.println("setGroupKey 2");
         coefA.fromByteArray(firstRoundData, (short) (offset + Constants.XCORD_LEN), Constants.SHARE_LEN);
+        // System.out.println("setGroupKey 3");
 
+        // System.out.println("setGroupKey 4");
         stateKeysEstablished = Constants.STATE_TRUE;
     }
 
@@ -446,61 +530,92 @@ public class Musig2 {
 
         short currentOffset = offset;
 
+        // System.out.println("1");
         if ((short)(offset + 2 * Constants.XCORD_LEN) > Constants.MAX_JC_BUFFER_LEN) {
             ISOException.throwIt(Constants.E_BUFFER_OVERLOW);
         }
 
+        // System.out.println("2");
+        // System.out.println(String.format("%02X", nonces[offset]));
+        // System.out.println(offset);
+        // for(short i = offset; i < (short) (offset + 33); i++ ) {
+        //     System.out.print(String.format("%02X", nonces[i]));
+        // }
+        // System.out.println();
+        // for(short i = (short) (offset + 33) ; i < (short) (offset + 66); i++ ) {
+        //     System.out.print(String.format("%02X", nonces[i]));
+        // }
+        // System.out.println();
         if (nonces[offset] != (byte) 0x02 && nonces[offset] != (byte) 0x03) {
             ISOException.throwIt(ISO7816.SW_DATA_INVALID);
         }
 
+        // System.out.println("3");
         aggNonce[0].decode(nonces, offset, Constants.XCORD_LEN);
         currentOffset += Constants.XCORD_LEN;
 
+        // System.out.println("4");
         if (nonces[currentOffset] != (byte) 0x02 && nonces[currentOffset] != (byte) 0x03) {
             ISOException.throwIt(ISO7816.SW_DATA_INVALID);
         }
 
+        // System.out.println("5");
         aggNonce[1].decode(nonces, currentOffset, Constants.XCORD_LEN);
 
+        // System.out.println("6");
         stateNoncesAggregated = Constants.STATE_TRUE;
     }
 
     // sk + pk + aggpk + pubnonce + secnonce  (5 + 32 + 33 + 33 + 66 + 64)
     public short setTestingValues (byte[] buffer, short offset) {
 
+            // System.out.println("setTestingValues 0");
             if (Constants.DEBUG == Constants.STATE_FALSE) {
                 ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             }
+            // System.out.println("setTestingValues 1");
 
             short currentOffset = (short) (offset + 5);
 
             if (Constants.DEBUG != Constants.STATE_TRUE) {
                 ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             }
+            // System.out.println("setTestingValues 2");
 
             // Secret key
             if (buffer[offset] == Constants.STATE_TRUE) {
+                // System.out.println("setTestingValues secret key");
                 secretShare.fromByteArray(buffer, currentOffset, Constants.SHARE_LEN);
                 currentOffset += Constants.SHARE_LEN;
                 statePreloaded = Constants.STATE_TRUE;
             }
+            // System.out.println("setTestingValues 3");
 
             // Public key
             if (buffer[(short)(offset + 1)] == Constants.STATE_TRUE) {
+                // System.out.println("setTestingValues public key");
                 publicShare.decode(buffer, currentOffset, Constants.XCORD_LEN);
                 currentOffset += Constants.XCORD_LEN;
                 stateKeyPairGenerated = Constants.STATE_TRUE;
                 statePreloaded = Constants.STATE_TRUE;
             }
+            // System.out.println("setTestingValues 4");
 
             // Group public key
             if (buffer[(short)(offset + 2)] == Constants.STATE_TRUE) {
+                // System.out.println("setTestingValues group public key");
                 groupPubKey.decode(buffer, currentOffset, Constants.XCORD_LEN);
                 stateKeysEstablished = Constants.STATE_TRUE;
                 currentOffset += Constants.XCORD_LEN;
                 statePreloaded = Constants.STATE_TRUE;
             }
+            groupPubKey.encode(tmpArray, (short) 0, true);
+            System.out.println("setTestingValues: groupPubKey.compressed");
+            for ( int i = 0; i < (short) 33; i++ ) {
+                System.out.print(String.format("%02X", tmpArray[i]));
+            }
+            System.out.println();
+            // System.out.println("setTestingValues 5");
 
             // Aggregated nonce
             if (buffer[(short)(offset + 3)] == Constants.STATE_TRUE) {
@@ -516,15 +631,18 @@ public class Musig2 {
                     ISOException.throwIt(ISO7816.SW_DATA_INVALID);
                 }
 
+                // System.out.println("setTestingValues agg nonce");
                 aggNonce[1].decode(buffer, currentOffset, Constants.XCORD_LEN);
                 currentOffset += Constants.XCORD_LEN;
                 stateNoncesAggregated = Constants.STATE_TRUE;
                 stateReadyForSigning = Constants.STATE_TRUE;
                 statePreloaded = Constants.STATE_TRUE;
             }
+            // System.out.println("setTestingValues 6");
 
             // Secnonce
             if (buffer[(short)(offset + 4)] == Constants.STATE_TRUE) {
+                // System.out.println("setTestingValues secret nonce");
                 secNonce[0].fromByteArray(buffer, currentOffset, Constants.SHARE_LEN);
                 currentOffset += Constants.SHARE_LEN;
                 secNonce[1].fromByteArray(buffer, currentOffset, Constants.SHARE_LEN);

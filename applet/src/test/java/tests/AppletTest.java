@@ -31,6 +31,8 @@ import java.security.AlgorithmParameters;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.EllipticCurve;
 import java.security.spec.ECFieldFp;
+import java.security.NoSuchAlgorithmException;
+import java.lang.IllegalArgumentException;
 
 import org.bouncycastle.util.encoders.Hex;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
@@ -63,6 +65,10 @@ import io.jsonwebtoken.io.Encoders;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.Claims;
 
+import java.io.IOException;
+
+import test.HashCustomTest;
+import applet.HashCustom;
 // import java.util.HashMap;
 // import java.util.Map;
 // import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,6 +78,7 @@ import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 
 import java.util.Arrays;
+import java.io.ByteArrayOutputStream;
 
 /**
  * Example test class for the applet
@@ -84,6 +91,7 @@ public class AppletTest extends BaseTest {
     public static ECPoint Generator;
     public static BigInteger x;
     public static BigInteger y;
+    public static final BigInteger curveOrder = new BigInteger(1, SecP256r1.r);
     private static final int SIGNUM_POSITIVE = 1;
 
     public static ECParameterSpec CURVE_SPEC = null;
@@ -810,4 +818,553 @@ public class AppletTest extends BaseTest {
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
         Assert.assertEquals(Constants.XCORD_LEN * Constants.V, (short) responseAPDU.getData().length);
     }
+
+    public byte[] getSecondKeyPlain(ECPoint[] pubkeys) {
+        for (int j = 1; j < pubkeys.length; j++ ) {
+            if ( ! pubkeys[j].equals(pubkeys[0]) ) {
+                return pubkeys[j].getEncoded(true);
+            }
+        }
+        return new byte[33];
+    }
+
+    public ECPoint keyAgg(ECPoint[] pubkeys) throws NoSuchAlgorithmException {
+        byte[] pk2 = getSecondKeyPlain(pubkeys);
+        ECPoint Q = curve.getInfinity();
+
+        for ( int i = 0; i < pubkeys.length; i++ ) {
+            // NOTE pubkeys shall be bytes and here is where we can catch an invalid contribution
+            // pubkeys[i];
+            BigInteger a_i = keyAggCoeffInternal(pubkeys, pubkeys[i], pk2);
+            Q = Q.add(pubkeys[i].multiply(a_i));
+        }
+        return Q;
+    }
+
+    public BigInteger keyAggCoeff(ECPoint[] pubkeys, ECPoint pk) throws NoSuchAlgorithmException {
+        byte[] pk2 = getSecondKeyPlain(pubkeys);
+        return keyAggCoeffInternal(pubkeys, pk, pk2);
+    }
+
+    public BigInteger keyAggCoeffInternal(ECPoint[] pubkeys, ECPoint pk, byte[] pk2) throws NoSuchAlgorithmException {
+        byte[] L = hashKeys(pubkeys);
+        if ( Arrays.equals(pk.getEncoded(true), pk2) ) {
+            return BigInteger.ONE;
+        }
+        HashCustomTest hasher = new HashCustomTest();
+        hasher.init("KeyAgg coefficient");
+        // return int_from_bytes(tagged_hash('KeyAgg coefficient', L + pk_)) % n
+        hasher.update(L);
+        hasher.update(pk.getEncoded(true));
+
+        return (new BigInteger(1, hasher.digest())).mod(curveOrder);
+    }
+
+    public byte[] hashKeys(ECPoint[] pubkeys) throws NoSuchAlgorithmException{
+        HashCustomTest hasher = new HashCustomTest();
+        hasher.init("KeyAgg list");
+
+        for(int i = 0; i < pubkeys.length; i++) {
+            hasher.update(pubkeys[i].getEncoded(true));
+        }
+        return hasher.digest();
+    }
+
+    // FIXME add tagged hash functions
+    public BigInteger getACoeff(ECPoint[] pubkeys, ECPoint current_key) throws NoSuchAlgorithmException {
+        HashCustomTest hasher = new HashCustomTest();
+        hasher.init("KeyAgg list");
+
+        hasher.update(current_key.getEncoded(true));
+        for(int i = 0; i < pubkeys.length; i++) {
+            hasher.update(pubkeys[i].getEncoded(true));
+        }
+        // The BIP-0327 uses another tagger hashing
+        byte[] digest = hasher.digest();
+        BigInteger inte = (new BigInteger(digest)).mod(curveOrder);
+        return inte;
+    }
+
+    public ECPoint aggregateKeys(ECPoint[] pubkeys) throws NoSuchAlgorithmException {
+        ECPoint aggregatedKey = curve.getInfinity();
+        for (int i = 0; i < pubkeys.length; i++)  {
+             aggregatedKey = aggregatedKey.add(pubkeys[i].multiply(getACoeff(pubkeys, pubkeys[i])));
+        }
+
+        return aggregatedKey;
+    }
+
+    private BigInteger generateCoefB(byte[] message, ECPoint[] aggNonces, ECPoint aggregatedKey) throws NoSuchAlgorithmException {
+        HashCustomTest hasher = new HashCustomTest();
+        hasher.init(HashCustom.MUSIG_NONCECOEF);
+
+        // Hash public aggregated nonces
+        for (short i = 0; i < Constants.V; i++) {
+            hasher.update(aggNonces[i].getEncoded(true));
+        }
+
+        // Hash public key
+        // Must be encoded using xbytes, notice the `normalize()`
+        hasher.update(aggregatedKey.normalize().getXCoord().getEncoded());
+        // or get X-coord directly from the encoded public key instead
+        // hasher.update(Arrays.copyOfRange(aggregatedKey.getEncoded(true), 1, 33));
+
+        // Hash the message to be signed
+        byte[] digest = hasher.digest(message);
+        BigInteger coefB = (new BigInteger(1, digest)).mod(curveOrder);
+        // .fromByteArray(tmpArray, (short) 0, Constants.HASH_LEN);
+        // coefB.mod(CURVE_R);
+        return coefB;
+    }
+
+    private ECPoint generateCoefR(BigInteger coefB, ECPoint[] aggNonces) {
+        return aggNonces[1].multiply(coefB).add(aggNonces[0]);
+    }
+
+    private BigInteger generateChallengeE(byte[] message, ECPoint coefR, ECPoint aggregatedKey) throws NoSuchAlgorithmException {
+        HashCustomTest hasher = new HashCustomTest();
+        hasher.init(HashCustom.BIP_CHALLENGE);
+
+        hasher.update(coefR.normalize().getXCoord().getEncoded());
+        // hasher.update(Arrays.copyOfRange(coefR.getEncoded(true), 1, 33));
+        hasher.update(aggregatedKey.normalize().getXCoord().getEncoded());
+        // hasher.update(Arrays.copyOfRange(aggregatedKey.getEncoded(true), 1, 33));
+
+        byte[] digest = hasher.digest(message);
+        // System.out.println("digest E");
+        // System.out.println(Hex.toHexString((new BigInteger(Hex.decode("cbacf3658e7a22467b1061819c1d494523980e8b499bc4906033cfd15128a471")).mod(curveOrder).toByteArray())));
+        // System.out.println(Hex.toHexString(curveOrder.toByteArray()));
+        BigInteger E = new BigInteger(1, digest).mod(curveOrder);
+        // Assert.assertEquals("E does not have the expected byte-length 32", 32, E.toByteArray().length);
+        // System.out.println(Hex.toHexString(curveOrder.toByteArray()));
+        // System.out.println(Hex.toHexString(new BigInteger(Hex.toHexString(curveOrder.toByteArray()), 16).toByteArray()));
+        // Assert.assertEquals("curveOrder does not have the expected byte-length 32", 32, curveOrder.toByteArray().length);
+        return E;
+        // return (new BigInteger(1, hasher.digest(message))).mod(curveOrder);
+    }
+
+    private BigInteger signPartially(BigInteger secret, BigInteger[] secretNonces, byte[] message, ECPoint coefR, BigInteger challengeE, BigInteger coefA, ECPoint aggKey, BigInteger coefB) {
+        BigInteger TWO = new BigInteger("2");
+        BigInteger tmp = null;
+        if ( !(coefR.normalize().getYCoord().toBigInteger().mod(TWO).equals(BigInteger.ZERO)) ) {
+            for (short i = 0; i < Constants.V; i++) {
+                tmp = secretNonces[i];
+                secretNonces[i] = curveOrder.subtract(tmp);
+            }
+        }
+
+        BigInteger partialSig = challengeE;
+
+        // coefA is often 1, but our multiplication is cheap
+        partialSig = partialSig.multiply(coefA).mod(curveOrder);
+        BigInteger g = BigInteger.ONE;
+        if ( !(aggKey.normalize().getYCoord().toBigInteger().mod(TWO).equals(BigInteger.ZERO)) ) {
+            // partialSig = curveOrder.subtract(partialSig).mod(curveOrder);
+            g = curveOrder.subtract(BigInteger.ONE);
+            secret = secret.multiply(g).mod(curveOrder);
+        }
+
+        partialSig = partialSig.multiply(secret).mod(curveOrder);
+        partialSig = partialSig.add(secretNonces[0]).mod(curveOrder);
+
+        tmp = coefB.multiply(secretNonces[1]).mod(curveOrder);
+        partialSig = partialSig.add(tmp).mod(curveOrder);
+
+        return partialSig;
+    }
+
+    private boolean isEven(ECPoint point) {
+        BigInteger TWO = new BigInteger("2");
+        return point.normalize().getYCoord().toBigInteger().mod(TWO) == BigInteger.ZERO;
+    }
+
+    private BigInteger sign(BigInteger secret, BigInteger[] secretNonces, byte[] message, ECPoint[] aggNonces, ECPoint aggKey, BigInteger coefA, byte[] expCoefB, byte[] expCoefR, byte[] expChallE) throws NoSuchAlgorithmException {
+
+        BigInteger coefB = generateCoefB(message, aggNonces, aggKey);
+        Assert.assertArrayEquals("Coef B does not match", expCoefB, coefB.toByteArray());
+
+        ECPoint coefR = generateCoefR(coefB, aggNonces);
+        Assert.assertArrayEquals("Coef R does not match", expCoefR, coefR.getEncoded(true));
+
+        BigInteger challengeE = generateChallengeE(message, coefR, aggKey);
+        // System.out.println(Hex.toHexString(challengeE.toByteArray()));
+        Assert.assertTrue("Challenge E does not match", new BigInteger(1, expChallE).equals(challengeE));
+
+        BigInteger partialSig = signPartially(secret, secretNonces, message, coefR, challengeE, coefA, aggKey, coefB);
+        return partialSig;
+    }
+
+    private byte[] aggregateSignatures(byte[] message, BigInteger[] partialSigs, ECPoint[] aggNonces, ECPoint aggKey) throws Exception {
+        BigInteger aggSig = BigInteger.ZERO;
+
+
+        for (int i = 0; i < partialSigs.length; i++){
+            if ( partialSigs[i].compareTo(curveOrder) >= 0 ) {
+                throw new IllegalArgumentException();
+            }
+            aggSig = aggSig.add(partialSigs[i]).mod(curveOrder);
+        }
+        // partial_sig_agg: sum partial: 17dd05dbc65d31978d724192a452f894cf724b4c0597b874d7bbf41caba4261e
+        Assert.assertTrue("Partial sigs sum does not match", new BigInteger(1, Hex.decode("17dd05dbc65d31978d724192a452f894cf724b4c0597b874d7bbf41caba4261e")).equals(aggSig));
+
+        BigInteger g = curveOrder.subtract(BigInteger.ONE);
+        // BigInteger g = new BigInteger(-1, new byte[]{0x01});
+        if ( isEven(aggKey) ) {
+            g = BigInteger.ONE;
+        }
+        // partial_sig_agg: g: ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632550
+        Assert.assertTrue("G's don't match", new BigInteger(1, Hex.decode("ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632550")).equals(g.mod(curveOrder)));
+
+        BigInteger coefB = generateCoefB(message, aggNonces, aggKey);
+        ECPoint coefR = generateCoefR(coefB, aggNonces);
+        // partial_sig_agg: R: eb442e2e9a2d69a2df7ec5dc349eb7c88db74f9a2755ad0a0654d84f4eb6ff25
+        Assert.assertArrayEquals("R's don't match", Hex.decode("eb442e2e9a2d69a2df7ec5dc349eb7c88db74f9a2755ad0a0654d84f4eb6ff25"), coefR.normalize().getXCoord().getEncoded());
+
+        BigInteger challengeE = generateChallengeE(message, coefR, aggKey);
+        // partial_sig_agg: e: cbacf3658e7a22467b1061819c1d494523980e8b499bc4906033cfd15128a471
+        Assert.assertTrue("E's don't match", new BigInteger(1, Hex.decode("cbacf3658e7a22467b1061819c1d494523980e8b499bc4906033cfd15128a471")).equals(challengeE));
+
+        // 34530c997185ddba84ef9e7e63e2b6ba994eec225d7bd9f49385faf1ab3a80e0
+        Assert.assertTrue("(e * g ) % n does not match", new BigInteger(1, Hex.decode("34530c997185ddba84ef9e7e63e2b6ba994eec225d7bd9f49385faf1ab3a80e0")).equals(challengeE.multiply(g).mod(curveOrder)));
+
+        // partial_sig_agg: (s + e * g) % n: 4c30127537e30f521261e0110835af4f68c1376e631392696b41ef0e56dea6fe
+        Assert.assertTrue(
+            "(s + e * g ) % n does not match",
+            new BigInteger(1, Hex.decode("4c30127537e30f521261e0110835af4f68c1376e631392696b41ef0e56dea6fe"))
+                .equals(
+                    (aggSig.add(challengeE.multiply(g)).mod(curveOrder))
+                )
+        );
+
+        // aggSig = (aggSig.add(challengeE.multiply(g))).mod(curveOrder);
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        stream.write(coefR.normalize().getXCoord().getEncoded());
+        // FIXME the coefA can be less than 32 bytes
+        stream.write(aggSig.toByteArray());
+        byte[] signature = stream.toByteArray();
+
+        return signature;
+    }
+
+    private ECPoint getPublic(BigInteger secret) {
+        return Generator.multiply(secret);
+    }
+
+    public byte[] cbytesExt(ECPoint point) {
+        if ( point.isInfinity() ) {
+            return new byte[33];
+        }
+        return point.getEncoded(true);
+    }
+
+    private byte[] aggregateNonces(ECPoint[][] publicNonces) throws IOException {
+        ByteArrayOutputStream aggNonce = new ByteArrayOutputStream();
+        // byte[] aggNonce = null;
+        ECPoint R_j = null;
+        ECPoint R_ij = null;
+        for (int j = 0; j <= 1; j++) {
+            R_j = curve.getInfinity();
+            for (int i = 0; i < publicNonces.length; i++ ) {
+                // = cpoint(pubnonces[i][(j-1)*33:j*33])
+                R_ij = publicNonces[i][j];
+                R_j = R_j.add(R_ij);
+            }
+            aggNonce.write(cbytesExt(R_j));
+        }
+
+        return aggNonce.toByteArray();
+    }
+
+    // @Test
+    // public void testBigInt() {
+    //     Assert.assertEquals(1, new BigInteger("7f", 16).toByteArray().length);
+    //     // Assert.assertArrayEquals(new BigInteger("ff", 16).toByteArray(), new byte[] { (byte) 0xff });
+    // }
+
+    @Test
+    public void testComputePublicTest() throws Exception {
+        BigInteger secret = new BigInteger(1, Hex.decode("b1c96b8ab21c6c5e04c64b693491957d027093c58087f9559e757a04428f399d"));
+        Assert.assertArrayEquals(getPublic(secret).getEncoded(true), Hex.decode("03f7e64e51389b49417ca5bbb1a87d9a5648486899ec38695e550f060b6eea5cdf"));
+    }
+
+    public ECPoint[] getPublicNonces(BigInteger[] secretNonces) {
+        ECPoint[] publicNonces = new ECPoint[Constants.V];
+        for (int i = 0; i < Constants.V; i++) {
+            publicNonces[i] = Generator.multiply(secretNonces[i]);
+        }
+        return publicNonces;
+    }
+
+    @Test
+    public void testMusig2SignatureInternal() throws Exception {
+         byte[] aggnonce = Hex.decode("020766F9AF190058191344AA2DF83EF2DAE2E79572814ABDD884CA5DCBB225B91502DDB9FEB4011D74411962F36C99C490EB77DC64503C7B3B7A1B2E10DBE0A3E917");
+         byte[] aggregatePublicKeyTest = Hex.decode("0344B6CB4BBD8B6C0A9F9C768F32CA5DF827177BFBC0F218843A7C4BEBFCD24EC5");
+         BigInteger coef_a_0 = new BigInteger("23603501198787295439580993970698567818946970708771452188531545428466868805564", 10);
+         BigInteger coef_a_1 = new BigInteger("1", 10);
+         byte[] partial_sig_0 = Hex.decode("ea5977811ab56cd2626b282a8a318fa143ad3f42463267a9b1e5645ea590cb6f");
+         byte[] partial_sig_1 = Hex.decode("2D838E59ABA7C4C62B0719681A2168F348AC06B7667CEF5019905A8102768000");
+         // D88DAD25CF239B28396F0A0059D965490B3E70A79EBA46AD41D65C13B1B6E328
+         byte[] pk_0 = Hex.decode("0383e5c3028a3ed2c7288bf8ce9f1bbdaf73fb1b41c1dc888f539b31448b000e5a");
+         byte[] pk_1 = Hex.decode("03f7e64e51389b49417ca5bbb1a87d9a5648486899ec38695e550f060b6eea5cdf");
+         byte[] secret_nonce_0 = Hex.decode("6da5107d6cb154b9f36a7c638883fc16e95091807b0e7978ae463a0ef22f834e149dba8073d0fd601ef54b346d7082264bf220215a17c3902a4f7c8da3225ab30383e5c3028a3ed2c7288bf8ce9f1bbdaf73fb1b41c1dc888f539b31448b000e5a");
+         byte[] secret_nonce_1 = Hex.decode("90333a55e850182454283162d363741efae4e456796e876fd30280e3e9b1f6bd11b43b8c3b0f68b377e433ae68b1b1125043a021031eb47f27e7b62b8b6b8abd03f7e64e51389b49417ca5bbb1a87d9a5648486899ec38695e550f060b6eea5cdf");
+         byte[] signature = Hex.decode("eb442e2e9a2d69a2df7ec5dc349eb7c88db74f9a2755ad0a0654d84f4eb6ff2517dd05dbc65d31978d724192a452f894cf724b4c0597b874d7bbf41caba4261e");
+         byte[] sk_0 = Hex.decode("fa0d0cec500fa8d88d512be3fcfb65ada453367330834efb6bfcf4d5c1cf0159");
+         byte[] sk_1 = Hex.decode("b1c96b8ab21c6c5e04c64b693491957d027093c58087f9559e757a04428f399d");
+         byte[] public_nonce_0 = Hex.decode("0379d07a0d0c3ffba26ff9a57a60e1b3c4d86451ea1ede1f737f76cb6bd6a07dd3035a7fca18cff6f5e100c0dc4f2763fbcfffff23424cca2575bc160ad8f2aa4580");
+         byte[] public_nonce_1 = Hex.decode("03ffd3c1aaa4f9c8dd1b311357ae19e043d897488c2cfdccde87d55549088f61390334e621d5e5c50e5c3c04725c5d88d8b29c67bfa3371ee5ad407fac24eb62a843");
+         // 022B495A9B4142DC317624626AD108D4896C12A97AF1A1372E9A7B0F29ADCAEB49022B495A9B4142DC317624626AD108D4896C12A97AF1A1372E9A7B0F29ADCAEB49
+        byte[] R_0 = Hex.decode("02EB442E2E9A2D69A2DF7EC5DC349EB7C88DB74F9A2755AD0A0654D84F4EB6FF25");
+        byte[] R_1 = Hex.decode("02eb442e2e9a2d69a2df7ec5dc349eb7c88db74f9a2755ad0a0654d84f4eb6ff25");
+        byte[] b_0 = Hex.decode("245F3741E5AB1D192C0694C57B3FEA8D5468F0FA2DE8D7B01824DB80FAC58ABC");
+        byte[] b_1 = Hex.decode("245F3741E5AB1D192C0694C57B3FEA8D5468F0FA2DE8D7B01824DB80FAC58ABC");
+        byte[] e_0 = Hex.decode("cbacf3658e7a22467b1061819c1d494523980e8b499bc4906033cfd15128a471");
+        byte[] e_1 = Hex.decode("CBACF3658E7A22467B1061819C1D494523980E8B499BC4906033CFD15128A471");
+        // CBACF3658E7A22467B1061819C1D494523980E8B499BC4906033CFD15128A471
+        // 02EB442E2E9A2D69A2DF7EC5DC349EB7C88DB74F9A2755AD0A0654D84F4EB6FF25
+        // 3C582EC9F21242070A96ED6238DC36DB10153069D768F26301ED17DC645E0CB8
+
+        byte[] message = new byte[32];
+
+        // # privateKey
+        BigInteger testSecret = new BigInteger(1, sk_0);
+        ECPoint testPublicKey = getPublic(testSecret);
+        Assert.assertArrayEquals(pk_0, testPublicKey.getEncoded(true));
+
+        BigInteger cardSecret = new BigInteger(1, sk_1);
+        ECPoint cardPublicKey = getPublic(cardSecret);
+        Assert.assertArrayEquals(pk_1, cardPublicKey.getEncoded(true));
+
+        // # secnonce
+        BigInteger[] testSecretNonces = new BigInteger[Constants.V];
+        byte[] first = Arrays.copyOfRange(secret_nonce_0, 0, 32);
+        byte[] second = Arrays.copyOfRange(secret_nonce_0, 32, 64);
+        System.out.println(Hex.toHexString(first));
+        System.out.println(Hex.toHexString(second));
+        System.out.println(Hex.toHexString(secret_nonce_0));
+        testSecretNonces[0] = new BigInteger(1, first);
+        testSecretNonces[1] = new BigInteger(1, second);
+        ECPoint[] testPublicNonces = getPublicNonces(testSecretNonces);
+
+        ByteArrayOutputStream st = new ByteArrayOutputStream();
+        st.write(testPublicNonces[0].getEncoded(true));
+        st.write(testPublicNonces[1].getEncoded(true));
+        // System.out.println(Hex.toHexString(st.toByteArray()));
+        // System.out.println(Hex.toHexString(public_nonce_0));
+        // System.out.println(Hex.toHexString(public_nonce_1));
+        Assert.assertArrayEquals(st.toByteArray(), public_nonce_0);
+
+        // # 
+        BigInteger[] cardSecretNonces = new BigInteger[Constants.V];
+        cardSecretNonces[0] = new BigInteger(1, Arrays.copyOfRange(secret_nonce_1, 0, 32));
+        cardSecretNonces[1] = new BigInteger(1, Arrays.copyOfRange(secret_nonce_1, 32, 64));
+        ECPoint[] cardPublicNonces = getPublicNonces(cardSecretNonces);
+
+        byte[] aggregatedNonces = aggregateNonces(new ECPoint[][] { testPublicNonces, cardPublicNonces });
+        ECPoint[] aggregatedNoncesPoints = new ECPoint[Constants.V];
+        aggregatedNoncesPoints[0] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 0, 33));
+        aggregatedNoncesPoints[1] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 33, 66));
+
+        Assert.assertArrayEquals(aggnonce, aggregatedNonces);
+
+        ByteArrayOutputStream testDataPayload = new ByteArrayOutputStream();
+        testDataPayload.write(new byte[] { Constants.STATE_TRUE, Constants.STATE_TRUE, Constants.STATE_TRUE, Constants.STATE_TRUE, Constants.STATE_TRUE });
+        testDataPayload.write(sk_1);
+        testDataPayload.write(pk_1);
+        testDataPayload.write(aggregatePublicKeyTest);
+        testDataPayload.write(aggregatedNonces);
+        testDataPayload.write(secret_nonce_1);
+
+        // set test data on card and invoke nonces
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.SETUP_TEST_DATA, 0x00, 0, testDataPayload.toByteArray());
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2, 0x00, 0);
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_NONCE_SHARE, 0x00, 0);
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertArrayEquals(public_nonce_1, responseAPDU.getData());
+
+        Assert.assertArrayEquals(pk_0, testPublicKey.getEncoded(true));
+        Assert.assertArrayEquals(pk_1, cardPublicKey.getEncoded(true));
+        // test aggregating public keys
+        ECPoint[] keys = new ECPoint[] { testPublicKey, cardPublicKey };
+        byte[] myKey = aggregateKeys(keys).getEncoded(true);
+        ECPoint correctAggKey = keyAgg(keys);
+
+        Assert.assertArrayEquals(aggregatePublicKeyTest, correctAggKey.getEncoded(true));
+
+        // test A coefs
+        BigInteger coefA_0 = keyAggCoeff(keys, keys[0]);
+        BigInteger coefA_1 = keyAggCoeff(keys, keys[1]);
+
+        BigInteger sig = sign(testSecret, testSecretNonces, message, aggregatedNoncesPoints, correctAggKey, coefA_0, b_0, R_0, e_0);
+        Assert.assertTrue("Test partial signature does not match", sig.equals(new BigInteger(1, partial_sig_0)));
+
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        stream.write(correctAggKey.getEncoded(true));
+        byte[] coef = new byte[32];
+        coef[31] = 0x01;
+        // stream.write(coefA_1.toByteArray());
+        stream.write(coef);
+        // card Sign
+        // sendCorrectApdu(Constants.INS_SET_AGG_PUBKEY, firstRoundData.get(i));
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, 0x00, 0, stream.toByteArray());
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SIGN_NEXT_EPOCH_MUSIG2, 0x00, 0, message);
+        responseAPDU = connect().transmit(cmd);
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        // System.out.println("Partial signature from card and the expected one");
+        // System.out.println(Hex.toHexString(responseAPDU.getData()));
+        // System.out.println(Hex.toHexString(partial_sig_1));
+        Assert.assertArrayEquals("Card partial signature does not match", partial_sig_1, responseAPDU.getData());
+
+        BigInteger[] partialSigs = new BigInteger[] { sig, new BigInteger(1, responseAPDU.getData()) };
+        byte[] aggSig = aggregateSignatures(message, partialSigs, aggregatedNoncesPoints, correctAggKey);
+
+        System.out.println(Hex.toHexString(aggSig));
+        System.out.println(Hex.toHexString(signature));
+        Assert.assertArrayEquals("Aggregated signatures don't match", aggSig, signature);
+
+        System.out.println(Hex.toHexString(aggSig));
+        System.out.println(Hex.toHexString(correctAggKey.getEncoded(true)));
+        System.out.println(Hex.toHexString(message));
+        // // # aggnonce
+        // String testAggregateNonces = "";
+        // ECPoint[] aggregatedNonces = new ECPoint[Constants.V];
+        // aggregatedNonces[0] = curve.decodePoint(Arrays.copyOfRange(Hex.decode(testAggregateNonces), 0, 33));
+        // aggregatedNonces[1] = curve.decodePoint(Arrays.copyOfRange(Hex.decode(testAggregateNonces), 33, 66));
+
+        // // # coefA
+        // BigInteger coefA = new BigInteger(1, Hex.decode(""));
+        // // # aggregatePublicKeyTest
+        // ECPoint aggregatedKey = curve.decodePoint(Hex.decode(""));
+        // // # messages
+        // byte[] message = Hex.decode("0000000000000000000000000000000000000000000000000000000000000000");
+        // // # expectedSignature
+        // BigInteger partialSig = sign(secret, secretNonces, message, aggregatedNonces, aggregatedKey, coefA);
+        // // psig = bytes.fromhex(
+        // byte[] expectedPartialSig = Hex.decode("");
+
+        // Assert.assertArrayEquals(expectedPartialSig, partialSig.toByteArray());
+    }
+
+    // @Test
+    // public void testMusig2Signature() throws Exception {
+    //     // generate data to sign
+    //     byte[] message = new byte[32];
+
+    //     // "generate" secret and public key
+    //     byte[] secretBytes = Hex.decode("931c495d1d390e13b46943163301b1f2bc4bc6ffada7edf091744958e8f8bd88");
+    //     BigInteger secret = new BigInteger(1, secretBytes);
+    //     ECPoint publicKey = getPublic(secret);
+
+    //     // get card public key
+    //     CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2, 0x00, 0);
+    //     System.out.println("testMusig2Signature 0");
+    //     ResponseAPDU responseAPDU = connect().transmit(cmd);
+    //     ECPoint cardPublicKey = curve.decodePoint(responseAPDU.getData());
+    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+    //     // aggregate public keys and set them to card
+    //     ECPoint[] keys = new ECPoint[] { publicKey, cardPublicKey };
+    //     ECPoint aggregatedKey = aggregateKeys(keys);
+    //     BigInteger coefA = getACoeff(keys, cardPublicKey);
+
+    //     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    //     outputStream.write(aggregatedKey.getEncoded(true));
+    //     // FIXME the coefA can be less than 32 bytes
+    //     outputStream.write(coefA.toByteArray());
+    //     byte payload[] = outputStream.toByteArray();
+
+    //     System.out.println(String.format("aggregatedKey length: %d", aggregatedKey.getEncoded(true).length));
+    //     System.out.println(String.format("coefA length: %d", coefA.toByteArray().length));
+    //     System.out.println(String.format("payload length: %d", payload.length));
+
+    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, 0, 0, payload);
+    //     responseAPDU = connect().transmit(cmd);
+    //     System.out.println("testMusig2Signature 1");
+    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+    //     // generate nonce
+    //     byte[] seed = new byte[32];
+    //     SecureRandom prng = new SecureRandom(seed);
+
+    //     BigInteger[] secretNonces = new BigInteger[Constants.V];
+    //     for (int i = 0; i < Constants.V; i++) {
+    //         byte[] tmp = new byte[32];
+    //         prng.nextBytes(tmp);
+    //         secretNonces[i] = new BigInteger(1, tmp);
+    //     }
+
+    //     ECPoint[] publicNonces = new ECPoint[Constants.V];
+    //     for (int i = 0; i < Constants.V; i++) {
+    //         publicNonces[i] = Generator.multiply(secretNonces[i]);
+    //     }
+
+    //     // get nonce from card
+    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2, 0, 0);
+    //     responseAPDU = connect().transmit(cmd);
+    //     System.out.println("2");
+    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_NONCE_SHARE, 0, 0);
+    //     responseAPDU = connect().transmit(cmd);
+    //     System.out.println("3");
+    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+    //     ECPoint[] cardPublicNonces = new ECPoint[Constants.V];
+    //     byte[] encodedCardNonceOne = new byte[33];
+    //     byte[] encodedCardNonceTwo = new byte[33];
+    //     System.arraycopy(responseAPDU.getData(), 0, encodedCardNonceOne, 0, 33);
+    //     System.arraycopy(responseAPDU.getData(), 33, encodedCardNonceTwo, 0, 33);
+
+    //     cardPublicNonces[0] = curve.decodePoint(encodedCardNonceOne);
+    //     cardPublicNonces[1] = curve.decodePoint(encodedCardNonceTwo);
+
+    //     // aggregate nonces and set them to card
+    //     ECPoint[] aggregatedNonces = new ECPoint[Constants.V];
+    //     aggregatedNonces[0] = publicNonces[0].add(cardPublicNonces[0]);
+    //     aggregatedNonces[1] = publicNonces[1].add(cardPublicNonces[1]);
+
+    //     outputStream.reset();
+    //     outputStream.write(aggregatedNonces[0].getEncoded(true));
+    //     outputStream.write(aggregatedNonces[1].getEncoded(true));
+    //     payload = outputStream.toByteArray();
+    //     System.out.println(Hex.toHexString(payload));
+
+    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_NONCE, 0, 0, payload);
+    //     responseAPDU = connect().transmit(cmd);
+    //     System.out.println("4");
+    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        
+    //     // sign
+    //     BigInteger partialSig = sign(secret, secretNonces, message, aggregatedNonces, aggregatedKey, coefA);
+
+    //     // signPartial on card and get the result
+    //     cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SIGN_NEXT_EPOCH_MUSIG2, 0, 0, message); 
+    //     responseAPDU = connect().transmit(cmd);
+
+    //     BigInteger cardPartialSig = new BigInteger(responseAPDU.getData());
+    //     BigInteger[] partialSigs = new BigInteger[] {partialSig, cardPartialSig };
+
+    //     byte[] sig = aggregateSignatures(message, partialSigs, aggregatedNonces, aggregatedKey);
+    //     System.out.println("Signature:");
+    //     System.out.println(Hex.toHexString(sig));
+    //     System.out.println("Pubkey:");
+    //     System.out.println(Hex.toHexString(aggregatedKey.normalize()getXCoord().getEncoded()));
+
+    //     Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+    // }
+
+
 }

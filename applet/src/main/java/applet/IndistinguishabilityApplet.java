@@ -3,6 +3,7 @@ package applet;
 import javacard.framework.Util;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
+import javacard.framework.APDUException;
 import javacard.framework.SystemException;
 import javacard.framework.TransactionException;
 import javacard.framework.CardRuntimeException;
@@ -180,6 +181,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.IS_INITIALIZED:
                         getInitialized(apdu);
                         break;
+                    case Consts.INS.SETUP_TEST_DATA:
+                        setUpTestData(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -215,12 +219,18 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_PUBLIC_NONCE_SHARE:
                         getPublicNonceShare(apdu);
                         break;
+                    case Consts.INS.SIGN_NEXT_EPOCH_MUSIG2:
+                        signNextEpoch(apdu);
+                        break;
                     case Consts.INS.SET_MUSIG2_AGG_NONCE:
                         setPublicNonce(apdu);
                         break;
                     case Consts.INS.SET_MUSIG2_AGG_KEY:
                         setAggPubKey(apdu);
                         break;
+                    // case Consts.INS.UPDATE_CURRENT_EPOCH:
+                    //     updateCurrentEpoch(apdu);
+                    //     break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -312,15 +322,65 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, Constants.XCORD_LEN);
     }
 
-    private void setAggPubKey(APDU apdu) {
+    private void setUpTestData(APDU apdu) {
+        // byte[] apduBuffer = apdu.getBuffer();
         byte[] apduBuffer = loadApdu(apdu);
+        // apdu.setIncomingAndReceive();
+        // short inOffset = apdu.getOffsetCdata();
+        short inOffset = (short) 0;
+
+        if (Constants.DEBUG == Constants.STATE_TRUE) {
+            if (Constants.DEBUG != Constants.STATE_FALSE) {
+                musig2.setTestingValues(apduBuffer, inOffset);
+            } else {
+                ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            }
+        }
+    }
+
+    public void signNextEpoch(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        // byte[] apduBuffer = loadApdu(apdu);
+        apdu.setIncomingAndReceive();
+        short offsetData = apdu.getOffsetCdata();
+        // short offsetData = (short) 0;
+        System.out.println("signNextEpoch 0");
+        // short inLen = apdu.getIncomingLength();
+        short inLen = (short) 32;
+        System.out.println("signNextEpoch 1");
+        short outLen = musig2.sign(apduBuffer,
+            offsetData,
+            inLen,
+            apduBuffer,
+            offsetData
+        );
+        System.out.println("2");
+
+        try {
+            apdu.setOutgoing();
+            apdu.setOutgoingLength(outLen);
+            apdu.sendBytesLong(apduBuffer, offsetData, outLen);
+        } catch (CryptoException e) {
+            System.out.println("CryptoException");
+            ISOException.throwIt(Constants.E_CRYPTO_EXCEPTION);
+        } catch (APDUException e) {
+            System.out.println("APDUException");
+            ISOException.throwIt(Constants.E_BUFFER_OVERLOW);
+        }
+    }
+
+    private void setAggPubKey(APDU apdu) {
+        // byte[] apduBuffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+
 
         musig2.setGroupPubKey(apduBuffer, apdu.getOffsetCdata());
     }
 
     private void setPublicNonce(APDU apdu) {
-        byte[] apduBuffer = loadApdu(apdu);
-        musig2.setNonceAggregate(apduBuffer, apdu.getOffsetCdata());
+        byte[] buffer = loadApdu(apdu);
+        musig2.setNonceAggregate(buffer, (short) 0);
     }
 
     private void sendDecrypted(APDU apdu) {
@@ -745,7 +805,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private void getPublicNonceShare (APDU apdu) {
         byte[] apduBuffer = loadApdu(apdu);
-        short offsetData = apdu.getOffsetCdata();
+        short offsetData = (short) 0; //apdu.getOffsetCdata();
         musig2.getPublicNonceShare(apduBuffer, offsetData);
 
         apdu.setOutgoing();

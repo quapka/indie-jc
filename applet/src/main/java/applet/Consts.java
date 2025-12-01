@@ -18,10 +18,12 @@ public class Consts {
         public static final byte GET_OIDC_PUBKEY = (byte) 0x06;
         public static final byte GET_CURRENT_EPOCH = (byte) 0x07;
         public static final byte GENERATE_KEY_MUSIG2 = (byte) 0x08;
+        public static final byte SIGN_NEXT_EPOCH_MUSIG2 = (byte) 0x09;
         public static final byte GENERATE_NONCE_MUSIG2 = (byte) 0x0a;
         public static final byte SET_MUSIG2_AGG_KEY = (byte) 0x0b;
         public static final byte SET_MUSIG2_AGG_NONCE = (byte) 0x0c;
         public static final byte GET_PUBLIC_NONCE_SHARE = (byte) 0x0d;
+        public static final byte SETUP_TEST_DATA = (byte) 0x0e;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
