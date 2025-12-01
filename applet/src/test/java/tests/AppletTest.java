@@ -1174,6 +1174,39 @@ public class AppletTest extends BaseTest {
         return publicNonces;
     }
 
+    /*
+     * The card expects the A coefficient encoded as 32 bytes, but BigInteger.toByteArray() uses the least
+     * number of bytes required. Thus this helper creates 32 byte array and copies the serialized BigInteger
+     * into it.
+     */
+    private byte[] serializeCoefAForCard(BigInteger coefficient) {
+        byte[] out = new byte[32];
+        byte[] tmp = coefficient.toByteArray();
+        for (int i = 0; i < tmp.length; i++) {
+            out[31 - i] = tmp[tmp.length - i - 1];
+        }
+        return out;
+    }
+
+    @Test
+    public void testACoefSerialization() {
+        byte[] one = new byte[32];
+        one[31] = (byte) 0x01;
+
+        Assert.assertArrayEquals(one, serializeCoefAForCard(new BigInteger(one)));
+
+        byte[] more = new byte[32];
+        more[30] = (byte) 0x02;
+        more[31] = (byte) 0x01;
+
+        Assert.assertArrayEquals(more, serializeCoefAForCard(new BigInteger(more)));
+
+        SecureRandom prng = new SecureRandom(new byte[32]);
+        prng.nextBytes(more);
+
+        Assert.assertArrayEquals(more, serializeCoefAForCard(new BigInteger(more)));
+    }
+
     @Test
     public void testMusig2SignatureInternal() throws Exception {
          byte[] aggnonce = Hex.decode("020766F9AF190058191344AA2DF83EF2DAE2E79572814ABDD884CA5DCBB225B91502DDB9FEB4011D74411962F36C99C490EB77DC64503C7B3B7A1B2E10DBE0A3E917");
@@ -1280,6 +1313,8 @@ public class AppletTest extends BaseTest {
         // test A coefs
         BigInteger coefA_0 = keyAggCoeff(keys, keys[0]);
         BigInteger coefA_1 = keyAggCoeff(keys, keys[1]);
+        System.out.println("coefA_1");
+        System.out.println(Hex.toHexString(coefA_1.toByteArray()));
 
         BigInteger sig = sign(testSecret, testSecretNonces, message, aggregatedNoncesPoints, correctAggKey, coefA_0, b_0, R_0, e_0);
         Assert.assertTrue("Test partial signature does not match", sig.equals(new BigInteger(1, partial_sig_0)));
@@ -1287,10 +1322,8 @@ public class AppletTest extends BaseTest {
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         stream.write(correctAggKey.getEncoded(true));
-        byte[] coef = new byte[32];
-        coef[31] = 0x01;
-        // stream.write(coefA_1.toByteArray());
-        stream.write(coef);
+        stream.write(serializeCoefAForCard(coefA_1));
+
         // card Sign
         // sendCorrectApdu(Constants.INS_SET_AGG_PUBKEY, firstRoundData.get(i));
         cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, 0x00, 0, stream.toByteArray());
