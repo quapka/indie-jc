@@ -380,13 +380,7 @@ public class Musig2 {
 
         // CoefA is a public coeficient and is often equal to 1
         if (!coefA.isOne()) {
-            System.out.println("Card: signPartially coefA is not none");
             coefA.copyToByteArray(tmpArray, (short) 0);
-            System.out.println("Card: signPartially coefA");
-            for ( int i = 0; i < (short) 32; i++ ) {
-                System.out.print(String.format("%02X", tmpArray[i]));
-            }
-            System.out.println();
             partialSig.modMult(coefA, modulo);
         }
 
@@ -609,13 +603,6 @@ public class Musig2 {
                 currentOffset += Constants.XCORD_LEN;
                 statePreloaded = Constants.STATE_TRUE;
             }
-            groupPubKey.encode(tmpArray, (short) 0, true);
-            System.out.println("setTestingValues: groupPubKey.compressed");
-            for ( int i = 0; i < (short) 33; i++ ) {
-                System.out.print(String.format("%02X", tmpArray[i]));
-            }
-            System.out.println();
-            // System.out.println("setTestingValues 5");
 
             // Aggregated nonce
             if (buffer[(short)(offset + 3)] == Constants.STATE_TRUE) {

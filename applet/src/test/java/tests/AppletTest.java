@@ -12,6 +12,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 
+import java.util.Optional;
+import java.util.NoSuchElementException;
+
 import java.util.stream.*;
 import java.util.Base64;
 import applet.jcmathlib.*;
@@ -89,8 +92,14 @@ import java.io.ByteArrayOutputStream;
 public class AppletTest extends BaseTest {
     public static ECCurve curve;
     public static ECPoint Generator;
+    public static BigInteger TWO = new BigInteger("2", 10);
+    public static BigInteger THREE = new BigInteger("3", 10);
+    public static BigInteger FOUR = new BigInteger("4", 10);
     public static BigInteger x;
     public static BigInteger y;
+    public static BigInteger fieldPrime;
+    public static BigInteger curveA;
+    public static BigInteger curveB;
     public static final BigInteger curveOrder = new BigInteger(1, SecP256r1.r);
     private static final int SIGNUM_POSITIVE = 1;
 
@@ -109,6 +118,9 @@ public class AppletTest extends BaseTest {
         BigInteger x = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1, CURVE_G.length / 2 + 1));
         BigInteger y = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1 + CURVE_G.length / 2, CURVE_G.length));
         Generator = curve.createPoint(x, y);
+        fieldPrime = new BigInteger(1, CURVE_P);
+        curveA = new BigInteger(1, CURVE_A);
+        curveB = new BigInteger(1, CURVE_B);
         CURVE_SPEC = new ECParameterSpec(curve, Generator, new BigInteger(1, CURVE_R), BigInteger.valueOf(CURVE_K));
 
         Security.addProvider(new BouncyCastleProvider());
@@ -944,7 +956,6 @@ public class AppletTest extends BaseTest {
     }
 
     private BigInteger signPartially(BigInteger secret, BigInteger[] secretNonces, byte[] message, ECPoint coefR, BigInteger challengeE, BigInteger coefA, ECPoint aggKey, BigInteger coefB) {
-        BigInteger TWO = new BigInteger("2");
         BigInteger tmp = null;
         if ( !(coefR.normalize().getYCoord().toBigInteger().mod(TWO).equals(BigInteger.ZERO)) ) {
             for (short i = 0; i < Constants.V; i++) {
@@ -1047,6 +1058,79 @@ public class AppletTest extends BaseTest {
         return signature;
     }
 
+    public Optional<ECPoint> liftX(byte[] bytes) {
+        BigInteger x = new BigInteger(1, bytes);
+        if ( x.compareTo(fieldPrime) >= 0 ) {
+            return Optional.empty();
+        };
+
+        BigInteger ySquare = x.modPow(THREE, fieldPrime).add(curveB).add(x.multiply(curveA)).mod(fieldPrime);
+        // BigInteger y = pow(y_sq, (p + 1) // 4, p)
+        BigInteger y = ySquare.modPow(fieldPrime.add(BigInteger.ONE).divide(FOUR), fieldPrime);
+
+        if ( y.modPow(TWO, fieldPrime).compareTo(ySquare) != 0 ) {
+            return Optional.empty();
+        }
+
+        if ( y.testBit(0) ) {
+            y = fieldPrime.subtract(y);
+        }
+
+        return Optional.of(curve.createPoint(x, y));
+    }
+
+    public boolean SchnorrVerify(byte[] message, byte[] pubkey, byte[] signature) throws NoSuchAlgorithmException {
+        if ( message.length != 32 ) {
+            throw new IllegalArgumentException();
+        }
+        if ( pubkey.length != 32 ) {
+            throw new IllegalArgumentException();
+        }
+        if ( signature.length != 64 ) {
+            throw new IllegalArgumentException();
+        }
+        // P = lift_x(pubkey)
+        ECPoint P = curve.getInfinity();
+        try {
+            P = liftX(pubkey).get();
+        } catch (NoSuchElementException e) {
+            return false;
+        }
+
+        if ( P.isInfinity() ) {
+            return false;
+        }
+
+        // r = int_from_bytes(sig[0:32])
+        byte[] rPart = Arrays.copyOfRange(signature, 0, 32);
+        BigInteger r = new BigInteger(1, rPart);
+
+        // s = int_from_bytes(sig[32:64])
+        BigInteger s = new BigInteger(1, Arrays.copyOfRange(signature, 32, 64));
+        if ( (r.compareTo(fieldPrime) >= 0) || ( s.compareTo(curveOrder) >= 0) ) {
+            return false;
+        }
+
+        // e = int_from_bytes(tagged_hash("BIP0340/challenge", sig[0:32] + pubkey + msg)) % n
+        HashCustomTest hasher = new HashCustomTest();
+        hasher.init("BIP0340/challenge");
+        hasher.update(rPart);
+        hasher.update(pubkey);
+        hasher.update(message);
+        BigInteger e = (new BigInteger(1, hasher.digest())).mod(curveOrder);
+
+        // R = point_add(point_mul(G, s), point_mul(P, n - e))
+        ECPoint R = null;
+        R = Generator.multiply(s).add(P.multiply(curveOrder.subtract(e)));
+
+        // if (R is None) or (not has_even_y(R)) or (x(R) != r);
+        boolean validR = Arrays.equals(R.normalize().getXCoord().getEncoded(), rPart);
+        if ( R.isInfinity() || !isEven(R) || !validR ) {
+            return false;
+        }
+        return true;
+    }
+
     private ECPoint getPublic(BigInteger secret) {
         return Generator.multiply(secret);
     }
@@ -1075,12 +1159,6 @@ public class AppletTest extends BaseTest {
 
         return aggNonce.toByteArray();
     }
-
-    // @Test
-    // public void testBigInt() {
-    //     Assert.assertEquals(1, new BigInteger("7f", 16).toByteArray().length);
-    //     // Assert.assertArrayEquals(new BigInteger("ff", 16).toByteArray(), new byte[] { (byte) 0xff });
-    // }
 
     @Test
     public void testComputePublicTest() throws Exception {
@@ -1238,24 +1316,8 @@ public class AppletTest extends BaseTest {
         System.out.println(Hex.toHexString(aggSig));
         System.out.println(Hex.toHexString(correctAggKey.getEncoded(true)));
         System.out.println(Hex.toHexString(message));
-        // // # aggnonce
-        // String testAggregateNonces = "";
-        // ECPoint[] aggregatedNonces = new ECPoint[Constants.V];
-        // aggregatedNonces[0] = curve.decodePoint(Arrays.copyOfRange(Hex.decode(testAggregateNonces), 0, 33));
-        // aggregatedNonces[1] = curve.decodePoint(Arrays.copyOfRange(Hex.decode(testAggregateNonces), 33, 66));
 
-        // // # coefA
-        // BigInteger coefA = new BigInteger(1, Hex.decode(""));
-        // // # aggregatePublicKeyTest
-        // ECPoint aggregatedKey = curve.decodePoint(Hex.decode(""));
-        // // # messages
-        // byte[] message = Hex.decode("0000000000000000000000000000000000000000000000000000000000000000");
-        // // # expectedSignature
-        // BigInteger partialSig = sign(secret, secretNonces, message, aggregatedNonces, aggregatedKey, coefA);
-        // // psig = bytes.fromhex(
-        // byte[] expectedPartialSig = Hex.decode("");
-
-        // Assert.assertArrayEquals(expectedPartialSig, partialSig.toByteArray());
+        Assert.assertTrue("Signature does not verify", SchnorrVerify(message, correctAggKey.normalize().getXCoord().getEncoded(), signature));
     }
 
     // @Test
