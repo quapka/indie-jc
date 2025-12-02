@@ -882,29 +882,6 @@ public class AppletTest extends BaseTest {
         return hasher.digest();
     }
 
-    public BigInteger getACoeff(ECPoint[] pubkeys, ECPoint current_key) throws NoSuchAlgorithmException {
-        HashCustomTest hasher = new HashCustomTest();
-        hasher.init("KeyAgg list");
-
-        hasher.update(current_key.getEncoded(true));
-        for(int i = 0; i < pubkeys.length; i++) {
-            hasher.update(pubkeys[i].getEncoded(true));
-        }
-        // The BIP-0327 uses another tagger hashing
-        byte[] digest = hasher.digest();
-        BigInteger inte = (new BigInteger(1, digest)).mod(curveOrder);
-        return inte;
-    }
-
-    public ECPoint aggregateKeys(ECPoint[] pubkeys) throws NoSuchAlgorithmException {
-        ECPoint aggregatedKey = curve.getInfinity();
-        for (int i = 0; i < pubkeys.length; i++)  {
-             aggregatedKey = aggregatedKey.add(pubkeys[i].multiply(getACoeff(pubkeys, pubkeys[i])));
-        }
-
-        return aggregatedKey;
-    }
-
     private BigInteger generateCoefB(byte[] message, ECPoint[] aggNonces, ECPoint aggregatedKey) throws NoSuchAlgorithmException {
         HashCustomTest hasher = new HashCustomTest();
         hasher.init(HashCustom.MUSIG_NONCECOEF);
@@ -1213,7 +1190,6 @@ public class AppletTest extends BaseTest {
 
         // test aggregating public keys
         ECPoint[] keys = new ECPoint[] { testPublicKey, cardPublicKey };
-        byte[] myKey = aggregateKeys(keys).getEncoded(true);
         ECPoint correctAggKey = keyAgg(keys);
 
         // test A coefs
