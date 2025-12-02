@@ -191,7 +191,9 @@ task updateBuildCardType(type: Copy) {
 
 tasks.named('buildJavaCard').configure {
     dependsOn preprocessJavaSources
+
     // If build.cardType is specified, update the source before build
+    println "Building for build.cardType: ${project.findProperty(buildCardType)}"
     if (project.hasProperty(buildCardType)) {
         dependsOn updateBuildCardType
     }
