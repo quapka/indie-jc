@@ -817,18 +817,32 @@ public class AppletTest extends BaseTest {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2, 0x00, 0);
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
-        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertEquals("Got NOK from card", Consts.SW.OK, (short) responseAPDU.getSW());
 
         cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2, 0x00, 0);
         responseAPDU = connect().transmit(cmd);
 
-        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertEquals("Got NOK from card", Consts.SW.OK, (short) responseAPDU.getSW());
 
         cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_NONCE_SHARE, 0x00, 0);
         responseAPDU = connect().transmit(cmd);
+        System.out.println(Hex.toHexString(responseAPDU.getData()));
 
-        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
-        Assert.assertEquals(Constants.XCORD_LEN * Constants.V, (short) responseAPDU.getData().length);
+        Assert.assertEquals("Got NOK from card", Consts.SW.OK, (short) responseAPDU.getSW());
+        Assert.assertEquals(
+            "Did not get expected number of bytes from the card.",
+            Constants.XCORD_LEN * Constants.V,
+            (short) responseAPDU.getData().length
+        );
+
+        Assert.assertTrue(
+            "The public nonce cannot be decoded into a valid ECPoint.",
+            !curve.decodePoint(Arrays.copyOfRange(responseAPDU.getData(), 0, 33)).isInfinity()
+        );
+        Assert.assertTrue(
+            "The public nonce cannot be decoded into a valid ECPoint.",
+            !curve.decodePoint(Arrays.copyOfRange(responseAPDU.getData(), 33, 66)).isInfinity()
+        );
     }
 
     public byte[] getSecondKeyPlain(ECPoint[] pubkeys) {

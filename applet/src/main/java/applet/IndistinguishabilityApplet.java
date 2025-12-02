@@ -804,8 +804,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     private void getPublicNonceShare (APDU apdu) {
-        byte[] apduBuffer = loadApdu(apdu);
-        short offsetData = (short) 0; //apdu.getOffsetCdata();
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+        short offsetData = apdu.getOffsetCdata();
+
         musig2.getPublicNonceShare(apduBuffer, offsetData);
 
         apdu.setOutgoing();
