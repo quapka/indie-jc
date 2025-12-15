@@ -219,8 +219,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_PUBLIC_NONCE_SHARE:
                         getPublicNonceShare(apdu);
                         break;
-                    case Consts.INS.SIGN_NEXT_EPOCH_MUSIG2:
-                        signNextEpoch(apdu);
+                    case Consts.INS.MUSIG2_SIGN:
+                        musigSign(apdu);
+                        break;
                         break;
                     case Consts.INS.SET_MUSIG2_AGG_NONCE:
                         setPublicNonce(apdu);
@@ -338,33 +339,29 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
     }
 
-    public void signNextEpoch(APDU apdu) {
+    public void musigSign(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
-        // byte[] apduBuffer = loadApdu(apdu);
         apdu.setIncomingAndReceive();
         short offsetData = apdu.getOffsetCdata();
         // short offsetData = (short) 0;
-        System.out.println("signNextEpoch 0");
         // short inLen = apdu.getIncomingLength();
         short inLen = (short) 32;
-        System.out.println("signNextEpoch 1");
+        // read-in the expected bitcoin hash (32B) - bound to SHA256
+        // tagged_hash(b"Indistinguishabilty service", current_epoch, bitcoin_hash)
         short outLen = musig2.sign(apduBuffer,
             offsetData,
             inLen,
             apduBuffer,
             offsetData
         );
-        System.out.println("2");
 
         try {
             apdu.setOutgoing();
             apdu.setOutgoingLength(outLen);
             apdu.sendBytesLong(apduBuffer, offsetData, outLen);
         } catch (CryptoException e) {
-            System.out.println("CryptoException");
             ISOException.throwIt(Constants.E_CRYPTO_EXCEPTION);
         } catch (APDUException e) {
-            System.out.println("APDUException");
             ISOException.throwIt(Constants.E_BUFFER_OVERLOW);
         }
     }

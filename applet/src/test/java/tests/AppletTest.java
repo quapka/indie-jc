@@ -1224,7 +1224,7 @@ public class AppletTest extends BaseTest {
         responseAPDU = connect().transmit(cmd);
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
 
-        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SIGN_NEXT_EPOCH_MUSIG2, 0x00, 0, message);
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.MUSIG2_SIGN, 0x00, 0, message);
         responseAPDU = connect().transmit(cmd);
 
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
