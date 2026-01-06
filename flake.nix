@@ -31,7 +31,26 @@
     JAVA_HOME = "${jdk}";
 
   in {
-    packages.default = defaultPackage;
+    packages = {
+      default = defaultPackage;
+      coord = with pkgs.python3Packages;
+        buildPythonApplication {
+          pname = "coord";
+          version = "0.1.0";
+          format = "other";
+
+          propagatedBuildInputs = [
+            requests
+            pyscard
+          ];
+
+          src = ./main.py;
+          dontUnpack = true;
+          installPhase = ''
+            install -Dm755 $src $out/bin/$pname
+          '';
+        };
+    };
     devShells = with pkgs; {
       default = mkShell {
         name = "gradle2nix";
