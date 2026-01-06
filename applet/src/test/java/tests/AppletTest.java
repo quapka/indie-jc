@@ -1238,4 +1238,91 @@ public class AppletTest extends BaseTest {
             aggregatedSignature)
         );
     }
+
+    @Test
+    public void testEpochGeneration() throws Exception {
+        SecureRandom prng = new SecureRandom(new byte[32]);
+        byte[] btcHash = new byte[32];
+        prng.nextBytes(btcHash);
+
+        // privateKey
+        byte[] secretBytes = new byte[32];
+        prng.nextBytes(secretBytes);
+        BigInteger testSecret = new BigInteger(1, secretBytes);
+        ECPoint testPublicKey = getPublic(testSecret);
+
+        // secnonce
+        byte[][] secretNonces = new byte[2][32];
+        prng.nextBytes(secretNonces[0]);
+        prng.nextBytes(secretNonces[1]);
+
+        BigInteger[] testSecretNonces = new BigInteger[Constants.V];
+        testSecretNonces[0] = new BigInteger(1, secretNonces[0]);
+        testSecretNonces[1] = new BigInteger(1, secretNonces[1]);
+        ECPoint[] testPublicNonces = getPublicNonces(testSecretNonces);
+
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        ECPoint cardPublicKey = curve.decodePoint(responseAPDU.getData());
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2, 0x00, 0);
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_NONCE_SHARE, 0x00, 0);
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+        ECPoint[] cardPublicNonces = new ECPoint[Constants.V];
+        cardPublicNonces[0] = curve.decodePoint(Arrays.copyOfRange(responseAPDU.getData(), 0, 33));
+        cardPublicNonces[1] = curve.decodePoint(Arrays.copyOfRange(responseAPDU.getData(), 33, 66));
+
+        byte[] aggregatedNonces = aggregateNonces(new ECPoint[][] { testPublicNonces, cardPublicNonces });
+        ECPoint[] aggregatedNoncesPoints = new ECPoint[Constants.V];
+        aggregatedNoncesPoints[0] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 0, 33));
+        aggregatedNoncesPoints[1] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 33, 66));
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_NONCE, 0x00, 0, aggregatedNonces);
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        // test aggregating public keys
+        ECPoint[] keys = new ECPoint[] { testPublicKey, cardPublicKey };
+        ECPoint correctAggKey = keyAgg(keys);
+
+        // test A coefs
+        BigInteger coefA_0 = keyAggCoeff(keys, keys[0]);
+        BigInteger coefA_1 = keyAggCoeff(keys, keys[1]);
+
+        HashCustomTest hasher = new HashCustomTest();
+        byte[] currentEpoch = new byte[64];
+        hasher.init("Indistinguishability service");
+        hasher.update(currentEpoch);
+        hasher.update(btcHash, (short) 0, (short) 32);
+        byte[] digest = hasher.digest();
+        BigInteger sig = sign(testSecret, testSecretNonces, digest, aggregatedNoncesPoints, correctAggKey, coefA_0);
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        stream.write(correctAggKey.getEncoded(true));
+        stream.write(serializeCoefAForCard(coefA_1));
+
+        // card generate
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, 0x00, 0, stream.toByteArray());
+        responseAPDU = connect().transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.CREATE_PARTIAL_EPOCH, 0x00, 0, btcHash);
+        responseAPDU = connect().transmit(cmd);
+
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        BigInteger[] partialSigs = new BigInteger[] { sig, new BigInteger(1, responseAPDU.getData()) };
+        byte[] aggregatedSignature = aggregateSignatures(digest, partialSigs, aggregatedNoncesPoints, correctAggKey);
+
+        Assert.assertTrue(
+            "Epoch signature does not verify",
+            SchnorrVerify(digest, correctAggKey.normalize().getXCoord().getEncoded(),
+            aggregatedSignature)
+        );
+    }
 }

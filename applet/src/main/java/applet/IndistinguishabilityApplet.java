@@ -40,6 +40,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static DiscreteLogEquality dleq;
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
+    HashCustom customHasher;
     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
     public static RandomData rng;
 
@@ -222,6 +223,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.MUSIG2_SIGN:
                         musigSign(apdu);
                         break;
+                    case Consts.INS.CREATE_PARTIAL_EPOCH:
+                        createPartialEpoch(apdu);
                         break;
                     case Consts.INS.SET_MUSIG2_AGG_NONCE:
                         setPublicNonce(apdu);
@@ -274,6 +277,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             return;
         }
         rm = new ResourceManager((short) 256);
+        customHasher = new HashCustom();
         // rm = new ResourceManager((short) 256, (short) 2056);
         rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         dleq = new DiscreteLogEquality();
@@ -337,6 +341,28 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                 ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             }
         }
+    }
+
+    public void createPartialEpoch(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+        short offsetData = apdu.getOffsetCdata();
+
+        customHasher.init(HashCustom.INDISTINGUISHABILITY_SERVICE);
+        customHasher.update(currentEpoch, (short) 0, (short) 64);
+        customHasher.doFinal(apduBuffer, offsetData, (short) 32, apduBuffer, offsetData);
+
+        short outLen = musig2.sign(
+            apduBuffer,
+            offsetData,
+            (short) 32,
+            apduBuffer,
+            offsetData
+        );
+
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(outLen);
+        apdu.sendBytesLong(apduBuffer, offsetData, outLen);
     }
 
     public void musigSign(APDU apdu) {
