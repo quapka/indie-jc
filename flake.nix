@@ -37,7 +37,7 @@
         name = "gradle2nix";
         packages = [
           nodejs
-          jdk17_headless
+          jdk25_headless
           global-platform-pro
           inputs.gradle2nix.packages.${system}.gradle2nix
         ];
