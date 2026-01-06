@@ -57,10 +57,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static final byte Cipher_ALG_AES_CTR = -16;
     public static final short uncompressPubKeySize = 65;
 
-    private static final byte[] helloWorld = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!'};
     public static final byte[] Good = {'G', 'O', 'O', 'D'};
     public static final byte[] Bad = {'B', 'A', 'D'};
-    private static final byte[] None = {'N', 'o', 'n', 'e'};
 
     private byte[] salt = new byte[32];
     // at least shal handle 65 bytes of uncompressed points
