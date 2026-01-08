@@ -14,7 +14,10 @@ import org.junit.jupiter.api.Disabled;
 
 import java.util.Optional;
 import java.util.NoSuchElementException;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.stream.*;
 import java.util.Base64;
 import applet.jcmathlib.*;
@@ -1130,8 +1133,14 @@ public class AppletTest extends BaseTest {
     private byte[] serializeCoefAForCard(BigInteger coefficient) {
         byte[] out = new byte[32];
         byte[] tmp = coefficient.toByteArray();
-        for (int i = 0; i < tmp.length; i++) {
-            out[31 - i] = tmp[tmp.length - i - 1];
+
+        // FIXME this handling of 33-bytes long coefs might not be correct
+        if ( tmp.length == 33 && tmp[0] == (byte) 0x00 ) {
+            out = Arrays.copyOfRange(tmp, 1, 33);
+        } else {
+            for (int i = 0; i < tmp.length; i++) {
+                out[31 - i] = tmp[tmp.length - i - 1];
+            }
         }
         return out;
     }
@@ -1321,6 +1330,106 @@ public class AppletTest extends BaseTest {
 
         Assert.assertTrue(
             "Epoch signature does not verify",
+            SchnorrVerify(digest, correctAggKey.normalize().getXCoord().getEncoded(),
+            aggregatedSignature)
+        );
+    }
+
+
+    public byte[] sendAPDU(int readerIndex, int klass, int instruction) throws Exception {
+        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, null);
+    }
+
+    public byte[] sendAPDU(int readerIndex, int klass, int instruction, byte[] data) throws Exception {
+        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, data);
+    }
+
+    public byte[] sendAPDU(int readerIndex, int klass, int instruction, int p1, int p2) throws Exception {
+        return sendAPDU(readerIndex, klass, instruction, p1, p2, null);
+    }
+
+    public byte[] sendAPDU(int readerIndex, int klass, int instruction, int p1, int p2, byte[] data) throws Exception {
+        CommandAPDU cmd = new CommandAPDU(klass, instruction, p1, p2, data);
+        ResponseAPDU responseAPDU = connectRawAtIndex(null, readerIndex).transmit(cmd);
+        Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
+
+        return responseAPDU.getData();
+    }
+
+    @Test
+    public void testNofNEpochGeneration() throws Exception {
+        // imitate a random bitcoin hash used for the epoch generation
+        SecureRandom prng = new SecureRandom(new byte[32]);
+        byte[] btcHash = new byte[32];
+        prng.nextBytes(btcHash);
+
+        // Calculate the message digest
+        HashCustomTest hasher = new HashCustomTest();
+        byte[] currentEpoch = new byte[64];
+        hasher.init("Indistinguishability service");
+        hasher.update(currentEpoch);
+        hasher.update(btcHash, (short) 0, (short) 32);
+        byte[] digest = hasher.digest();
+
+        // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
+        // or with different cards inserted into a system
+        int[] readerIndeces = new int[] {2, 3, 4};
+
+        // Cards initialization
+        int nCards = readerIndeces.length;
+        ECPoint[] keys = new ECPoint[nCards];
+        ECPoint[][] cardsPubNonces = new ECPoint[nCards][Constants.V];
+
+        // Cards generate individual public keys
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte[] pubkeyData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2);
+            keys[index] = curve.decodePoint(pubkeyData);
+        }
+        ECPoint correctAggKey = keyAgg(keys);
+
+        // Signing: generate nonces
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2);
+            byte[] nonceData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_NONCE_SHARE);
+
+            cardsPubNonces[index][0] = curve.decodePoint(Arrays.copyOfRange(nonceData, 0, 33));
+            cardsPubNonces[index][1] = curve.decodePoint(Arrays.copyOfRange(nonceData, 33, 66));
+        }
+
+        // calculate aggregated nonce
+        byte[] aggregatedNonces = aggregateNonces(cardsPubNonces);
+        ECPoint[] aggregatedNoncesPoints = new ECPoint[Constants.V];
+        aggregatedNoncesPoints[0] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 0, 33));
+        aggregatedNoncesPoints[1] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 33, 66));
+
+        // Signing: Send aggregated nonce to cards
+        for (int index = 0; index < readerIndeces.length; index++) {
+            sendAPDU(readerIndeces[index], Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_NONCE, aggregatedNonces);
+        }
+
+
+        // Signing: Generate partial signatures
+        BigInteger[] partialSigs = new BigInteger[nCards];
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            BigInteger coefA = keyAggCoeff(keys, keys[index]);
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            stream.write(correctAggKey.getEncoded(true));
+            stream.write(serializeCoefAForCard(coefA));
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, stream.toByteArray());
+
+            byte[] partialSig = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.CREATE_PARTIAL_EPOCH, btcHash);
+            partialSigs[index] = new BigInteger(1, partialSig);
+        }
+
+
+        byte[] aggregatedSignature = aggregateSignatures(digest, partialSigs, aggregatedNoncesPoints, correctAggKey);
+
+        Assert.assertTrue(
+            "2-out-of-2 epoch signature does not verify",
             SchnorrVerify(digest, correctAggKey.normalize().getXCoord().getEncoded(),
             aggregatedSignature)
         );
