@@ -1610,24 +1610,8 @@ public class AppletTest extends BaseTest {
                 Assert.assertEquals(32 * nParties, data.length);
 
                 System.out.println(String.format("Setting shares from '%d' for '%d' card.", partyID, otherPartyID));
-                data = sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_SHARES, partyID, 0x00, data);
-                // System.out.println("Got a/b coeffs calculation:");
-                // for (short x = 0; x < 4; x++) {
-                //     System.out.println(Hex.toHexString(Arrays.copyOfRange(data, x * 32, (x + 1) * 32)));
-                // }
-                // Assert.assertArrayEquals(new byte[] {(byte) 0xFF, (byte) 0xFF}, data);
+                sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_SHARES, partyID, 0x00, data);
             }
-        }
-
-        System.out.println("Gett all CPoints:");
-        byte[] data = sendAPDU(2, Consts.CLA.DEBUG, Consts.INS.GET_ALL_C_POINTS, 0x00, 0x00);
-        for (short x = 0; x < 4; x++) {
-            System.out.println(Hex.toHexString(Arrays.copyOfRange(data, x * 33, (x + 1) * 33)));
-        }
-        System.out.println("Gett all CPoints:");
-        data = sendAPDU(3, Consts.CLA.DEBUG, Consts.INS.GET_ALL_C_POINTS, 0x00, 0x00);
-        for (short x = 0; x < 4; x++) {
-            System.out.println(Hex.toHexString(Arrays.copyOfRange(data, x * 33, (x + 1) * 33)));
         }
     };
 }

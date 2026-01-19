@@ -388,12 +388,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) (dkg.nParties * dkg.nParties * pubKeySize));
     }
 
-    // public void getSharesForCounterParty(APDU apdu) {
-    //     byte[] apduBuffer = apdu.getBuffer();
-
-    //     apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * 33));
-    // }
-
     public void setCPoints(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         apdu.setIncomingAndReceive();
@@ -415,16 +409,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short size = dkg.otherAShares[fromPartyIndex].fromByteArray(apduBuffer, offset, (short) 32);
         dkg.otherBShares[fromPartyIndex].fromByteArray(apduBuffer, (short) (offset + size), (short) 32);
 
-        // short length = dkg.verifyShares(fromPartyID, apduBuffer);
-
-        // dkg.getABCoeffs(apduBuffer);
-        // apdu.setOutgoingAndSend((short) 0, (short) 128);
-        if ( dkg.verifyShares(fromPartyID) == true ) {
-            Util.setShort(apduBuffer, (short) 0, (short) 0xffff);
-            apdu.setOutgoingAndSend((short) 0, (short) 2);
-        } else {
-            Util.setShort(apduBuffer, (short) 0, (short) 0x0000);
-            apdu.setOutgoingAndSend((short) 0, (short) 2);
+        if ( dkg.verifyShares(fromPartyID) != true ) {
+            // FIXME Throwing here is detectable in tests, but the shares are already set anyway.
+            //       The proper way is to report the party which misbehaves.
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
     }
 

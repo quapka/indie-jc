@@ -214,11 +214,9 @@ public class DistributedKeyGen {
      * shares are s_ij and s'_ij
      */
     public boolean verifyShares(byte fromPartyID) { //, byte[] out) {
-        // FIXME fix IDs and indeces
-        // Skip verifying our own shares?
+        // Skip verifying our own shares
         byte fromPartyIndex = (byte) (fromPartyID - 1);
         if ( fromPartyID == partyID ) {
-            // return 0x00;
             return false;
         }
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
@@ -237,12 +235,7 @@ public class DistributedKeyGen {
 
         short k = 0;
         short index = (short) (fromPartyIndex * nParties + k);
-
-        // out[0] = (byte) index;
-
         tmpPointC.copy(cPoints[index]);
-
-        // tmpPointC.encode(out, (short) 1, true);
 
         for (k = 1; k < nParties; k++) {
             // C_ik
@@ -260,11 +253,6 @@ public class DistributedKeyGen {
             tmpPointC.add(tmpPointB);
         }
 
-        // tmpPointC.encode(out, (short) 34, true);
-        // return 66;
-
-
         return tmpPointA.isEqual(tmpPointC);
-        // return 0x00;
     }
 }
