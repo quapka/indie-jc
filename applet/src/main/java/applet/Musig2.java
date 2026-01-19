@@ -45,7 +45,7 @@ public class Musig2 {
         // Helper objects
         digestHelper = JCSystem.makeTransientByteArray(Constants.HASH_LEN, JCSystem.CLEAR_ON_DESELECT);
         digest = new HashCustom();
-        rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+        rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
 
         // Helper attributes
         tmpArray = JCSystem.makeTransientByteArray((short) (Constants.POINT_LEN+1), JCSystem.CLEAR_ON_DESELECT);
@@ -114,7 +114,7 @@ public class Musig2 {
 
     // Only max. 32B (or the length of a secret key share)
     private void getRandomBigNat (BigNat outBigNat) {
-        rng.generateData(tmpArray, (short) 0, Constants.SHARE_LEN);
+        rng.nextBytes(tmpArray, (short) 0, Constants.SHARE_LEN);
         outBigNat.fromByteArray(tmpArray, (short) 0, Constants.SHARE_LEN);
     }
 

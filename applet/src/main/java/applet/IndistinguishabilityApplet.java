@@ -38,6 +38,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
+    public static DistributedKeyGen dkg;
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     HashCustom customHasher;
@@ -122,7 +123,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public boolean select() {
         if (initialized) {
+            // FIXME use only a single curve
             DiscreteLogEquality.curve.updateAfterReset();
+            DistributedKeyGen.curve.updateAfterReset();
         }
         return true;
     }
@@ -183,6 +186,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.SETUP_TEST_DATA:
                         setUpTestData(apdu);
                         break;
+                    case Consts.INS.GET_ALL_C_POINTS:
+                        getAllCPoints(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -230,9 +236,21 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.SET_MUSIG2_AGG_KEY:
                         setAggPubKey(apdu);
                         break;
-                    // case Consts.INS.UPDATE_CURRENT_EPOCH:
-                    //     updateCurrentEpoch(apdu);
-                    //     break;
+                    case Consts.INS.KEY_GEN_DLEQ:
+                        generateKeyDleq(apdu);
+                        break;
+                    case Consts.INS.SET_C_POINTS:
+                        setCPoints(apdu);
+                        break;
+                    case Consts.INS.GET_C_POINTS:
+                        getCPoints(apdu);
+                        break;
+                    case Consts.INS.GET_SHARES:
+                        getShares(apdu);
+                        break;
+                    case Consts.INS.SET_SHARES:
+                        setShares(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -277,8 +295,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         rm = new ResourceManager((short) 256);
         customHasher = new HashCustom();
         // rm = new ResourceManager((short) 256, (short) 2056);
-        rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+        rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         dleq = new DiscreteLogEquality();
+        dkg = new DistributedKeyGen((byte) 2); // FIXME the 2 should be inputted from the user!
         musig2 = new Musig2(DiscreteLogEquality.curve, rm);
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
@@ -305,14 +324,118 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         nParties = apduBuffer[ISO7816.OFFSET_P1];
         threshold = apduBuffer[ISO7816.OFFSET_P2];
+
+        System.out.println(String.format("Setting self index to: '%d'", apduBuffer[ISO7816.OFFSET_CDATA]));
+
+        byte partyID = apduBuffer[ISO7816.OFFSET_CDATA];
+        if ( partyID < 1 ) {
+            // TODO more specific exception?
+            ISOException.throwIt(Consts.SW_Exception);
+        }
+
+        dkg.partyID = partyID;
+        dkg.partyIndex = (byte) (partyID - 1);
     }
 
     private void getSetup(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         apduBuffer[0] = nParties;
         apduBuffer[1] = threshold;
+        // TODO parties are 1-indexed, but stored 0-indexed
+        apduBuffer[2] =  dkg.partyID;
+        apduBuffer[3] =  dkg.partyIndex;
 
-        apdu.setOutgoingAndSend((short) 0, (short) 2);
+        apdu.setOutgoingAndSend((short) 0, (short) 4);
+    }
+
+    public void generateKeyDleq(APDU apdu) {
+        // TODO send out C Points and shares
+        dkg.generateCoefficientsAndShares();
+        // byte[] apduBuffer = apdu.getBuffer();
+        // apdu.setIncomingAndReceive();
+
+        // for (short i = 0; i < dkg.nCoeffs; i++) {
+        //     short index = (short) (dkg.partyIndex * dkg.nParties + i);
+        //     dkg.cPoints[index].encode(apduBuffer, (short) (i * 33), true);
+        // }
+
+        // apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * 33));
+    }
+
+    public void getCPoints(APDU apdu) {
+        // TODO send out C Points and shares
+        short pubKeySize = 65;
+
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+
+        for (short i = 0; i < dkg.nCoeffs; i++) {
+            short index = (short) (dkg.partyIndex * dkg.nParties + i);
+            dkg.cPoints[index].encode(apduBuffer, (short) (i * pubKeySize), false);
+        }
+
+        apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * pubKeySize));
+    }
+
+    public void getAllCPoints(APDU apdu) {
+        short pubKeySize = 33;
+        byte[] apduBuffer = apdu.getBuffer();
+
+        for (short i = 0; i < (short) (dkg.nParties * dkg.nParties); i++) {
+            dkg.cPoints[i].encode(apduBuffer, (short) (i * pubKeySize), true);
+        }
+
+        apdu.setOutgoingAndSend((short) 0, (short) (dkg.nParties * dkg.nParties * pubKeySize));
+    }
+
+    // public void getSharesForCounterParty(APDU apdu) {
+    //     byte[] apduBuffer = apdu.getBuffer();
+
+    //     apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * 33));
+    // }
+
+    public void setCPoints(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+        byte fromPartyID = apduBuffer[ISO7816.OFFSET_P1];
+
+        dkg.setCPoints(fromPartyID, apduBuffer, ISO7816.OFFSET_CDATA);
+    }
+
+    public void setShares(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+
+        byte fromPartyID = apduBuffer[ISO7816.OFFSET_P1];
+        byte fromPartyIndex = (byte) (fromPartyID - 1);
+
+        short offset = ISO7816.OFFSET_CDATA;
+
+        // FIXME move to the DistributedKeyGen class to keep things at the same place
+        short size = dkg.otherAShares[fromPartyIndex].fromByteArray(apduBuffer, offset, (short) 32);
+        dkg.otherBShares[fromPartyIndex].fromByteArray(apduBuffer, (short) (offset + size), (short) 32);
+
+        // short length = dkg.verifyShares(fromPartyID, apduBuffer);
+
+        // dkg.getABCoeffs(apduBuffer);
+        // apdu.setOutgoingAndSend((short) 0, (short) 128);
+        if ( dkg.verifyShares(fromPartyID) == true ) {
+            Util.setShort(apduBuffer, (short) 0, (short) 0xffff);
+            apdu.setOutgoingAndSend((short) 0, (short) 2);
+        } else {
+            Util.setShort(apduBuffer, (short) 0, (short) 0x0000);
+            apdu.setOutgoingAndSend((short) 0, (short) 2);
+        }
+    }
+
+    public void getShares(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+
+        byte forParty = apduBuffer[ISO7816.OFFSET_P1];
+        short length = dkg.getShares(forParty, apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, length);
     }
 
     public void generateMusig2Key(APDU apdu) {
@@ -513,7 +636,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short pointLen = 65;
         byte nonceByteSize = 16;
         // generate new nonce directly to the output
-        rng.generateData(out, (short) 0, nonceByteSize);
+        rng.nextBytes(out, (short) 0, nonceByteSize);
 
         System.out.println("nonce");
         for (short i = 0; i < nonceByteSize; i++) {

@@ -106,6 +106,9 @@ public class AppletTest extends BaseTest {
     public static final BigInteger curveOrder = new BigInteger(1, SecP256r1.r);
     private static final int SIGNUM_POSITIVE = 1;
 
+    private final byte compressedPointSize = 33;
+    private final byte uncompressedPointSize = 65;
+
     public static ECParameterSpec CURVE_SPEC = null;
     public static byte[] CURVE_P = SecP256r1.p;
     public static byte[] CURVE_R = SecP256r1.r;
@@ -329,7 +332,9 @@ public class AppletTest extends BaseTest {
     public void testSetup() throws Exception {
         byte threshold = 0x02;
         byte nParties = 0x03;
-        CommandAPDU setupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold);
+        byte partyID = 0x04;
+
+        CommandAPDU setupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {0x04});
         ResponseAPDU responseAPDU = connect().transmit(setupCmd);
 
         CommandAPDU getSetupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
@@ -338,6 +343,7 @@ public class AppletTest extends BaseTest {
 
         Assert.assertEquals(data[0], nParties);
         Assert.assertEquals(data[1], threshold);
+        Assert.assertEquals(data[2], partyID);
     }
 
     public void printBuffer(byte[] buf, short size) {
@@ -1356,6 +1362,7 @@ public class AppletTest extends BaseTest {
         return responseAPDU.getData();
     }
 
+    @Disabled("Don't run routinely, requires multiple physical cards available.")
     @Test
     public void testNofNEpochGeneration() throws Exception {
         // imitate a random bitcoin hash used for the epoch generation
@@ -1434,4 +1441,193 @@ public class AppletTest extends BaseTest {
             aggregatedSignature)
         );
     }
+
+    @Test
+    public void testNofNDLEQSecretDerivation() throws Exception {
+        // Setup cards
+        // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
+        // or with different cards inserted into a system
+        int[] readerIndeces = new int[] {2, 3, 4};
+
+        // Cards initialization
+        int nCards = readerIndeces.length;
+        for (int index = 0; index < nCards; index++) {
+
+        }
+
+        //  - secret keys
+        // derive secret using DLEQ
+        // verify aggregated DLEQ
+    }
+
+    @Test
+    public void testNofNDLEQSetup() throws Exception {
+        int[] readerIndeces = new int[] {2, 3};
+        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+
+        // Cards setup
+        int nParties = readerIndeces.length;
+        int threshold = nParties;
+
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SETUP);
+
+            System.out.println(String.format("Card ID '%d': %d-out-of-%d", data[2], data[1], data[0]));
+
+            // get CPoint from readerIndex card
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.KEY_GEN_DLEQ, partyID, 0x00);
+        }
+    }
+
+    @Test
+    public void testNofNDleqGetCPoints() throws Exception {
+        int[] readerIndeces = new int[] {2, 3};
+        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+
+        // Cards setup
+        int nParties = readerIndeces.length;
+        int threshold = nParties;
+
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SETUP);
+
+            System.out.println(String.format("Card ID '%d': %d-out-of-%d", data[2], data[1], data[0]));
+
+            // get CPoint from readerIndex card
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.KEY_GEN_DLEQ, partyID, 0x00);
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS);
+            Assert.assertEquals(nParties * uncompressedPointSize, data.length);
+        }
+    }
+
+    @Test
+    public void testNofNDleqSetCPoints() throws Exception {
+        int[] readerIndeces = new int[] {2, 3};
+        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+
+        // Cards setup
+        int nParties = readerIndeces.length;
+        int threshold = nParties;
+
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SETUP);
+
+            // get CPoint from readerIndex card
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.KEY_GEN_DLEQ, partyID, 0x00);
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS);
+
+            Assert.assertEquals(nParties * uncompressedPointSize, data.length);
+
+            for (int otherIndex = 0; otherIndex < readerIndeces.length; otherIndex++) {
+                if ( otherIndex == index ) {
+                    // skip self card
+                    continue;
+                }
+                int otherReaderIndex = readerIndeces[otherIndex];
+                byte otherPartyID = partyIDs[otherIndex];
+                System.out.println(String.format("Set CPoints from '%d' to '%d' card", partyID, otherPartyID));
+                sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_C_POINTS, partyID, 0x00, data);
+            }
+        }
+    }
+
+    @Test
+    public void testDleqKeyGeneration() throws Exception {
+
+        int[] readerIndeces = new int[] {2, 3};
+        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+        // Cards initialization
+        int nCards = readerIndeces.length;
+        int nParties = readerIndeces.length;
+        int threshold = readerIndeces.length;
+
+        ECPoint[][] cPoints = new ECPoint[nParties][nParties];
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SETUP);
+            System.out.println(String.format("Card '%d' index: %d-out-of-%d", data[2], data[1], data[0]));
+
+            // get CPoint from readerIndex card
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.KEY_GEN_DLEQ, partyID, 0x00);
+        }
+
+        // for each card get its CPoints
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            System.out.println(String.format("Get CPoints from '%d' card", partyID));
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS);
+            System.out.println(Hex.toHexString(data));
+            // set the CPoints to all the other cards
+            for (int otherIndex = 0; otherIndex < readerIndeces.length; otherIndex++) {
+                byte otherPartyID = partyIDs[otherIndex];
+                if ( otherPartyID == partyID ) {
+                    // skip self card
+                    continue;
+                }
+                int otherReaderIndex = readerIndeces[otherIndex];
+                System.out.println(String.format("Set CPoints from '%d' to '%d' card", partyID, otherPartyID));
+                sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_C_POINTS, partyID, 0x00, data);
+            }
+        }
+
+        // for each card get shares for all the other cards
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            byte[] data = null;
+
+
+
+            for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
+                int otherReaderIndex = readerIndeces[otherIndex];
+                byte otherPartyID = partyIDs[otherIndex];
+                System.out.println(String.format("Getting shares from '%d' for '%d' card.", partyID, otherPartyID));
+                if ( otherPartyID == partyID ) {
+                    data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SHARES, otherPartyID, 0x00);
+                    // no self shares have been returned
+                    Assert.assertEquals(0, data.length);
+                    continue;
+                }
+                data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SHARES, otherPartyID, 0x00);
+                System.out.println(Hex.toHexString(data));
+                Assert.assertEquals(32 * nParties, data.length);
+
+                System.out.println(String.format("Setting shares from '%d' for '%d' card.", partyID, otherPartyID));
+                data = sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_SHARES, partyID, 0x00, data);
+                // System.out.println("Got a/b coeffs calculation:");
+                // for (short x = 0; x < 4; x++) {
+                //     System.out.println(Hex.toHexString(Arrays.copyOfRange(data, x * 32, (x + 1) * 32)));
+                // }
+                // Assert.assertArrayEquals(new byte[] {(byte) 0xFF, (byte) 0xFF}, data);
+            }
+        }
+
+        System.out.println("Gett all CPoints:");
+        byte[] data = sendAPDU(2, Consts.CLA.DEBUG, Consts.INS.GET_ALL_C_POINTS, 0x00, 0x00);
+        for (short x = 0; x < 4; x++) {
+            System.out.println(Hex.toHexString(Arrays.copyOfRange(data, x * 33, (x + 1) * 33)));
+        }
+        System.out.println("Gett all CPoints:");
+        data = sendAPDU(3, Consts.CLA.DEBUG, Consts.INS.GET_ALL_C_POINTS, 0x00, 0x00);
+        for (short x = 0; x < 4; x++) {
+            System.out.println(Hex.toHexString(Arrays.copyOfRange(data, x * 33, (x + 1) * 33)));
+        }
+    };
 }

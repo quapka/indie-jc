@@ -25,6 +25,12 @@ public class Consts {
         public static final byte GET_PUBLIC_NONCE_SHARE = (byte) 0x0d;
         public static final byte SETUP_TEST_DATA = (byte) 0x0e;
         public static final byte CREATE_PARTIAL_EPOCH = (byte) 0x0f;
+        public static final byte KEY_GEN_DLEQ = (byte) 0x10;
+        public static final byte GET_C_POINTS = (byte) 0x11;
+        public static final byte SET_C_POINTS = (byte) 0x12;
+        public static final byte SET_SHARES = (byte) 0x13;
+        public static final byte GET_SHARES = (byte) 0x14;
+        public static final byte GET_ALL_C_POINTS = (byte) 0x15;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;

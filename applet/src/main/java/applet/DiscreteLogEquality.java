@@ -80,11 +80,11 @@ public class DiscreteLogEquality {
     public void calculateModMult(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         // a.setValue((short) 1);
-        IndistinguishabilityApplet.rng.generateData(tmp, (short) 0, (short) 32);
+        IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         aBN.fromByteArray(tmp, (short) 0, (short) 32);
 
         // b.setValue((short) 2);
-        IndistinguishabilityApplet.rng.generateData(tmp, (short) 0, (short) 32);
+        IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         bBN.fromByteArray(tmp, (short) 0, (short) 32);
 
         printBigNat(aBN);
@@ -107,7 +107,7 @@ public class DiscreteLogEquality {
      */
     public short proveEq(ECPoint H, ECPoint pubkeyPoint, ECPoint partial, byte[] out) {
         // choose random r <- ZZ_q
-        IndistinguishabilityApplet.rng.generateData(tmp, (short) 0, (short) 32);
+        IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
         // FIXME measure, whether the modding is necessary. The consequent point multiplication is possible either way.
         // r.mod(curve.rBN);

@@ -1299,7 +1299,7 @@ public class jcmathlib {
                 pointKeyPair.genKeyPair(); // Fails for some curves on some cards
             } else {
                 BigNat tmp = rm.EC_BN_A;
-                rm.rng.generateData(rm.ARRAY_A, (short) 0, (short) (curve.KEY_BIT_LENGTH / 8 + 16));
+                rm.rng.nextBytes(rm.ARRAY_A, (short) 0, (short) (curve.KEY_BIT_LENGTH / 8 + 16));
                 tmp.fromByteArray(rm.ARRAY_A, (short) 0, (short) (curve.KEY_BIT_LENGTH / 8 + 16));
                 tmp.mod(curve.rBN);
                 tmp.shrink();
@@ -2462,7 +2462,7 @@ public class jcmathlib {
             expPriv = (RSAPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PRIVATE, MAX_EXP_BIT_LENGTH, false);
             expCiph = Cipher.getInstance(Cipher.ALG_RSA_NOPAD, false);
 
-            rng = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+            rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         }
 
         /**

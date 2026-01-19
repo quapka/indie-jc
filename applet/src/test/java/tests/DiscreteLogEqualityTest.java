@@ -95,11 +95,6 @@ public class DiscreteLogEqualityTest extends BaseTest {
         byte[] encoded = hashedToCurvePoint.getEncoded(false);
         CommandAPDU getProofCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_EXAMPLE_PROOF, 0x00, 0x00, encoded);
 
-        // System.out.println(String.format("Encoded: %d", encoded.length));
-        // for (short i = 0; i < encoded.length; i++) {
-        //     System.out.print(String.format("%02x", encoded[i]));
-        // }
-
         System.out.println();
         ResponseAPDU responseAPDU = connect().transmit(getProofCmd);
 
