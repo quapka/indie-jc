@@ -22,7 +22,8 @@ public class DistributedKeyGen {
     private byte coeffSize = 32;
     // public byte[][] aCoeffs, bCoeffs;
     public BigNat[] aCoeffs, bCoeffs, aShares, bShares, otherAShares, otherBShares;
-    public ECPoint[] cPoints;
+    public BigNat xShare;
+    public ECPoint[] cPoints, aPoints;
     public byte nCoeffs;
     // public byte[maxParties][coeffSize] aCoeffs, bCoeffs;
     public static ECCurve curve;
@@ -79,7 +80,7 @@ public class DistributedKeyGen {
         otherBShares = new BigNat[nParties];
 
         cPoints = new ECPoint[nParties * nParties];
-        // no two-dimensional arrays avaialable
+        aPoints = new ECPoint[nParties * nParties];
 
         this.nParties = nParties;
         // nCoeffs = (byte) (nParties + 1);
@@ -101,6 +102,8 @@ public class DistributedKeyGen {
                 short index = (short) (j * nParties + i);
                 cPoints[index] = new ECPoint(curve);
                 cPoints[index].setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
+                aPoints[index] = new ECPoint(curve);
+                aPoints[index].setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
             }
         }
 
@@ -183,11 +186,12 @@ public class DistributedKeyGen {
     }
 
     public void setCPoints(byte fromPartyID, byte[] cPointsData, short offset) {
+        byte fromPartyIndex = (byte) (fromPartyID - 1);
         short pubKeySize = 65;
+
         for (short i = 0; i < nParties; i++) {
             short from = (short) (i * pubKeySize + offset);
 
-            byte fromPartyIndex = (byte) (fromPartyID - 1);
             short index = (short) (fromPartyIndex * nParties + i);
             cPoints[index].setW(cPointsData, from, pubKeySize);
         }
@@ -254,5 +258,80 @@ public class DistributedKeyGen {
         }
 
         return tmpPointA.isEqual(tmpPointC);
+    }
+
+    public short getAPoints(byte[] out) {
+        short keySize = 65;
+        // FIXME We assume all parties are in QUAL
+        short k = 0;
+        for (; k < nCoeffs; k++) {
+            tmpPointA.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
+            tmpPointA.multiplication(aCoeffs[k]);
+
+            tmpPointA.encode(out, (short) (keySize * k), false);
+        }
+        return (short) (keySize * k);
+    }
+
+    public void setAPoints(byte fromPartyID, byte[] aPointsData, short offset) {
+        short fromPartyIndex = (short) (fromPartyID - 1);
+        short pubKeySize = 65;
+
+        for (short k = 0; k < nParties; k++) {
+            short fromOffset = (short) (k * pubKeySize + offset);
+
+            short index = (short) (fromPartyIndex * nParties + k);
+            aPoints[index].setW(aPointsData, fromOffset, pubKeySize);
+        }
+    }
+
+    public boolean verifyAPoints() {
+        for (short i = 0; i < nParties; i++) {
+            // FIXME cache (i * nParties)
+            if ( i == partyIndex ) {
+                // skip self
+                continue;
+            }
+            // s_ij * G
+            tmpPointB.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
+            tmpPointB.multiplication(otherAShares[i]);
+
+            short k = 0;
+            short index = (short) (i * nParties + k);
+            tmpPointC.copy(aPoints[index]);
+
+            for (k = 1; k < nParties; k++) {
+                index = (short) (i * nParties + k);
+                // A_ik
+                tmpPointA.copy(aPoints[index]);
+                // j
+                tmpNum.setValue(partyID);
+                // k
+                ch.setValue(k);
+                // j^k
+                tmpNum.modExp(ch, curve.rBN);
+                // j^k * A_ik 
+                tmpPointA.multiplication(tmpNum);
+                // aggregate
+                tmpPointC.add(tmpPointA);
+            }
+        }
+
+        return tmpPointC.isEqual(tmpPointB);
+    }
+
+    public void computeXShare() {
+        // for all parties j in QUAL (we assume its all parties for now), sum s_ji
+        // this in principle should equal sum otherAShares, but it's missing self A share
+
+        // start with our own share
+        tmpNum.copy(aShares[partyIndex]);
+        for (short j = 0; j < nParties; j++) {
+            if ( j == partyIndex ) {
+                // skip,otherAShares[j] should be empty
+                continue;
+            }
+            tmpNum.modAdd(otherAShares[j], curve.rBN);
+        }
     }
 }

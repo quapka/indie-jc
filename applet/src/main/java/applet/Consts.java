@@ -31,6 +31,10 @@ public class Consts {
         public static final byte SET_SHARES = (byte) 0x13;
         public static final byte GET_SHARES = (byte) 0x14;
         public static final byte GET_ALL_C_POINTS = (byte) 0x15;
+        public static final byte COMPUTE_X_SHARE = (byte) 0x16;
+        public static final byte GET_A_POINTS = (byte) 0x17;
+        public static final byte SET_A_POINTS = (byte) 0x18;
+        public static final byte VERIFY_A_POINTS = (byte) 0x19;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;

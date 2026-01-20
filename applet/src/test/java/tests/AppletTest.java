@@ -1613,5 +1613,43 @@ public class AppletTest extends BaseTest {
                 sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_SHARES, partyID, 0x00, data);
             }
         }
+
+        // compute partial X_i shares
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.COMPUTE_X_SHARE, 0x00, 0x00);
+        }
+
+        // set A points
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            System.out.println(String.format("Get APoints from '%d' card", partyID));
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_A_POINTS, 0x00, 0x00);
+            // System.out.println(Hex.toHexString(data));
+
+            for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
+                int otherReaderIndex = readerIndeces[otherIndex];
+                byte otherPartyID = partyIDs[otherIndex];
+                if ( otherPartyID == partyID ) {
+                    continue;
+                }
+
+                System.out.println(String.format("Set APoints from '%d' to '%d' card", partyID, otherPartyID));
+                sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_A_POINTS, partyID, 0x00, data);
+            }
+        }
+
+        // verify A points
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            System.out.println(String.format("Verify APoints in card '%d'", partyID));
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.VERIFY_A_POINTS, 0x00, 0x00);
+        }
     };
 }

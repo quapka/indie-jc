@@ -251,6 +251,18 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.SET_SHARES:
                         setShares(apdu);
                         break;
+                    case Consts.INS.COMPUTE_X_SHARE:
+                        computeXShare(apdu);
+                        break;
+                    case Consts.INS.GET_A_POINTS:
+                        getAPoints(apdu);
+                        break;
+                    case Consts.INS.SET_A_POINTS:
+                        setAPoints(apdu);
+                        break;
+                    case Consts.INS.VERIFY_A_POINTS:
+                        verifyAPoints(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -377,6 +389,31 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * pubKeySize));
     }
 
+    public void getAPoints(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        // FIXME check size/offset
+        short length = dkg.getAPoints(apduBuffer);
+
+        apdu.setOutgoingAndSend((short) 0, length);
+    }
+
+    public void setAPoints(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
+
+        // FIXME throw if the ID is not > 0;
+        byte fromPartyID = apduBuffer[ISO7816.OFFSET_P1];
+
+        // FIXME check size/offset
+        dkg.setAPoints(fromPartyID, apduBuffer, ISO7816.OFFSET_CDATA);
+    }
+
+    public void verifyAPoints(APDU apdu) {
+        if ( dkg.verifyAPoints() != true ) {
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+        }
+    }
+
     public void getAllCPoints(APDU apdu) {
         short pubKeySize = 33;
         byte[] apduBuffer = apdu.getBuffer();
@@ -414,6 +451,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             //       The proper way is to report the party which misbehaves.
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
+        // FIXME the qualified parties should be recorded and a QUAL set of them constructed
+    }
+
+    public void computeXShare(APDU apdu) {
+        // byte[] apduBuffer = apdu.getBuffer();
+        // apdu.setIncomingAndReceive();
+        dkg.computeXShare();
     }
 
     public void getShares(APDU apdu) {
