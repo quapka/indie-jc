@@ -28,7 +28,7 @@ public class DistributedKeyGen {
     // public byte[maxParties][coeffSize] aCoeffs, bCoeffs;
     public static ECCurve curve;
     // G is the curve generator and H is another point H = hG, with the h being unknown.
-    public static ECPoint G, H,tmpPointA, tmpPointB, tmpPointC;
+    public static ECPoint G, H,tmpPointA, tmpPointB, tmpPointC, groupKey;
     // FIXME rewrite tmpNum to tmpBN
     public static BigNat r, ch, tmpNum, secret;
     public static BigNat curveOrder;
@@ -60,6 +60,7 @@ public class DistributedKeyGen {
         tmpPointA = new ECPoint(curve);
         tmpPointB = new ECPoint(curve);
         tmpPointC = new ECPoint(curve);
+        groupKey = new ECPoint(curve);
         H = new ECPoint(curve);
 
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
@@ -269,6 +270,9 @@ public class DistributedKeyGen {
             tmpPointA.multiplication(aCoeffs[k]);
 
             tmpPointA.encode(out, (short) (keySize * k), false);
+            // save the computed point to self
+            short index = (short) (partyIndex * nParties + k);
+            aPoints[index].copy(tmpPointA);
         }
         return (short) (keySize * k);
     }
@@ -277,7 +281,7 @@ public class DistributedKeyGen {
         short fromPartyIndex = (short) (fromPartyID - 1);
         short pubKeySize = 65;
 
-        for (short k = 0; k < nParties; k++) {
+        for (short k = 0; k < nCoeffs; k++) {
             short fromOffset = (short) (k * pubKeySize + offset);
 
             short index = (short) (fromPartyIndex * nParties + k);
@@ -318,6 +322,19 @@ public class DistributedKeyGen {
         }
 
         return tmpPointC.isEqual(tmpPointB);
+    }
+
+    public void computeY() {
+        groupKey.copy(aPoints[0]);
+        // groupKey.add(aPoints[2]);
+        for (short i = 1; i < nParties; i++) {
+            short index = (short) (i * nParties);
+            groupKey.add(aPoints[index]);
+        }
+    }
+
+    public short getGroupKey(byte[] out, short offset) {
+        return groupKey.encode(out, offset, false);
     }
 
     public void computeXShare() {

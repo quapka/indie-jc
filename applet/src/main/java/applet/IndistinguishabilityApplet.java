@@ -263,6 +263,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.VERIFY_A_POINTS:
                         verifyAPoints(apdu);
                         break;
+                    case Consts.INS.GET_DLEQ_KEY:
+                        getDleqKey(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -413,6 +416,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         if ( dkg.verifyAPoints() != true ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
+        dkg.computeY();
+    }
+
+    public void getDleqKey(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short length = dkg.getGroupKey(apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, length);
     }
 
     public void getAllCPoints(APDU apdu) {

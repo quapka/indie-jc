@@ -1629,7 +1629,7 @@ public class AppletTest extends BaseTest {
 
             System.out.println(String.format("Get APoints from '%d' card", partyID));
             byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_A_POINTS, 0x00, 0x00);
-            // System.out.println(Hex.toHexString(data));
+            System.out.println(Hex.toHexString(data));
 
             for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
                 int otherReaderIndex = readerIndeces[otherIndex];
@@ -1650,6 +1650,21 @@ public class AppletTest extends BaseTest {
 
             System.out.println(String.format("Verify APoints in card '%d'", partyID));
             sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.VERIFY_A_POINTS, 0x00, 0x00);
+        }
+
+        // aggregate A points
+        byte[][] dleqKeys = new byte[nParties][65];
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            System.out.println(String.format("Get aggregated public key from card '%d'", partyID));
+            dleqKeys[index] = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
+        }
+
+        // verify that the aggregated keys are the same across the cards
+        for (int index = 0; index < nParties - 1; index++) {
+            Assert.assertArrayEquals(dleqKeys[index], dleqKeys[index + 1]);
         }
     };
 }
