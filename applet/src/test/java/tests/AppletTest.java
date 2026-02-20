@@ -333,8 +333,9 @@ public class AppletTest extends BaseTest {
         byte threshold = 0x02;
         byte nParties = 0x03;
         byte partyID = 0x04;
+        byte partyIndex = 0x03;
 
-        CommandAPDU setupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {0x04});
+        CommandAPDU setupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
         ResponseAPDU responseAPDU = connect().transmit(setupCmd);
 
         CommandAPDU getSetupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
@@ -344,6 +345,7 @@ public class AppletTest extends BaseTest {
         Assert.assertEquals(data[0], nParties);
         Assert.assertEquals(data[1], threshold);
         Assert.assertEquals(data[2], partyID);
+        Assert.assertEquals(data[3], partyIndex);
     }
 
     public void printBuffer(byte[] buf, short size) {
@@ -1592,8 +1594,6 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
             byte[] data = null;
-
-
 
             for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
                 int otherReaderIndex = readerIndeces[otherIndex];

@@ -334,6 +334,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private void setup(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
         nParties = apduBuffer[ISO7816.OFFSET_P1];
         threshold = apduBuffer[ISO7816.OFFSET_P2];
 
