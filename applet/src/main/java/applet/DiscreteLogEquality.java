@@ -63,9 +63,6 @@ public class DiscreteLogEquality {
         bBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
         secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-        short byteLength = curve.disposablePriv.getS(tmp, (short) 0);
-        secret.fromByteArray(tmp, (short) 0, byteLength);
-        secret.mod(curve.rBN);
 
         initialized = true;
     }
