@@ -330,7 +330,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
         }
         aesCtr = Cipher.getInstance(Cipher_ALG_AES_CTR, false);
-        // change to TYPE_AES_TRANSIENT_RESET
+        // TODO change to TYPE_AES_TRANSIENT_RESET
         aesCtrKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
 
 

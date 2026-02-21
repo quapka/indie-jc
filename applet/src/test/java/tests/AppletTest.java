@@ -1559,6 +1559,7 @@ public class AppletTest extends BaseTest {
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
+            // FIXME the threshold-out-of-nParties  is set during the installation, thus cannot be updated here!
             sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
             byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SETUP);
             System.out.println(String.format("Card '%d' index: %d-out-of-%d", data[2], data[1], data[0]));

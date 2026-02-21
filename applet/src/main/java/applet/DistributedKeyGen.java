@@ -206,6 +206,7 @@ public class DistributedKeyGen {
             return (short) 0;
         }
         byte forPartyIndex = (byte) (forPartyID - 1);
+        // FIXME do the evaluation need to happen everytime we run this? Does it persist?
         evaluateShares();
         short outSize = aShares[forPartyIndex].copyToByteArray(out, offset);
         outSize = (short) (outSize + bShares[forPartyIndex].copyToByteArray(out, (short) (offset + outSize)));
