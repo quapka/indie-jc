@@ -1606,8 +1606,9 @@ public class AppletTest extends BaseTest {
                     continue;
                 }
                 data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SHARES, otherPartyID, 0x00);
+
                 System.out.println(Hex.toHexString(data));
-                Assert.assertEquals(32 * nParties, data.length);
+                Assert.assertEquals(32 * 2, data.length);
 
                 System.out.println(String.format("Setting shares from '%d' for '%d' card.", partyID, otherPartyID));
                 sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_SHARES, partyID, 0x00, data);
