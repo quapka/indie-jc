@@ -71,8 +71,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
     private static final byte[] NAME_FIELD_NAME = {'n', 'a', 'm', 'e'};
 
-    public static byte nParties;
-    public static byte threshold;
+    public byte nParties;
+    public byte threshold;
     // TODO AESKey or only Key
     private static AESKey aesCtrKey;
     private static Cipher aesCtr;
@@ -110,10 +110,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public static void install(byte[] bArray, short bOffset, byte bLength)
     {
-        new IndistinguishabilityApplet(bArray, bOffset, bLength);
+        // kudos to: https://stackoverflow.com/a/32841038/2377489
+        short offset = bOffset;
+        byte aidLength = bArray[bOffset];
+        offset = (short) (offset + 1 + aidLength);
+
+        short controlLength = (short)(bArray[offset] & (short) 0x00FF);
+        offset = (short) (offset + 1 + controlLength);
+
+        short dataLength = (short) (bArray[offset] & (short) 0x00FF);
+        new IndistinguishabilityApplet(bArray, (short) (bOffset + 1 + aidLength + 1 + controlLength + 1), dataLength);
     }
 
-    public IndistinguishabilityApplet(byte[] bArray, short bOffset, byte bLength) {
+    public IndistinguishabilityApplet(byte[] bArray, short bOffset, short bLength) {
+        this.threshold = bArray[bOffset];
+        this.nParties = bArray[(short) (bOffset + 1)];
+
         OperationSupport.getInstance().setCard(CARD_TYPE);
         if (!OperationSupport.getInstance().DEFERRED_INITIALIZATION) {
             initialize();
@@ -312,7 +324,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // rm = new ResourceManager((short) 256, (short) 2056);
         rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         dleq = new DiscreteLogEquality();
-        dkg = new DistributedKeyGen((byte) 2); // FIXME the 2 should be inputted from the user!
+        dkg = new DistributedKeyGen(threshold, nParties);
         musig2 = new Musig2(DiscreteLogEquality.curve, rm);
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);

@@ -14,6 +14,7 @@ import javacardx.framework.util.*;
 public class DistributedKeyGen {
     // FIXME 
     // private byte maxParties = 2;
+    public byte threshold;
     public byte nParties;
     public byte partyID; // partyIndex + 1
     public byte partyIndex; // partyID - 1 
@@ -32,20 +33,22 @@ public class DistributedKeyGen {
     // FIXME rewrite tmpNum to tmpBN
     public static BigNat r, ch, tmpNum, secret;
     public static BigNat curveOrder;
-    private byte[] tmp = new byte[128];
-    private byte[] tmp2 = new byte[128];
+    // NOTE evaluation should hold up to 14 parties
+    private byte[] tmp = new byte[512];
     boolean initialized = false;
 
-    public DistributedKeyGen(byte nParties) {
+    public DistributedKeyGen(byte threshold, byte nParties) {
+        this.threshold = threshold;
+        this.nParties = nParties;
 
         if ( !initialized ) {
-            initialize(nParties);
+            initialize();
         }
     }
 
     // FIXME the resource manager, curve and other should be initialized on the applet class level
     // FIXME should be shared across other functionalities.
-    public void initialize(byte nParties) {
+    public void initialize() {
         if ( initialized ) {
             return;
         }
@@ -83,8 +86,6 @@ public class DistributedKeyGen {
         cPoints = new ECPoint[nParties * nParties];
         aPoints = new ECPoint[nParties * nParties];
 
-        this.nParties = nParties;
-        // nCoeffs = (byte) (nParties + 1);
         this.nCoeffs = nParties;
 
         for (short i = 0; i < nCoeffs; i++) {
