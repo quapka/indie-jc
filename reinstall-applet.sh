@@ -32,6 +32,6 @@ gp --uninstall "$appletPath" --debug --reader "$reader3" || true
 gp --uninstall "$appletPath" --debug --reader "$reader4" || true
 gp --uninstall "$appletPath" --debug --reader "$reader5" || true
 
-gp --install --params "$params" "$appletPath" --debug --reader "$reader3"
-gp --install --params "$params" "$appletPath" --debug --reader "$reader4"
-gp --install --params "$params" "$appletPath" --debug --reader "$reader5"
+gp --install "$appletPath" --params "$params" --debug --reader "$reader3"
+gp --install "$appletPath" --params "$params" --debug --reader "$reader4"
+gp --install "$appletPath" --params "$params" --debug --reader "$reader5"
