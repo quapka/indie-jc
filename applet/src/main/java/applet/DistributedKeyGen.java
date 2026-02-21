@@ -23,15 +23,16 @@ public class DistributedKeyGen {
     private byte coeffSize = 32;
     // public byte[][] aCoeffs, bCoeffs;
     public BigNat[] aCoeffs, bCoeffs, aShares, bShares, otherAShares, otherBShares;
-    public BigNat xShare;
+    public BigNat secretShare;
     public ECPoint[] cPoints, aPoints;
     public byte nCoeffs;
     // public byte[maxParties][coeffSize] aCoeffs, bCoeffs;
     public static ECCurve curve;
     // G is the curve generator and H is another point H = hG, with the h being unknown.
     public static ECPoint G, H,tmpPointA, tmpPointB, tmpPointC, groupKey;
+    public ECPoint publicShare;
     // FIXME rewrite tmpNum to tmpBN
-    public static BigNat r, ch, tmpNum, secret;
+    public static BigNat r, ch, tmpNum;
     public static BigNat curveOrder;
     // NOTE evaluation should hold up to 14 parties
     private byte[] tmp = new byte[512];
@@ -60,6 +61,7 @@ public class DistributedKeyGen {
         ch = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         tmpNum = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         G = new ECPoint(curve);
+        publicShare = new ECPoint(curve);
         tmpPointA = new ECPoint(curve);
         tmpPointB = new ECPoint(curve);
         tmpPointC = new ECPoint(curve);
@@ -74,7 +76,7 @@ public class DistributedKeyGen {
         H.multiplication(tmpNum);
         
         ECPrivateKey privKey = curve.disposablePriv;
-        secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
         aCoeffs = new BigNat[nParties];
         bCoeffs = new BigNat[nParties];
@@ -333,6 +335,7 @@ public class DistributedKeyGen {
             short index = (short) (i * nParties);
             groupKey.add(aPoints[index]);
         }
+        publicShare.copy(aPoints[partyIndex * nParties]);
     }
 
     public short getGroupKey(byte[] out, short offset) {
@@ -344,13 +347,13 @@ public class DistributedKeyGen {
         // this in principle should equal sum otherAShares, but it's missing self A share
 
         // start with our own share
-        tmpNum.copy(aShares[partyIndex]);
+        secretShare.copy(aShares[partyIndex]);
         for (short j = 0; j < nParties; j++) {
             if ( j == partyIndex ) {
                 // skip,otherAShares[j] should be empty
                 continue;
             }
-            tmpNum.modAdd(otherAShares[j], curve.rBN);
+            secretShare.modAdd(otherAShares[j], curve.rBN);
         }
     }
 }

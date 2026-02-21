@@ -435,6 +435,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short length = dkg.getGroupKey(apduBuffer, (short) 0);
 
+        // We assume that the key is correct and thus set the DLEQ key
+        dleq.setShare(dkg.secretShare, dkg.publicShare);
+
         apdu.setOutgoingAndSend((short) 0, length);
     }
 
@@ -479,8 +482,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void computeXShare(APDU apdu) {
-        // byte[] apduBuffer = apdu.getBuffer();
-        // apdu.setIncomingAndReceive();
         dkg.computeXShare();
     }
 
@@ -1039,7 +1040,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         System.out.println();
         // 3. multiply by secret
         DiscreteLogEquality.M.copy(DiscreteLogEquality.userPoint);
-        DiscreteLogEquality.M.multiplication(DiscreteLogEquality.secret);
+        DiscreteLogEquality.M.multiplication(DiscreteLogEquality.secretShare);
         // provide a proof of usage of the secret
         short proofLength = dleq.exampleProof(apduBuffer);
         short partialLength = DiscreteLogEquality.M.getW(apduBuffer, proofLength);

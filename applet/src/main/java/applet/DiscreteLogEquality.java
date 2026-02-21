@@ -19,8 +19,8 @@ import javacard.framework.APDU;
 public class DiscreteLogEquality {
     public static ECCurve curve;
     // FIXME M is H actually :D
-    public static ECPoint G, com1, com2, userPoint, M, tmpPoint;
-    public static BigNat r, ch, tmpNum, secret;
+    public static ECPoint G, com1, com2, userPoint, M, tmpPoint, publicShare;
+    public static BigNat r, ch, tmpNum, secretShare;
     public static BigNat curveOrder;
     public static BigNat aBN, bBN;
     private byte[] tmp = new byte[128];
@@ -49,6 +49,7 @@ public class DiscreteLogEquality {
         r = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         ch = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         G = new ECPoint(curve);
+        publicShare = new ECPoint(curve);
         com1 = new ECPoint(curve);
         com2 = new ECPoint(curve);
         userPoint = new ECPoint(curve);
@@ -61,12 +62,18 @@ public class DiscreteLogEquality {
         aBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         bBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
-        secret = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         short byteLength = curve.disposablePriv.getS(tmp, (short) 0);
         secret.fromByteArray(tmp, (short) 0, byteLength);
         secret.mod(curve.rBN);
 
         initialized = true;
+    }
+
+    public void setShare(BigNat dkgSecretShare, ECPoint dkgPublicShare) {
+        // this should also set the partial public key y_i, aka do some initialization
+        secretShare.copy(dkgSecretShare);
+        publicShare.copy(dkgPublicShare);
     }
 
     private void printBigNat(BigNat num) {
@@ -121,8 +128,8 @@ public class DiscreteLogEquality {
         // compute ch <- H(g, h , x, y, com1, com2)
         short hashSize = hashCommitments(userPoint, pubkeyPoint, partial, com1, com2);
         ch.fromByteArray(tmp, (short) 0, hashSize);
-        // compute res = r + secret * ch
-        ch.modMult(secret, curve.rBN);
+        // compute res = r + secretShare * ch
+        ch.modMult(secretShare, curve.rBN);
         // res = r
         r.modAdd(ch, curve.rBN);
 
@@ -172,11 +179,11 @@ public class DiscreteLogEquality {
     }
 
     public short exampleProof(byte[] out) {
-        // convert the ephemeral key to point and secret
+        // convert the ephemeral key to point and secretShare
         for (short i = 0; i < 32; i ++ ) {
             System.out.print(String.format("%02x", tmp[i]));
         }
-        // G.multiplication(secret);
+        // G.multiplication(secretShare);
         System.out.println();
         short byteLength = curve.disposablePub.getW(tmp, (short) 0);
         tmpPoint.setW(tmp, (short) 0, byteLength);
