@@ -1487,8 +1487,8 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDleqGetCPoints() throws Exception {
-        int[] readerIndeces = new int[] {2, 3};
-        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+        int[] readerIndeces = new int[] {2, 3, 4};
+        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed
 
         // Cards setup
         int nParties = readerIndeces.length;
@@ -1512,8 +1512,8 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDleqSetCPoints() throws Exception {
-        int[] readerIndeces = new int[] {2, 3};
-        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+        int[] readerIndeces = new int[] {2, 3, 4};
+        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed
 
         // Cards setup
         int nParties = readerIndeces.length;
@@ -1549,7 +1549,7 @@ public class AppletTest extends BaseTest {
     public void testDleqKeyGeneration() throws Exception {
 
         int[] readerIndeces = new int[] {2, 3};
-        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed, thier indeces 0-indexed
         // Cards initialization
         int nCards = readerIndeces.length;
         int nParties = readerIndeces.length;
@@ -1668,5 +1668,61 @@ public class AppletTest extends BaseTest {
         for (int index = 0; index < nParties - 1; index++) {
             Assert.assertArrayEquals(dleqKeys[index], dleqKeys[index + 1]);
         }
+
+        // test n-out-of-n partial Dleq evaluation
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            String message = "this is the user input";
+            byte[] msgBytes = message.getBytes();
+
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
+        }
+
     };
+
+    @Test
+    public void testDeriveDleq() throws Exception {
+        int[] readerIndeces = new int[] {2, 3};
+        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed, thier indeces 0-indexed
+
+
+        // Cards initialization
+        int nCards = readerIndeces.length;
+        int nParties = readerIndeces.length;
+        int threshold = readerIndeces.length;
+
+        ECPoint[] derivedSaltShares = new ECPoint[nParties];
+        byte[][] dleqProofs = new byte[nParties][64];
+
+        System.out.println("Get DLEQ key");
+        byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
+        ECPoint verificationPoint = curve.decodePoint(data);
+
+        // BigInteger xCoordGroupKey = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
+        // BigInteger yCoordGroupKey = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 33, 65));
+        // ECPoint derivedPoint = curve.createPoint(xCoord, yCoord);
+
+        // test n-out-of-n partial Dleq evaluation
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            SecureRandom prng = new SecureRandom(new byte[32]);
+            byte[] msgBytes = new byte[32];
+            prng.nextBytes(msgBytes);
+            // String message = "this is the user input";
+            // byte[] msgBytes = message.getBytes();
+
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
+            // System.out.println(Hex.toHexString(data));
+
+            dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
+            derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 64, 64 + 65));
+            // derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 0, 65));
+
+            System.out.println(derivedSaltShares[index]);
+        }
+    }
 }

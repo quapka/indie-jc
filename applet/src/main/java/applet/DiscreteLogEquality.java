@@ -19,7 +19,7 @@ import javacard.framework.APDU;
 public class DiscreteLogEquality {
     public static ECCurve curve;
     // FIXME M is H actually :D
-    public static ECPoint G, com1, com2, userPoint, M, tmpPoint, publicShare;
+    public static ECPoint G, com1, com2, userPoint, M, tmpPoint, publicShare, hashToCurvePoint, partialDerivedShare;
     public static BigNat r, ch, tmpNum, secretShare;
     public static BigNat curveOrder;
     public static BigNat aBN, bBN;
@@ -50,6 +50,8 @@ public class DiscreteLogEquality {
         ch = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         G = new ECPoint(curve);
         publicShare = new ECPoint(curve);
+        hashToCurvePoint = new ECPoint(curve);
+        partialDerivedShare = new ECPoint(curve);
         com1 = new ECPoint(curve);
         com2 = new ECPoint(curve);
         userPoint = new ECPoint(curve);
@@ -137,6 +139,91 @@ public class DiscreteLogEquality {
         return (short) (hashSize + resSize);
     }
 
+    public short partialEval(byte[] userInput, short offset, short length, byte[] out, short outOffset) {
+        if ( !IndistinguishabilityApplet.h2c.hash(userInput, offset, length, userPoint) ) {
+            return (short) 0;
+        }
+
+        partialDerivedShare.copy(userPoint);
+        partialDerivedShare.multiplication(secretShare);
+
+        // calculate the proof
+        short proofLength = proveEq2(userPoint, partialDerivedShare, out, outOffset);
+        // and also send the actual derive salt share
+        short encodedLength = partialDerivedShare.encode(out, (short) (outOffset + proofLength), false);
+
+        return (short) (proofLength + encodedLength);
+    }
+
+    /**
+     * Implemented following the description from the publication:
+     *     Fully Distributed Verifiable Random Functions and their Application to Decentralised Random Beacons
+     *     Page 3. Definition 2.1
+     *     link: https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9581233
+     *
+     *     Instead of the multiplicative notation we use the additive one.
+     *
+     *     Params:
+     *     G generator is implicit
+     *     H is the user provided point H(x)
+     *     vk_i is the publicShare given implicitly
+     *     v_i is the derivation share
+     *     r is the randomness, but generated inline
+     */
+    public short proveEq2(/*ECPoint G,*/ ECPoint H, /*ECPoint vk_i ,*/ ECPoint partialDerivedShare, /*r,*/ byte[] out, short outOffset) {
+        // choose random r <- ZZ_q
+        IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
+        r.fromByteArray(tmp, (short) 0, (short) 32);
+        // TODO measure, whether the modding is necessary. The consequent point multiplication is possible either way.
+        // r.mod(curve.rBN);
+        // TODO implement rG via the co-processor, set r as private key and compute public key
+        // compute com1 = rG
+        com1.copy(G);
+        com1.multiplication(r);
+        // compute com2 = rH
+        com2.copy(H);
+        com2.multiplication(r);
+        // compute ch <- H(g, h , x, y, com1, com2)
+        short hashSize = hashCommitments2(/*ECPoint G,*/ H, /*publicShare,*/ partialDerivedShare, com1, com2);
+        ch.fromByteArray(tmp, (short) 0, hashSize);
+        // compute res = r + secretShare * ch
+        ch.modMult(secretShare, curve.rBN);
+        // res = r
+        r.modAdd(ch, curve.rBN);
+
+        // return (ch, res) in out
+        Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) 0, hashSize);
+        short resSize = r.copyToByteArray(tmp, (short) 0);
+        Util.arrayCopyNonAtomic(tmp, (short) 0, out, hashSize, resSize);
+        return (short) (hashSize + resSize);
+    }
+
+    private short hashCommitments2(/*ECPoint G,*/ ECPoint H, /* ECPoint X,*/ ECPoint Y, ECPoint com1, ECPoint com2) {
+        hasher.reset();
+        hasher.update(HASH_DLEQ_DOMAIN_SEPARATOR, (short) 0, (short) HASH_DLEQ_DOMAIN_SEPARATOR.length);
+
+        // The curve generator is an implicit parameter
+        short pointByteLen = G.getW(tmp, (short) 0);
+        hasher.update(tmp, (short) 0, pointByteLen);
+
+        pointByteLen = H.getW(tmp, (short) 0);
+        hasher.update(tmp, (short) 0, pointByteLen);
+
+        pointByteLen = publicShare.getW(tmp, (short) 0);
+        hasher.update(tmp, (short) 0, pointByteLen);
+
+        pointByteLen = Y.getW(tmp, (short) 0);
+        hasher.update(tmp, (short) 0, pointByteLen);
+
+        pointByteLen = com1.getW(tmp, (short) 0);
+        hasher.update(tmp, (short) 0, pointByteLen);
+
+        pointByteLen = com2.getW(tmp, (short) 0);
+        hasher.doFinal(tmp, (short) 0, pointByteLen, tmp, (short) 0);
+
+        return hasher.getLength();
+    }
+
     /**
      * Hash to ZZq, where q is the curve order.
      * FIXME currenlty we do not use modulus to really fit in ZZq.
@@ -174,6 +261,7 @@ public class DiscreteLogEquality {
 
         return hasher.getLength();
     }
+
 
     public short exampleProof(byte[] out) {
         // convert the ephemeral key to point and secretShare

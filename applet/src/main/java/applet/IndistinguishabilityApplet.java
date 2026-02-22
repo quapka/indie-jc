@@ -39,6 +39,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static ResourceManager rm;
     public static DiscreteLogEquality dleq;
     public static DistributedKeyGen dkg;
+    public static HashToCurve h2c;
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     HashCustom customHasher;
@@ -278,6 +279,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_DLEQ_KEY:
                         getDleqKey(apdu);
                         break;
+                    case Consts.INS.DERIVE_DLEQ_SALT_SHARE:
+                        deriveDleqSaltShare(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
                         break;
@@ -325,6 +329,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         dleq = new DiscreteLogEquality();
         dkg = new DistributedKeyGen(threshold, nParties);
+        h2c = new HashToCurve();
         musig2 = new Musig2(DiscreteLogEquality.curve, rm);
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
@@ -435,10 +440,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short length = dkg.getGroupKey(apduBuffer, (short) 0);
 
-        // We assume that the key is correct and thus set the DLEQ key
+        // We assume that the dkg is done and thus set the DLEQ key
         dleq.setShare(dkg.secretShare, dkg.publicShare);
 
         apdu.setOutgoingAndSend((short) 0, length);
+    }
+
+    public void deriveDleqSaltShare(APDU apdu) {
+        byte[] apduBuffer = loadApdu(apdu);
+
+        short length = dleq.partialEval(apduBuffer, (short) 0, extApduSize, apduBuffer, (short) 0);
+
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(length);
+        apdu.sendBytesLong(apduBuffer, (short) 0, length);
     }
 
     public void getAllCPoints(APDU apdu) {

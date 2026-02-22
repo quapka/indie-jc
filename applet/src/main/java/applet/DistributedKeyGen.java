@@ -76,7 +76,7 @@ public class DistributedKeyGen {
         H.multiplication(tmpNum);
         
         ECPrivateKey privKey = curve.disposablePriv;
-        secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         aCoeffs = new BigNat[nParties];
         bCoeffs = new BigNat[nParties];
@@ -96,8 +96,8 @@ public class DistributedKeyGen {
             aCoeffs[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
             bCoeffs[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
-            aShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-            bShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+            aShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            bShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
             otherAShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
             otherBShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
