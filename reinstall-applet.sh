@@ -30,8 +30,13 @@ echo "Using $thresholdB-out-of-$nPartiesB setting"
 
 gp --uninstall "$appletPath" --debug --reader "$reader3" || true
 gp --uninstall "$appletPath" --debug --reader "$reader4" || true
-# gp --uninstall "$appletPath" --debug --reader "$reader5" || true
+gp --uninstall "$appletPath" --debug --reader "$reader5" || true
 
-gp --install "$appletPath" --params "$params" --debug --reader "$reader3"
-gp --install "$appletPath" --params "$params" --debug --reader "$reader4"
-# gp --install "$appletPath" --params "$params" --debug --reader "$reader5"
+if (( "$nPartiesB" > 1 )); then
+    gp --install "$appletPath" --params "$params" --debug --reader "$reader3"
+    gp --install "$appletPath" --params "$params" --debug --reader "$reader4"
+fi
+
+if (( "$nPartiesB" == 3 )); then
+    gp --install "$appletPath" --params "$params" --debug --reader "$reader5"
+fi
