@@ -117,7 +117,7 @@ public class DiscreteLogEqualityTest extends BaseTest {
      *     Fully Distributed Verifiable Random Functions
      *     and their Application to Decentralised Random Beacons
      */
-    public boolean VerifyEq(ECPoint G, ECPoint H, ECPoint X, ECPoint Y, byte[] proof) throws NoSuchAlgorithmException {
+    public static boolean VerifyEq(ECPoint G, ECPoint H, ECPoint X, ECPoint Y, byte[] proof) throws NoSuchAlgorithmException {
         byte[] chVerifyData = Arrays.copyOfRange(proof, 0, 32);
         BigInteger chVerify = new BigInteger(SIGNUM_POSITIVE, chVerifyData);
         BigInteger resVerify = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(proof, 32, 64));
@@ -129,7 +129,7 @@ public class DiscreteLogEqualityTest extends BaseTest {
         return Arrays.equals(chVerifyData, digest);
     }
 
-    public byte[] hashCommitments(ECPoint G, ECPoint H, ECPoint X, ECPoint Y, ECPoint com1, ECPoint com2) throws NoSuchAlgorithmException{
+    public static byte[] hashCommitments(ECPoint G, ECPoint H, ECPoint X, ECPoint Y, ECPoint com1, ECPoint com2) throws NoSuchAlgorithmException{
         MessageDigest hasher = MessageDigest.getInstance("SHA-256");
         hasher.update(DiscreteLogEquality.HASH_DLEQ_DOMAIN_SEPARATOR);
         hasher.update(G.getEncoded(false));

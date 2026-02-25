@@ -20,8 +20,10 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.stream.*;
 import java.util.Base64;
+
 import applet.jcmathlib.*;
 import applet.Constants;
+import applet.DiscreteLogEquality;
 // import javacard.security.*;
 
 import javax.crypto.KeyAgreement;
@@ -73,11 +75,11 @@ import io.jsonwebtoken.Claims;
 
 import java.io.IOException;
 
-import test.HashCustomTest;
+import tests.HashCustomTest;
+import test.HashToCurveTest;
+import tests.DiscreteLogEqualityTest;
+
 import applet.HashCustom;
-// import java.util.HashMap;
-// import java.util.Map;
-// import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 import javax.smartcardio.CommandAPDU;
@@ -1682,6 +1684,39 @@ public class AppletTest extends BaseTest {
 
     };
 
+    /**
+     * Definition 2.6 from Fully Distributed Verifiable Random Functions
+     *                     and their Application to Decentralised Random Beacons
+     *
+     *  \prod (x - k)(j - k) for k in DELTA \ {j}
+     */
+    public BigInteger lagrangeCoefficient(int x, int j, int[] delta) {
+        // FIXME should be 
+        int result = 1;
+        for (int i = 0; i < delta.length; i++ ) {
+            if ( delta[i] == j) {
+                continue;
+            }
+            int k = delta[i];
+            result *= (x - k) / (j - k);
+        }
+        BigInteger resultBI = BigInteger.valueOf(result).mod(curveOrder);
+        return resultBI;
+    }
+
+    // public byte[] hashCommitments(ECPoint G, ECPoint H, ECPoint X, ECPoint Y, ECPoint com1, ECPoint com2) throws NoSuchAlgorithmException{
+    //     MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+    //     hasher.update(DiscreteLogEquality.HASH_DLEQ_DOMAIN_SEPARATOR);
+    //     hasher.update(G.getEncoded(false));
+    //     hasher.update(H.getEncoded(false));
+    //     hasher.update(X.getEncoded(false));
+    //     hasher.update(Y.getEncoded(false));
+    //     hasher.update(com1.getEncoded(false));
+    //     hasher.update(com2.getEncoded(false));
+
+    //     return hasher.digest();
+    // }
+
     @Test
     public void testDeriveDleq() throws Exception {
         int[] readerIndeces = new int[] {2, 3};
@@ -1693,36 +1728,125 @@ public class AppletTest extends BaseTest {
         int nParties = readerIndeces.length;
         int threshold = readerIndeces.length;
 
+        ECPoint[] individualVerKeys = new ECPoint[nParties];
         ECPoint[] derivedSaltShares = new ECPoint[nParties];
         byte[][] dleqProofs = new byte[nParties][64];
+        byte[][] hashComs = new byte[nParties][32];
 
         System.out.println("Get DLEQ key");
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
+
 
         // BigInteger xCoordGroupKey = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
         // BigInteger yCoordGroupKey = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 33, 65));
         // ECPoint derivedPoint = curve.createPoint(xCoord, yCoord);
 
         // test n-out-of-n partial Dleq evaluation
+        SecureRandom prng = new SecureRandom(new byte[32]);
+        // byte[] msgBytes = new byte[32];
+        // prng.nextBytes(msgBytes);
+        String message = "this is the user input";
+        byte[] msgBytes = message.getBytes();
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
 
-            SecureRandom prng = new SecureRandom(new byte[32]);
-            byte[] msgBytes = new byte[32];
-            prng.nextBytes(msgBytes);
-            // String message = "this is the user input";
-            // byte[] msgBytes = message.getBytes();
 
             data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
-            // System.out.println(Hex.toHexString(data));
 
             dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
+            // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
             derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 64, 64 + 65));
-            // derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 0, 65));
 
-            System.out.println(derivedSaltShares[index]);
+            // verify individual salt shares
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
+            individualVerKeys[index] = curve.decodePoint(data);
+            // System.out.println(individualVerKeys[index]);
+
+            byte[] ch = Arrays.copyOfRange(dleqProofs[index], 0, 32);
+            BigInteger res = new BigInteger(1, Arrays.copyOfRange(dleqProofs[index], 0, 32));
         }
+
+        HashToCurveTest h2c = new HashToCurveTest(curve);
+        // aggregate salts
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            ECPoint hashedPoint = h2c.digest(msgBytes);
+
+            byte[] proof = dleqProofs[index];
+            ECPoint vk_i = individualVerKeys[index];
+            ECPoint v_i = derivedSaltShares[index];
+
+            byte[] cardHashedPoint = sendAPDU(
+                readerIndex, Consts.CLA.INDIE, Consts.INS.COMPUTE_HASH_TO_CURVE, 0x00, 0x00, msgBytes
+            );
+
+            // System.out.println(Hex.toHexString(cardHashedPoint));
+            // System.out.println(Hex.toHexString(hashedPoint.getEncoded(false)));
+            Assert.assertArrayEquals(hashedPoint.getEncoded(false), cardHashedPoint);
+
+            System.out.println(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
+            byte[] dleqParams = sendAPDU(
+                readerIndex, Consts.CLA.INDIE, Consts.INS.GET_DLEQ_PARAMS, 0x00, 0x00, msgBytes
+            );
+
+            System.out.println(dleqParams.length);
+            Assert.assertArrayEquals(Arrays.copyOfRange(dleqParams, 0, 65), Generator.getEncoded(false));
+            Assert.assertArrayEquals(Arrays.copyOfRange(dleqParams, 65, 2 * 65), vk_i.getEncoded(false));
+
+            byte[] chVerifyData = Arrays.copyOfRange(proof, 0, 32);
+            // Assert.assertArrayEquals(chVerifyData, hashComs[index]);
+            BigInteger chVerify = new BigInteger(SIGNUM_POSITIVE, chVerifyData);
+            BigInteger resVerify = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(proof, 32, 64));
+
+            ECPoint com1Verify = Generator.multiply(resVerify).add(vk_i.multiply(chVerify).negate());
+            ECPoint com2Verify = hashedPoint.multiply(resVerify).add(v_i.multiply(chVerify).negate());
+            byte[] hashCom = DiscreteLogEqualityTest.hashCommitments(
+                Generator, hashedPoint, vk_i, v_i, com1Verify, com2Verify
+            );
+
+            byte[] com2 = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_COMMITMENTS, 0x02, 0x00);
+            byte[] com1 = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_COMMITMENTS, 0x01, 0x00);
+            Assert.assertArrayEquals(com2Verify.getEncoded(false), com2);
+
+            // System.out.println(Hex.toHexString(com1));
+            // System.out.println(Hex.toHexString(com1Verify.getEncoded(false)));
+            Assert.assertArrayEquals(com1Verify.getEncoded(false), com1);
+            byte[] secretShare = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SECRET_SHARE, 0x00, 0x00);
+            ECPoint tvk = Generator.multiply(new BigInteger(SIGNUM_POSITIVE, secretShare));
+            Assert.assertArrayEquals(vk_i.getEncoded(false), tvk.getEncoded(false));
+
+            Assert.assertArrayEquals(hashCom, chVerifyData);
+
+            Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
+
+
+        }
+
+        // pk = skG
+        // vk_i = sk_i G
+        //
+        // sk_i H(x)
+        // H(x) = rG, for unknown r
+        // sk H(x) = 
+        //
+        ECPoint salt = curve.getInfinity();
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            BigInteger lambda = lagrangeCoefficient(0, partyID, new int[] { 0x01,  0x02});
+            System.out.println(lambda);
+            ECPoint v_i = derivedSaltShares[index];
+            salt = salt.add(v_i.multiply(lambda));
+
+            System.out.println(Hex.toHexString(individualVerKeys[index].getEncoded(false)));
+        }
+        System.out.println(Hex.toHexString(salt.getEncoded(false)));
+        
+        // verify salts
     }
 }

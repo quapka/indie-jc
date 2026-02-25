@@ -282,8 +282,23 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.DERIVE_DLEQ_SALT_SHARE:
                         deriveDleqSaltShare(apdu);
                         break;
+                    case Consts.INS.GET_PUBLIC_DLEQ_SHARE:
+                        getDleqPublicShare(apdu);
+                        break;
                     case Consts.INS.GENERATE_KEY_MUSIG2:
                         generateMusig2Key(apdu);
+                        break;
+                    case Consts.INS.COMPUTE_HASH_TO_CURVE:
+                        getHashToCurve(apdu);
+                        break;
+                    case Consts.INS.GET_DLEQ_PARAMS:
+                        getDleqParams(apdu);
+                        break;
+                    case Consts.INS.GET_COMMITMENTS:
+                        getCommitments(apdu);
+                        break;
+                    case Consts.INS.GET_SECRET_SHARE:
+                        getSecretShare(apdu);
                         break;
                     default:
                         break;
@@ -446,6 +461,23 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, length);
     }
 
+    public void getHashToCurve(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        h2c.hash(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, dleq.tmpPoint);
+        short size = dleq.tmpPoint.encode(apduBuffer, (short) 0, false);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getDleqPublicShare(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short length = dkg.getPublicShare(apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, length);
+    }
+
     public void deriveDleqSaltShare(APDU apdu) {
         byte[] apduBuffer = loadApdu(apdu);
 
@@ -484,6 +516,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short offset = ISO7816.OFFSET_CDATA;
 
+        // otherAShares[i] = s_i[partyID]
         // FIXME move to the DistributedKeyGen class to keep things at the same place
         short size = dkg.otherAShares[fromPartyIndex].fromByteArray(apduBuffer, offset, (short) 32);
         dkg.otherBShares[fromPartyIndex].fromByteArray(apduBuffer, (short) (offset + size), (short) 32);
@@ -1199,6 +1232,38 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         // FIXME the size of the decoded token will differ
         // apdu.setOutgoingAndSend((short) 0,  (short) (len / 4 * 3));
+    }
+
+    public void getCommitments(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short pubSize = 0;
+        if (apduBuffer[ISO7816.OFFSET_P1] == 0x01 ) {
+            pubSize = dleq.com1.encode(apduBuffer, (short) 0, false);
+        } else if (apduBuffer[ISO7816.OFFSET_P1] == 0x02 ) {
+            pubSize = dleq.com2.encode(apduBuffer, (short) 0, false);
+        }
+
+        apdu.setOutgoingAndSend((short) 0, pubSize);
+    }
+
+    public void getDleqParams(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short genSize = dleq.G.encode(apduBuffer, (short) 0, false);
+        short pubSize = dleq.publicShare.encode(apduBuffer, genSize, false);
+
+        apdu.setOutgoingAndSend((short) 0, (short) (genSize + pubSize));
+    }
+
+    public void getSecretShare(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short size = dleq.secretShare.copyToByteArray(apduBuffer, (short) 0);
+        apdu.setOutgoingAndSend((short) 0, size);
     }
 
     /** 

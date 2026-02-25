@@ -37,6 +37,11 @@ public class Consts {
         public static final byte VERIFY_A_POINTS = (byte) 0x19;
         public static final byte GET_DLEQ_KEY = (byte) 0x1a;
         public static final byte DERIVE_DLEQ_SALT_SHARE = (byte) 0x1b;
+        public static final byte GET_PUBLIC_DLEQ_SHARE = (byte) 0x1c;
+        public static final byte COMPUTE_HASH_TO_CURVE = (byte) 0x1d;
+        public static final byte GET_DLEQ_PARAMS = (byte) 0x1e;
+        public static final byte GET_COMMITMENTS = (byte) 0x1f;
+        public static final byte GET_SECRET_SHARE = (byte) 0x20;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
