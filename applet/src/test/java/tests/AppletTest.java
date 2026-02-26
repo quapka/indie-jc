@@ -32,6 +32,7 @@ import javax.crypto.Cipher;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Random;
 import java.security.KeyFactory;
 import java.security.Security;
 import java.security.KeyPair;
@@ -97,6 +98,8 @@ import java.io.ByteArrayOutputStream;
 public class AppletTest extends BaseTest {
     public static ECCurve curve;
     public static ECPoint Generator;
+    public static BigInteger ZERO = new BigInteger("0", 10);
+    public static BigInteger ONE = new BigInteger("1", 10);
     public static BigInteger TWO = new BigInteger("2", 10);
     public static BigInteger THREE = new BigInteger("3", 10);
     public static BigInteger FOUR = new BigInteger("4", 10);
@@ -1690,18 +1693,21 @@ public class AppletTest extends BaseTest {
      *
      *  \prod (x - k)(j - k) for k in DELTA \ {j}
      */
-    public BigInteger lagrangeCoefficient(int x, int j, int[] delta) {
-        // FIXME should be 
-        int result = 1;
+    public BigInteger lagrangeCoefficient(BigInteger x, BigInteger j, BigInteger[] delta) {
+        BigInteger result = BigInteger.valueOf(1);
         for (int i = 0; i < delta.length; i++ ) {
-            if ( delta[i] == j) {
+            if ( delta[i].compareTo(j) == 0 ) {
                 continue;
             }
-            int k = delta[i];
-            result *= (x - k) / (j - k);
+            BigInteger k = delta[i];
+            BigInteger num = x.subtract(k);
+            BigInteger denomInverse = (j.subtract(k)).modInverse(curveOrder);
+            BigInteger div = (num.multiply(denomInverse)).mod(curveOrder);
+
+            result = result.multiply(div);
         }
-        BigInteger resultBI = BigInteger.valueOf(result).mod(curveOrder);
-        return resultBI;
+        result = result.mod(curveOrder);
+        return result;
     }
 
     // public byte[] hashCommitments(ECPoint G, ECPoint H, ECPoint X, ECPoint Y, ECPoint com1, ECPoint com2) throws NoSuchAlgorithmException{
@@ -1820,33 +1826,54 @@ public class AppletTest extends BaseTest {
             Assert.assertArrayEquals(vk_i.getEncoded(false), tvk.getEncoded(false));
 
             Assert.assertArrayEquals(hashCom, chVerifyData);
-
             Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
-
-
         }
 
-        // pk = skG
-        // vk_i = sk_i G
-        //
-        // sk_i H(x)
-        // H(x) = rG, for unknown r
-        // sk H(x) = 
-        //
+        ECPoint aggVerKeys = curve.getInfinity();
         ECPoint salt = curve.getInfinity();
         for (int index = 0; index < readerIndeces.length; index++) {
-            int readerIndex = readerIndeces[index];
+            // int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
 
-            BigInteger lambda = lagrangeCoefficient(0, partyID, new int[] { 0x01,  0x02});
+            BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
+                new BigInteger[] { ONE, TWO, THREE}
+            );
+            System.out.println("lambda");
             System.out.println(lambda);
+
             ECPoint v_i = derivedSaltShares[index];
             salt = salt.add(v_i.multiply(lambda));
 
             System.out.println(Hex.toHexString(individualVerKeys[index].getEncoded(false)));
+
+            aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
         }
+
+        Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
+        // System.out.println(Hex.toHexString(aggVerKeys.getEncoded(false)));
+        // System.out.println(Hex.toHexString(verificationPoint.getEncoded(false)));
+
+        // TODO add a test that derives salt twice
         System.out.println(Hex.toHexString(salt.getEncoded(false)));
-        
-        // verify salts
+    }
+
+    @Test
+    public void testLagrange() {
+        Random rng = new Random();
+        int deltaSize = rng.nextInt(30) + 2;
+
+        BigInteger[] delta = new BigInteger[deltaSize];
+        for ( int i = 0; i < deltaSize; i++ ) {
+            delta[i] = BigInteger.valueOf(i + 1);
+        }
+
+        BigInteger coeffSum = ZERO;
+        for (int partyID = 1; partyID <= delta.length; partyID++ ) {
+            BigInteger j = BigInteger.valueOf(partyID);
+            BigInteger lambda = lagrangeCoefficient(ZERO, j, delta);
+            coeffSum.add(lambda).mod(curveOrder);
+        }
+
+        Assert.assertTrue(coeffSum.compareTo(ZERO) == 0);
     }
 }
