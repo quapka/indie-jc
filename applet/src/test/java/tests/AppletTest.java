@@ -1743,11 +1743,6 @@ public class AppletTest extends BaseTest {
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
 
-
-        // BigInteger xCoordGroupKey = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 1, 33));
-        // BigInteger yCoordGroupKey = new BigInteger(SIGNUM_POSITIVE, Arrays.copyOfRange(data, 33, 65));
-        // ECPoint derivedPoint = curve.createPoint(xCoord, yCoord);
-
         // test n-out-of-n partial Dleq evaluation
         SecureRandom prng = new SecureRandom(new byte[32]);
         byte[] msgBytes = new byte[32];
