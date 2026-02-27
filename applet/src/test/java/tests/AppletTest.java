@@ -1745,10 +1745,10 @@ public class AppletTest extends BaseTest {
 
         // test n-out-of-n partial Dleq evaluation
         SecureRandom prng = new SecureRandom(new byte[32]);
-        byte[] msgBytes = new byte[32];
-        prng.nextBytes(msgBytes);
-        // String message = "this is the user input";
-        // byte[] msgBytes = message.getBytes();
+        // byte[] msgBytes = new byte[32];
+        // prng.nextBytes(msgBytes);
+        String message = "issuerJWTName||userStableIdenfitierValue";
+        byte[] msgBytes = message.getBytes();
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
