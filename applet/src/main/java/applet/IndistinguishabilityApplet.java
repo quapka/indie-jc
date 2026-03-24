@@ -1210,27 +1210,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
         }
-
-        // nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
-        //     buffer,
-        //     (short) 0,
-        //     (short) (firstDot + 1),
-        //     procBuffer,
-        //     (short) 0
-        // );
-
-        // short len = 124;
-        // nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
-        //     buffer,
-        //     (short) (firstDot + 1),
-        //     // (short) (secondDot - firstDot + 1),
-        //     (short) (len),
-        //     procBuffer,
-        //     (short) 0
-        // );
-
-        // FIXME the size of the decoded token will differ
-        // apdu.setOutgoingAndSend((short) 0,  (short) (len / 4 * 3));
     }
 
     public void getCommitments(APDU apdu) {
