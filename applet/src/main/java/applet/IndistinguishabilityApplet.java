@@ -449,14 +449,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
         dkg.computeY();
+        // We assume that the dkg is done and thus set the DLEQ key
+        dleq.setShare(dkg.secretShare, dkg.publicShare);
     }
 
     public void getDleqKey(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
         short length = dkg.getGroupKey(apduBuffer, (short) 0);
-
-        // We assume that the dkg is done and thus set the DLEQ key
-        dleq.setShare(dkg.secretShare, dkg.publicShare);
 
         apdu.setOutgoingAndSend((short) 0, length);
     }

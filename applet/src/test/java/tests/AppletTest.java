@@ -1740,6 +1740,7 @@ public class AppletTest extends BaseTest {
         byte[][] hashComs = new byte[nParties][32];
 
         System.out.println("Get DLEQ key");
+        // TODO we should verify that the GROUP DLEQ key of all devices is the correct one.
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
 
@@ -1843,7 +1844,7 @@ public class AppletTest extends BaseTest {
         }
 
         Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
-        // System.out.println(Hex.toHexString(salt.getEncoded(false)));
+        System.out.println(Hex.toHexString(salt.getEncoded(false)));
     }
 
     @Test

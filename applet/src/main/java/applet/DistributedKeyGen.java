@@ -332,16 +332,10 @@ public class DistributedKeyGen {
 
     public void computeY() {
         groupKey.copy(aPoints[0]);
-        // groupKey.add(aPoints[2]);
         for (short i = 1; i < nParties; i++) {
             short index = (short) (i * nParties);
             groupKey.add(aPoints[index]);
         }
-
-        // publicShare.copy(aPoints[partyIndex * nParties]);
-        // for (short i = 1; i < nParties; ++ ) {
-
-        // }
     }
 
     public short getPublicShare(byte[] out, short offset) {
@@ -368,7 +362,10 @@ public class DistributedKeyGen {
             }
             secretShare.modAdd(otherAShares[j], curve.rBN);
         }
+
         publicShare.copy(G);
         publicShare.multiplication(secretShare);
+
+
     }
 }
