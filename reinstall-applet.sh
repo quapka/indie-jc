@@ -17,9 +17,12 @@ if [ -n "$2" ]; then
 fi
 
 params="$thresholdB$nPartiesB"
-reader3="Gemalto PC Twin Reader 00 00"
+# reader3="Alcor Link AK9563 00 00"
+# reader4="Gemalto PC Twin Reader 01 00"
+# reader5="Gemalto PC Twin Reader 02 00"
+reader3="Alcor"
 reader4="Gemalto PC Twin Reader 01 00"
-reader5="Alcor Link AK9563 02 00"
+reader5="Gemalto PC Twin Reader 02 00"
 
 appletPath="./applet/build/javacard/indie.cap"
 
