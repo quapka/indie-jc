@@ -27,7 +27,6 @@ public class DistributedKeyGen {
     public ECPoint[] cPoints, aPoints;
     public byte nCoeffs;
     // public byte[maxParties][coeffSize] aCoeffs, bCoeffs;
-    public static ECCurve curve;
     // G is the curve generator and H is another point H = hG, with the h being unknown.
     public static ECPoint G, H,tmpPointA, tmpPointB, tmpPointC, groupKey;
     public ECPoint publicShare;
@@ -53,20 +52,17 @@ public class DistributedKeyGen {
         if ( initialized ) {
             return;
         }
-        // rm = new ResourceManager((short) 256);
-        // NOTE r for the protocol versus `r` as the curve order
-        curve = new ECCurve(SecP256r1.p, SecP256r1.a, SecP256r1.b, SecP256r1.G, SecP256r1.r, SecP256r1.k, IndistinguishabilityApplet.rm);
         rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
-        r = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        ch = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        tmpNum = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        G = new ECPoint(curve);
-        publicShare = new ECPoint(curve);
-        tmpPointA = new ECPoint(curve);
-        tmpPointB = new ECPoint(curve);
-        tmpPointC = new ECPoint(curve);
-        groupKey = new ECPoint(curve);
-        H = new ECPoint(curve);
+        r = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        ch = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        tmpNum = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        G = new ECPoint(IndistinguishabilityApplet.curve);
+        publicShare = new ECPoint(IndistinguishabilityApplet.curve);
+        tmpPointA = new ECPoint(IndistinguishabilityApplet.curve);
+        tmpPointB = new ECPoint(IndistinguishabilityApplet.curve);
+        tmpPointC = new ECPoint(IndistinguishabilityApplet.curve);
+        groupKey = new ECPoint(IndistinguishabilityApplet.curve);
+        H = new ECPoint(IndistinguishabilityApplet.curve);
 
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
 
@@ -75,8 +71,8 @@ public class DistributedKeyGen {
         tmpNum.setValue((byte) 0x02);
         H.multiplication(tmpNum);
         
-        ECPrivateKey privKey = curve.disposablePriv;
-        secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        ECPrivateKey privKey = IndistinguishabilityApplet.curve.disposablePriv;
+        secretShare = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         aCoeffs = new BigNat[nParties];
         bCoeffs = new BigNat[nParties];
@@ -93,20 +89,20 @@ public class DistributedKeyGen {
         for (short i = 0; i < nCoeffs; i++) {
             // FIXME load from persistent to transient upon select to speed up?
             // FIXME generate coeffs as a hash of some seed to avoid persistent memory
-            aCoeffs[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-            bCoeffs[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            aCoeffs[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            bCoeffs[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
-            aShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-            bShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            aShares[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            bShares[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
-            otherAShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-            otherBShares[i] = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            otherAShares[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+            otherBShares[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
             for (short j = 0; j < nParties; j++) {
                 short index = (short) (j * nParties + i);
-                cPoints[index] = new ECPoint(curve);
+                cPoints[index] = new ECPoint(IndistinguishabilityApplet.curve);
                 cPoints[index].setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
-                aPoints[index] = new ECPoint(curve);
+                aPoints[index] = new ECPoint(IndistinguishabilityApplet.curve);
                 aPoints[index].setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
             }
         }
@@ -125,11 +121,11 @@ public class DistributedKeyGen {
         for (short i = 0; i < nParties; i++) {
             rng.nextBytes(tmp, (short) 0, (short) 32);
             aCoeffs[i].fromByteArray(tmp, (short) 0, (short) 32);
-            aCoeffs[i].mod(curve.rBN);
+            aCoeffs[i].mod(IndistinguishabilityApplet.curve.rBN);
 
             rng.nextBytes(tmp, (short) 0, (short) 32);
             bCoeffs[i].fromByteArray(tmp, (short) 0, (short) 32);
-            bCoeffs[i].mod(curve.rBN);
+            bCoeffs[i].mod(IndistinguishabilityApplet.curve.rBN);
         }
 
         // calculated the to-be broadcasted points
@@ -184,8 +180,8 @@ public class DistributedKeyGen {
         result.copy(coefficients[(short) (nCoeffs - 1)]);
 
         for (short i = (short) (nCoeffs - 1); i > 0; i--) {
-            result.modMult(value, curve.rBN);
-            result.modAdd(coefficients[(short) (i - 1)], curve.rBN);
+            result.modMult(value, IndistinguishabilityApplet.curve.rBN);
+            result.modAdd(coefficients[(short) (i - 1)], IndistinguishabilityApplet.curve.rBN);
         }
     }
 
@@ -255,7 +251,7 @@ public class DistributedKeyGen {
             // k
             ch.setValue(k);
             // j^k
-            tmpNum.modExp(ch, curve.rBN);
+            tmpNum.modExp(ch, IndistinguishabilityApplet.curve.rBN);
             // j^k * C_ik
             tmpPointB.multiplication(tmpNum);
             // aggregate
@@ -317,7 +313,7 @@ public class DistributedKeyGen {
                 // k
                 ch.setValue(k);
                 // j^k
-                tmpNum.modExp(ch, curve.rBN);
+                tmpNum.modExp(ch, IndistinguishabilityApplet.curve.rBN);
                 // j^k * A_ik 
                 tmpPointA.multiplication(tmpNum);
                 // aggregate
@@ -360,7 +356,7 @@ public class DistributedKeyGen {
                 // skip,otherAShares[j] should be empty
                 continue;
             }
-            secretShare.modAdd(otherAShares[j], curve.rBN);
+            secretShare.modAdd(otherAShares[j], IndistinguishabilityApplet.curve.rBN);
         }
 
         publicShare.copy(G);

@@ -29,6 +29,7 @@ import applet.Consts;
 import applet.jcmathlib.OperationSupport;
 import applet.jcmathlib.ResourceManager;
 import applet.jcmathlib.SecP256r1;
+import applet.jcmathlib.ECCurve;
 // import applet.Utils;
 
 // FIXME change all (short) 0 to ZERO final 0x00 byte value?
@@ -43,6 +44,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     KeyAgreement ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_KDF, false);
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     HashCustom customHasher;
+    public static ECCurve curve;
     Signature sigObj = Signature.getInstance(Signature.ALG_ECDSA_SHA_256, false);
     public static RandomData rng;
 
@@ -137,8 +139,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public boolean select() {
         if (initialized) {
             // FIXME use only a single curve
-            DiscreteLogEquality.curve.updateAfterReset();
-            DistributedKeyGen.curve.updateAfterReset();
+            curve.updateAfterReset();
         }
         return true;
     }
@@ -340,14 +341,16 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         rm = new ResourceManager((short) 256);
         customHasher = new HashCustom();
+
+        curve = new ECCurve(SecP256r1.p, SecP256r1.a, SecP256r1.b, SecP256r1.G, SecP256r1.r, SecP256r1.k, IndistinguishabilityApplet.rm);
         // rm = new ResourceManager((short) 256, (short) 2056);
         rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         dleq = new DiscreteLogEquality();
         dkg = new DistributedKeyGen(threshold, nParties);
         h2c = new HashToCurve();
-        musig2 = new Musig2(DiscreteLogEquality.curve, rm);
+        musig2 = new Musig2(curve, rm);
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
-            rm.fixModSqMod(DiscreteLogEquality.curve.rBN);
+            rm.fixModSqMod(curve.rBN);
         }
         aesCtr = Cipher.getInstance(Cipher_ALG_AES_CTR, false);
         // TODO change to TYPE_AES_TRANSIENT_RESET
@@ -1041,7 +1044,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public void getDerivationPubkey(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
 
-        ECPublicKey pubKey = DiscreteLogEquality.curve.disposablePub;
+        ECPublicKey pubKey = curve.disposablePub;
         short pubKeyLength = pubKey.getW(apduBuffer, (short) 0);
 
         apdu.setOutgoingAndSend((short) 0, pubKeyLength);

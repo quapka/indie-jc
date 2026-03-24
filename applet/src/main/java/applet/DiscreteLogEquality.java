@@ -17,7 +17,6 @@ import javacard.security.MessageDigest;
 import javacard.framework.APDU;
 
 public class DiscreteLogEquality {
-    public static ECCurve curve;
     // FIXME M is H actually :D
     public static ECPoint G, com1, com2, userPoint, M, tmpPoint, publicShare, hashToCurvePoint, partialDerivedShare;
     public static BigNat r, ch, tmpNum, secretShare;
@@ -45,27 +44,25 @@ public class DiscreteLogEquality {
         if ( initialized ) {
             return;
         }
-        // NOTE r for the protocol versus `r` as the curve order
-        curve = new ECCurve(SecP256r1.p, SecP256r1.a, SecP256r1.b, SecP256r1.G, SecP256r1.r, SecP256r1.k, IndistinguishabilityApplet.rm);
-        r = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        ch = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        G = new ECPoint(curve);
-        publicShare = new ECPoint(curve);
-        hashToCurvePoint = new ECPoint(curve);
-        partialDerivedShare = new ECPoint(curve);
-        com1 = new ECPoint(curve);
-        com2 = new ECPoint(curve);
-        userPoint = new ECPoint(curve);
-        tmpPoint = new ECPoint(curve);
-        M = new ECPoint(curve);
+        r = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        ch = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        G = new ECPoint(IndistinguishabilityApplet.curve);
+        publicShare = new ECPoint(IndistinguishabilityApplet.curve);
+        hashToCurvePoint = new ECPoint(IndistinguishabilityApplet.curve);
+        partialDerivedShare = new ECPoint(IndistinguishabilityApplet.curve);
+        com1 = new ECPoint(IndistinguishabilityApplet.curve);
+        com2 = new ECPoint(IndistinguishabilityApplet.curve);
+        userPoint = new ECPoint(IndistinguishabilityApplet.curve);
+        tmpPoint = new ECPoint(IndistinguishabilityApplet.curve);
+        M = new ECPoint(IndistinguishabilityApplet.curve);
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
-        curveOrder = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        curveOrder = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
 
-        aBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        bBN = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        aBN = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        bBN = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
-        secretShare = new BigNat(curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        secretShare = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         initialized = true;
     }
@@ -96,8 +93,8 @@ public class DiscreteLogEquality {
 
         printBigNat(aBN);
         printBigNat(bBN);
-        printBigNat(curve.rBN);
-        aBN.modMult(bBN, curve.rBN);
+        printBigNat(IndistinguishabilityApplet.curve.rBN);
+        aBN.modMult(bBN, IndistinguishabilityApplet.curve.rBN);
         printBigNat(aBN);
         aBN.copyToByteArray(apduBuffer, (short) 0);
 
@@ -117,7 +114,7 @@ public class DiscreteLogEquality {
         IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
         // FIXME measure, whether the modding is necessary. The consequent point multiplication is possible either way.
-        // r.mod(curve.rBN);
+        // r.mod(IndistinguishabilityApplet.curve.rBN);
         // FIXME implement rG via the co-processor, set r as private key and compute public key
         // compute com1 = rG
         com1.copy(G);
@@ -129,9 +126,9 @@ public class DiscreteLogEquality {
         short hashSize = hashCommitments(userPoint, pubkeyPoint, partial, com1, com2);
         ch.fromByteArray(tmp, (short) 0, hashSize);
         // compute res = r + secretShare * ch
-        ch.modMult(secretShare, curve.rBN);
+        ch.modMult(secretShare, IndistinguishabilityApplet.curve.rBN);
         // res = r
-        r.modAdd(ch, curve.rBN);
+        r.modAdd(ch, IndistinguishabilityApplet.curve.rBN);
 
         // return (ch, res) in out
         Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) 0, hashSize);
@@ -176,7 +173,7 @@ public class DiscreteLogEquality {
         IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
         // TODO measure, whether the modding is necessary. The consequent point multiplication is possible either way.
-        // r.mod(curve.rBN);
+        // r.mod(IndistinguishabilityApplet.curve.rBN);
         // TODO implement rG via the co-processor, set r as private key and compute public key
         // compute com1 = rG
         com1.copy(G);
@@ -188,9 +185,9 @@ public class DiscreteLogEquality {
         short hashSize = hashCommitments2(/*ECPoint G,*/ H, /*publicShare,*/ partialDerivedShare, com1, com2);
         ch.fromByteArray(tmp, (short) 0, hashSize);
         // compute res = r + secretShare * ch
-        ch.modMult(secretShare, curve.rBN);
+        ch.modMult(secretShare, IndistinguishabilityApplet.curve.rBN);
         // res = r
-        r.modAdd(ch, curve.rBN);
+        r.modAdd(ch, IndistinguishabilityApplet.curve.rBN);
 
         // return (ch, res) in out
         Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) 0, hashSize);
@@ -271,7 +268,7 @@ public class DiscreteLogEquality {
         }
         // G.multiplication(secretShare);
         System.out.println();
-        short byteLength = curve.disposablePub.getW(tmp, (short) 0);
+        short byteLength = IndistinguishabilityApplet.curve.disposablePub.getW(tmp, (short) 0);
         tmpPoint.setW(tmp, (short) 0, byteLength);
 
         return proveEq(userPoint, tmpPoint, M, out);
