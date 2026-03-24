@@ -464,8 +464,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short bytesRead = apdu.setIncomingAndReceive();
 
-        h2c.hash(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, dleq.tmpPoint);
-        short size = dleq.tmpPoint.encode(apduBuffer, (short) 0, false);
+        h2c.hash(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, DiscreteLogEquality.tmpPoint);
+        short size = DiscreteLogEquality.tmpPoint.encode(apduBuffer, (short) 0, false);
 
         apdu.setOutgoingAndSend((short) 0, size);
     }
@@ -1239,9 +1239,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short pubSize = 0;
         if (apduBuffer[ISO7816.OFFSET_P1] == 0x01 ) {
-            pubSize = dleq.com1.encode(apduBuffer, (short) 0, false);
+            pubSize = DiscreteLogEquality.com1.encode(apduBuffer, (short) 0, false);
         } else if (apduBuffer[ISO7816.OFFSET_P1] == 0x02 ) {
-            pubSize = dleq.com2.encode(apduBuffer, (short) 0, false);
+            pubSize = DiscreteLogEquality.com2.encode(apduBuffer, (short) 0, false);
         }
 
         apdu.setOutgoingAndSend((short) 0, pubSize);
@@ -1251,8 +1251,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short bytesRead = apdu.setIncomingAndReceive();
 
-        short genSize = dleq.G.encode(apduBuffer, (short) 0, false);
-        short pubSize = dleq.publicShare.encode(apduBuffer, genSize, false);
+        short genSize = DiscreteLogEquality.G.encode(apduBuffer, (short) 0, false);
+        short pubSize = DiscreteLogEquality.publicShare.encode(apduBuffer, genSize, false);
 
         apdu.setOutgoingAndSend((short) 0, (short) (genSize + pubSize));
     }
@@ -1261,7 +1261,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short bytesRead = apdu.setIncomingAndReceive();
 
-        short size = dleq.secretShare.copyToByteArray(apduBuffer, (short) 0);
+        short size = DiscreteLogEquality.secretShare.copyToByteArray(apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, size);
     }
 
