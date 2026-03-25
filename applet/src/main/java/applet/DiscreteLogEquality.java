@@ -113,9 +113,9 @@ public class DiscreteLogEquality {
         // choose random r <- ZZ_q
         IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         r.fromByteArray(tmp, (short) 0, (short) 32);
-        // FIXME measure, whether the modding is necessary. The consequent point multiplication is possible either way.
+        // TODO measure, whether the modding is necessary. The consequent point multiplication is possible either way.
         // r.mod(IndistinguishabilityApplet.curve.rBN);
-        // FIXME implement rG via the co-processor, set r as private key and compute public key
+        // TODO implement rG via the co-processor, set r as private key and compute public key
         // compute com1 = rG
         com1.copy(G);
         com1.multiplication(r);
