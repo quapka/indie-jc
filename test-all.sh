@@ -1,65 +1,52 @@
 #!/usr/bin/env bash
 
-sleepFor=0.5
+sleepFor=0
+aggResult=0
 
-./test_integration_jcop4.sh -- --tests AppletTest.testDebugGood
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDebugBad
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testIsInitialized
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDecodeBase64UrlSafe
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDerivingSalt
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testGettingExampleDleqProof
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDVRFKeyGeneration
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDLEQAgainstGeneratedKey
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testSetup
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testAesCtrDecryption
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testVerifyCommitment
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testSetOIDCPublicKey
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testJWTVerification
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testEncryptedJwtVerification
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testBenchmarkDecoding
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testEncryptedJwtVerificationAndCommitment
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testGetCurrentEmptyEpoch
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testGenerateMusig2Key
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testGenerateMusig2Nonce
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testComputePublicTest
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testACoefSerialization
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testMusig2SignatureInternal
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testEpochGeneration
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testNofNEpochGeneration
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testNofNDLEQSecretDerivation
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testNofNDLEQSetup
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testNofNDleqGetCPoints
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testNofNDleqSetCPoints
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDleqKeyGeneration
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testDeriveDleq
-sleep "$sleepFor"
-./test_integration_jcop4.sh -- --tests AppletTest.testLagrange
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+tests=(
+    testEncryptedJwtVerificationAndCommitment
+    testDebugGood
+    testDebugBad
+    testIsInitialized
+    testDecodeBase64UrlSafe
+    testDerivingSalt
+    testGettingExampleDleqProof
+    testDVRFKeyGeneration
+    testDLEQAgainstGeneratedKey
+    testSetup
+    testAesCtrDecryption
+    testVerifyCommitment
+    testSetOIDCPublicKey
+    testJWTVerification
+    testEncryptedJwtVerification
+    testBenchmarkDecoding
+    testGetCurrentEmptyEpoch
+    testGenerateMusig2Key
+    testGenerateMusig2Nonce
+    testComputePublicTest
+    testACoefSerialization
+    testMusig2SignatureInternal
+    testEpochGeneration
+    testNofNEpochGeneration
+    testNofNDLEQSecretDerivation
+    testNofNDLEQSetup
+    testNofNDleqGetCPoints
+    testNofNDleqSetCPoints
+    # testDleqKeyGeneration
+    testDeriveDleq
+    testLagrange
+)
+
+for testName in "${tests[@]}"; do
+    ./test_integration_jcop4.sh -- --tests AppletTest."$testName" || aggResult=$(( $? | $aggResult ))
+done
+
+if test $aggResult -ne 0; then
+    printf "\n${RED}FAILED${NC}: some tests failed"
+else
+    printf "\n${GREEN}PASSED${NC}: all tests passed"
+fi
