@@ -36,7 +36,7 @@ tests=(
     testNofNDLEQSetup
     testNofNDleqGetCPoints
     testNofNDleqSetCPoints
-    # testDleqKeyGeneration
+    testDleqKeyGeneration
     testDeriveDleq
     testLagrange
 )
