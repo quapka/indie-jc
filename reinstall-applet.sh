@@ -3,8 +3,14 @@
 # TODO add proper command line interface
 set -e
 
+
 thresholdB=03
 # nPartiesB=03
+
+aggResult=0
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
 
 if [ -n "$1" ]; then
     thresholdB="$(printf "%02X" $1)"
@@ -54,5 +60,11 @@ done
 echo "Installing new applet"
 for reader in "${readersWithCard[@]}";
 do
-    gp --install "$appletPath" --params "$params" --debug --reader "$reader"
+    gp --install "$appletPath" --params "$params" --debug --reader "$reader" || aggResult=$(( $? | $aggResult ))
 done
+
+if test $aggResult -ne 0; then
+    printf "\n${RED}FAILED${NC}: some installations failed"
+else
+    printf "\n${GREEN}PASSED${NC}: all installations passed"
+fi
