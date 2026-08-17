@@ -22,7 +22,6 @@ if [ -n "$2" ]; then
     # nPartiesB="$(printf "%02X" $2)"
 fi
 
-params="$thresholdB$nPartiesB"
 
 # Iterate through available readers
 availableReaders=()
@@ -57,6 +56,7 @@ do
     gp --uninstall "$appletPath" --debug --reader "$reader" || true
 done
 
+params="$thresholdB$nPartiesB"
 echo "Installing new applet"
 for reader in "${readersWithCard[@]}";
 do
