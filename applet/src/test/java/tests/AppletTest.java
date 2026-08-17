@@ -121,6 +121,9 @@ public class AppletTest extends BaseTest {
     public static byte[] CURVE_B = SecP256r1.b;
     public static byte[] CURVE_G = SecP256r1.G;
     public static short CURVE_K = SecP256r1.k;
+
+    public static short threshold = 2;
+    public static short nParties = 3;
     
     public AppletTest() throws Exception {
         super();
@@ -335,8 +338,6 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testSetup() throws Exception {
-        byte threshold = 0x02;
-        byte nParties = 0x03;
         byte partyID = 0x04;
         byte partyIndex = 0x03;
 
