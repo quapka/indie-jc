@@ -4,25 +4,39 @@
 set -e
 
 thresholdB=03
-nPartiesB=03
+# nPartiesB=03
 
 if [ -n "$1" ]; then
     thresholdB="$(printf "%02X" $1)"
-    nPartiesB="$(printf "%02X" $1)"
+    # nPartiesB="$(printf "%02X" $1)"
 fi
 
 if [ -n "$2" ]; then
     thresholdB="$(printf "%02X" $1)"
-    nPartiesB="$(printf "%02X" $2)"
+    # nPartiesB="$(printf "%02X" $2)"
 fi
 
 params="$thresholdB$nPartiesB"
-# reader3="Alcor Link AK9563 00 00"
-# reader4="Gemalto PC Twin Reader 01 00"
-# reader5="Gemalto PC Twin Reader 02 00"
-reader3="Alcor"
-reader4="Gemalto PC Twin Reader 01 00"
-reader5="Gemalto PC Twin Reader 02 00"
+
+# Iterate through available readers
+availableReaders=()
+mapfile -t availableReaders < \
+    <( \
+        gp --reader nonExistentReaderIndex 2>&1 \
+        | grep '^-' \
+        | sed -e 's/^- //'
+    )
+# Build an array of readers that have card inserted and working
+readersWithCard=()
+for reader in "${availableReaders[@]}";
+do
+    if gp --info --reader "$reader" > /dev/null 2>&1 ; then
+        echo "Reader: '$reader' contains card"
+        readersWithCard+=("$reader")
+    fi
+done
+
+nPartiesB="$(printf "%02X" ${#readersWithCard[@]})"
 
 appletPath="./applet/build/javacard/indie.cap"
 
@@ -31,15 +45,14 @@ echo "Using $thresholdB-out-of-$nPartiesB setting"
 ./gradlew buildJavaCard -P build.cardType=JCOP4_P71 --rerun-tasks
 
 
-gp --uninstall "$appletPath" --debug --reader "$reader3" || true
-gp --uninstall "$appletPath" --debug --reader "$reader4" || true
-gp --uninstall "$appletPath" --debug --reader "$reader5" || true
+echo "Greedy uninstalling old applet"
+for reader in "${readersWithCard[@]}";
+do
+    gp --uninstall "$appletPath" --debug --reader "$reader" || true
+done
 
-if (( "$nPartiesB" > 1 )); then
-    gp --install "$appletPath" --params "$params" --debug --reader "$reader3"
-    gp --install "$appletPath" --params "$params" --debug --reader "$reader4"
-fi
-
-if (( "$nPartiesB" == 3 )); then
-    gp --install "$appletPath" --params "$params" --debug --reader "$reader5"
-fi
+echo "Installing new applet"
+for reader in "${readersWithCard[@]}";
+do
+    gp --install "$appletPath" --params "$params" --debug --reader "$reader"
+done
