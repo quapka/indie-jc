@@ -1470,8 +1470,8 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDLEQSetup() throws Exception {
-        int[] readerIndeces = new int[] {2, 3};
-        byte[] partyIDs = new byte[] {1, 2}; // parties are 1-indexed
+        int[] readerIndeces = new int[] {2, 3, 4};
+        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed
 
         // Cards setup
         int nParties = readerIndeces.length;
