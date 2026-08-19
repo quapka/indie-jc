@@ -23,23 +23,28 @@ if [ -n "$2" ]; then
 fi
 
 
-# Iterate through available readers
-availableReaders=()
-mapfile -t availableReaders < \
-    <( \
-        gp --reader nonExistentReaderIndex 2>&1 \
-        | grep '^-' \
-        | sed -e 's/^- //'
-    )
-# Build an array of readers that have card inserted and working
-readersWithCard=()
-for reader in "${availableReaders[@]}";
-do
-    if gp --info --reader "$reader" > /dev/null 2>&1 ; then
-        echo "Reader: '$reader' contains card"
-        readersWithCard+=("$reader")
-    fi
-done
+if ! gp --list > /dev/null 2>&1; then
+    # Iterate through available readers
+    availableReaders=()
+    mapfile -t availableReaders < \
+        <( \
+            gp --reader nonExistentReaderIndex 2>&1 \
+            | grep '^-' \
+            | sed -e 's/^- //'
+        )
+    # Build an array of readers that have card inserted and working
+    readersWithCard=()
+    for reader in "${availableReaders[@]}";
+    do
+        if gp --info --reader "$reader" > /dev/null 2>&1 ; then
+            echo "Reader: '$reader' contains card"
+            readersWithCard+=("$reader")
+        fi
+    done
+else
+    # there is likely only a single reader and it does not matter what is its name
+    readersWithCard=("singleReaderNameDoesNotMatter")
+fi
 
 nPartiesB="$(printf "%02X" ${#readersWithCard[@]})"
 
