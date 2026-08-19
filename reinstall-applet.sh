@@ -48,6 +48,11 @@ fi
 
 nPartiesB="$(printf "%02X" ${#readersWithCard[@]})"
 
+if (( $thresholdB > $nPartiesB )); then
+    echo "The threshold '$thresholdB' is greater than the number of parties '$nPartiesB'"
+    exit 1
+fi
+
 appletPath="./applet/build/javacard/indie.cap"
 
 echo "Using $thresholdB-out-of-$nPartiesB setting"
