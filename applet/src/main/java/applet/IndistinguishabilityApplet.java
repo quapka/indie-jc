@@ -430,6 +430,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public void getAPoints(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        apdu.setIncomingAndReceive();
         // FIXME check size/offset
         short length = dkg.getAPoints(apduBuffer);
 
