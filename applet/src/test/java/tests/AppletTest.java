@@ -1552,8 +1552,17 @@ public class AppletTest extends BaseTest {
     }
 
     @Test
-    public void testDleqKeyGeneration() throws Exception {
+    public void testExtendedAPDUBufferSize() throws Exception {
+        byte readerIndex = 2;
+        byte[] data = sendAPDU(readerIndex, Consts.CLA.DEBUG, Consts.INS.TEST_EXT_APDU_SIZE, 0x00, 0xff, new byte[] {0}, (short) 0x07ff); //, p1, p2);
+        System.out.println(String.format("\"%s\"", new String(data, "UTF-8")));
+        System.out.println(Hex.toHexString(data));
+        System.out.println("Something");
+    }
 
+
+    @Test
+    public void testDleqKeyGeneration() throws Exception {
         int[] readerIndeces = new int[] {2, 3, 4};
         byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed, thier indeces 0-indexed
         // Cards initialization

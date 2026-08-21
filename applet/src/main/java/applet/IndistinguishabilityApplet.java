@@ -203,6 +203,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_ALL_C_POINTS:
                         getAllCPoints(apdu);
                         break;
+                    case Consts.INS.TEST_EXT_APDU_SIZE:
+                        testExtApduBuf(apdu);
+                        break;
                     case Consts.INS.EXT_APDU_ECHO:
                         echoExtApduBuffer(apdu);
                         break;
@@ -414,6 +417,31 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // }
 
         // apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * 33));
+    }
+
+    public void sendExtendedResponse(APDU apdu, byte[] input, short offset, short toSend) {
+        byte[] buffer = apdu.getBuffer();
+
+        short LE = apdu.setOutgoing();
+
+        if (LE != toSend) {
+            apdu.setOutgoingLength(toSend);
+        }
+
+        while (toSend > 0) {
+            short sentLen = (extResponseChunkSize < toSend) ? extResponseChunkSize: toSend;
+            Util.arrayCopyNonAtomic(input, offset, buffer, (short) 0, sentLen);
+            apdu.sendBytes((short) 0, sentLen);
+            toSend -= sentLen;
+            offset += sentLen;
+        }
+    }
+
+    public void testExtApduBuf(APDU apdu) {
+        byte[] buffer = apdu.getBuffer();
+
+        short toSend = Util.makeShort(buffer[ISO7816.OFFSET_P1], buffer[ISO7816.OFFSET_P2]);
+        sendExtendedResponse(apdu, tmp, (short) 0, toSend);
     }
 
     public void getCPoints(APDU apdu) {
