@@ -125,6 +125,11 @@ public class AppletTest extends BaseTest {
     public static short threshold = 2;
     public static short nParties = 3;
     
+    // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
+    // or with different cards inserted into a system
+    public static int[] readerIndeces = new int[] {2, 3, 4}; //, 5, 6};
+    public static byte[] partyIDs = new byte[] {1, 2, 3}; //, 4, 5}; // parties are 1-indexed
+
     public AppletTest() throws Exception {
         super();
 
@@ -1386,10 +1391,6 @@ public class AppletTest extends BaseTest {
         hasher.update(btcHash, (short) 0, (short) 32);
         byte[] digest = hasher.digest();
 
-        // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
-        // or with different cards inserted into a system
-        int[] readerIndeces = new int[] {2, 3, 4};
-
         // Cards initialization
         int nCards = readerIndeces.length;
         ECPoint[] keys = new ECPoint[nCards];
@@ -1452,11 +1453,6 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDLEQSecretDerivation() throws Exception {
-        // Setup cards
-        // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
-        // or with different cards inserted into a system
-        int[] readerIndeces = new int[] {2, 3, 4};
-
         // Cards initialization
         int nCards = readerIndeces.length;
         for (int index = 0; index < nCards; index++) {
@@ -1470,9 +1466,6 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDLEQSetup() throws Exception {
-        int[] readerIndeces = new int[] {2, 3, 4};
-        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed
-
         // Cards setup
         int nParties = readerIndeces.length;
         int threshold = nParties;
@@ -1493,9 +1486,6 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDleqGetCPoints() throws Exception {
-        int[] readerIndeces = new int[] {2, 3, 4};
-        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed
-
         // Cards setup
         int nParties = readerIndeces.length;
         int threshold = nParties;
@@ -1518,9 +1508,6 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testNofNDleqSetCPoints() throws Exception {
-        int[] readerIndeces = new int[] {2, 3, 4};
-        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed
-
         // Cards setup
         int nParties = readerIndeces.length;
         int threshold = nParties;
@@ -1593,8 +1580,6 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testDleqKeyGeneration() throws Exception {
-        int[] readerIndeces = new int[] {2, 3, 4};
-        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed, thier indeces 0-indexed
         // Cards initialization
         int nCards = readerIndeces.length;
         int nParties = readerIndeces.length;
@@ -1765,10 +1750,7 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testDeriveDleq() throws Exception {
-        int[] readerIndeces = new int[] {2, 3, 4};
-        byte[] partyIDs = new byte[] {1, 2, 3}; // parties are 1-indexed, thier indeces 0-indexed
-
-
+        // TODO this test seems to be needed to be ran AFTER the testDleqKeyGeneration
         // Cards initialization
         int nCards = readerIndeces.length;
         int nParties = readerIndeces.length;
