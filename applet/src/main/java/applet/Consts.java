@@ -55,6 +55,7 @@ public class Consts {
         public static final byte VERIFY_ENCRYPTED_JWT = (byte) 0x09;
         public static final byte VERIFY_ENCRYPTED_JWT_AND_COMMITMENT = (byte) 0x0a;
         public static final byte IS_INITIALIZED = (byte) 0x0b;
+        public static final byte EXT_APDU_ECHO = (byte) 0x0d;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {

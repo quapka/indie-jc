@@ -203,6 +203,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_ALL_C_POINTS:
                         getAllCPoints(apdu);
                         break;
+                    case Consts.INS.EXT_APDU_ECHO:
+                        echoExtApduBuffer(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -1268,6 +1271,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             }
         }
         return -1;
+    }
+
+    public void echoExtApduBuffer(APDU apdu) {
+        byte[] buffer = loadApdu(apdu);
+
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(extApduSize);
+        apdu.sendBytesLong(buffer, (short) 0, extApduSize);
     }
 
     private byte[] loadApdu(APDU apdu) {
