@@ -484,7 +484,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public void deriveDleqSaltShare(APDU apdu) {
         byte[] apduBuffer = loadApdu(apdu);
 
-        short length = dleq.partialEval(apduBuffer, (short) 0, extApduSize, apduBuffer, (short) 0);
+        short offset = apdu.getOffsetCdata();
+        short length = dleq.partialEval(apduBuffer, offset, (short) (extApduSize - offset), apduBuffer, (short) 0);
 
         apdu.setOutgoing();
         apdu.setOutgoingLength(length);
@@ -560,8 +561,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // byte[] apduBuffer = apdu.getBuffer();
         byte[] apduBuffer = loadApdu(apdu);
         // apdu.setIncomingAndReceive();
-        // short inOffset = apdu.getOffsetCdata();
-        short inOffset = (short) 0;
+        short inOffset = apdu.getOffsetCdata();
+        // short inOffset = (short) 0;
 
         if (Constants.DEBUG == Constants.STATE_TRUE) {
             if (Constants.DEBUG != Constants.STATE_FALSE) {
@@ -632,7 +633,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private void setPublicNonce(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
-        musig2.setNonceAggregate(buffer, (short) 0);
+        musig2.setNonceAggregate(buffer, apdu.getOffsetCdata());
     }
 
     private void sendDecrypted(APDU apdu) {
@@ -654,9 +655,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short uncompressedECPointSize = 65;
         short zkNonceSize = 32;
 
-        short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - zkNonceSize);
+        short offset = apdu.getOffsetCdata();
+        short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - zkNonceSize - offset);
 
-        short ptxtLen = aesCtrDecryptInner(buffer, (short) 0, ctxtLen, tmp, (short) 0);
+        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
 
         boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
         if ( !jwtIsvalid ) {
@@ -706,9 +708,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private void verifyEncryptedJwt(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
-        short ctxtLen = (short) (extApduSize - 16 - 65);
+        short offset = apdu.getOffsetCdata();
+        short ctxtLen = (short) (extApduSize - 16 - 65 - offset);
 
-        short ptxtLen = aesCtrDecryptInner(buffer, (short) 0, ctxtLen, tmp, (short) 0);
+        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
         System.out.println(ptxtLen);
 
         System.out.println("In-card token");
@@ -878,13 +881,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
 
         System.out.println("Plaintex JWT verify");
-        for (short i = 0; i < extApduSize; i++) {
+        for (short i = apdu.getOffsetCdata(); i < extApduSize; i++) {
             System.out.print(String.format("%02X", buffer[i]));
         }
         System.out.println();
 
 
-        if (validJwt(buffer, (short) 0,  extApduSize)) {
+        if (validJwt(buffer, apdu.getOffsetCdata(),  extApduSize)) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
             apdu.setOutgoingAndSend((short) 0, (short) Good.length);
         } else {
@@ -922,7 +925,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         System.out.println();
 
         short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, derSignature);
-        return verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen);
+        short payloadLength = (short) (secondDot - offset);
+        return verifySignature(buffer, offset, payloadLength, derSignature, (short) 0, sigLen);
     }
 
     private boolean verifySignature(byte[] message, short msgOffset, short msgLen, byte[] signature, short sigOffset, short sigLen) 
@@ -977,7 +981,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public void decodeJwtBody(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
 
-        short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
+        short offset = apdu.getOffsetCdata();
+
+        short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
 
         short nDecoded = 0;
@@ -995,8 +1001,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public void deriveSalt(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
+        short offset = apdu.getOffsetCdata();
 
-        short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
+        short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
         System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
         System.out.println(String.format("secondDot: %d", secondDot));
@@ -1017,7 +1024,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             System.out.print(String.format("%02x", derSignature[i]));
         }
         System.out.println();
-        if ( !verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, sigLen) ) {
+        if ( !verifySignature(buffer, offset, (short) (secondDot - offset), derSignature, (short) 0, sigLen) ) {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
             // FIXME better output
             apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
@@ -1078,6 +1085,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     public void computeDleq(APDU apdu) {
         System.out.println("computeDleq");
+        // FIXME buffer is not used
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
         // FIXME for now the user provides already a point on the curve
@@ -1152,7 +1160,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // byte[] token = (byte[]) (buffer + apdu.getOffsetCdata());
         // short tokenSize = extApduSize - apdu.getOffsetCdata();
 
-        short firstDot = indexOf(buffer, (short) 0,  extApduSize, (byte) '.');
+        short offset = apdu.getOffsetCdata();
+        short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
         System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
         System.out.println(String.format("secondDot: %d", secondDot));
@@ -1265,13 +1274,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short recvLen = apdu.setIncomingAndReceive(); // + apdu.getOffsetCdata());
         if (apdu.getOffsetCdata() == ISO7816.OFFSET_CDATA) {
-            extApduSize = recvLen;
-            Util.arrayCopyNonAtomic(apduBuffer, (short) ISO7816.OFFSET_CDATA, extApduBuffer, (short) 0, recvLen);
+            extApduSize = (short) (recvLen + ISO7816.OFFSET_CDATA);
+            Util.arrayCopyNonAtomic(apduBuffer, (short) 0, extApduBuffer, (short) 0, extApduSize);
             return extApduBuffer;
         }
 
-        Util.arrayCopyNonAtomic(apduBuffer, apdu.getOffsetCdata(), extApduBuffer, (short) 0, recvLen);
-        short written = recvLen;
+        short written = (short) (recvLen + apdu.getOffsetCdata());
+        Util.arrayCopyNonAtomic(apduBuffer, (short) 0, extApduBuffer, (short) 0, written);
         recvLen = apdu.receiveBytes((short) 0);
         while (recvLen > 0) {
             Util.arrayCopyNonAtomic(apduBuffer, (short) 0, extApduBuffer, written, recvLen);
