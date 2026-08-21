@@ -22,7 +22,7 @@ public class DiscreteLogEquality {
     public static BigNat r, ch, tmpNum, secretShare;
     public static BigNat curveOrder;
     public static BigNat aBN, bBN;
-    private byte[] tmp = new byte[128];
+    private byte[] tmp = JCSystem.makeTransientByteArray((short) 128, JCSystem.CLEAR_ON_DESELECT);
     public boolean initialized = false;
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
