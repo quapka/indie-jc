@@ -1356,19 +1356,27 @@ public class AppletTest extends BaseTest {
 
 
     public byte[] sendAPDU(int readerIndex, int klass, int instruction) throws Exception {
-        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, null);
+        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, null, (short) 0x00);
     }
 
     public byte[] sendAPDU(int readerIndex, int klass, int instruction, byte[] data) throws Exception {
-        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, data);
+        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, data, (short) 0x00);
+    }
+
+    public byte[] sendAPDU(int readerIndex, int klass, int instruction, byte[] data, short le) throws Exception {
+        return sendAPDU(readerIndex, klass, instruction, 0x00, 0x00, data, le);
     }
 
     public byte[] sendAPDU(int readerIndex, int klass, int instruction, int p1, int p2) throws Exception {
-        return sendAPDU(readerIndex, klass, instruction, p1, p2, null);
+        return sendAPDU(readerIndex, klass, instruction, p1, p2, null, (short) 0x00);
     }
 
     public byte[] sendAPDU(int readerIndex, int klass, int instruction, int p1, int p2, byte[] data) throws Exception {
-        CommandAPDU cmd = new CommandAPDU(klass, instruction, p1, p2, data);
+        return sendAPDU(readerIndex, klass, instruction, p1, p2, data, (short) 0x00);
+    }
+
+    public byte[] sendAPDU(int readerIndex, int klass, int instruction, int p1, int p2, byte[] data, short le) throws Exception {
+        CommandAPDU cmd = new CommandAPDU(klass, instruction, p1, p2, data, le);
         ResponseAPDU responseAPDU = connectRawAtIndex(null, readerIndex).transmit(cmd);
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
 
@@ -1604,7 +1612,7 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
             System.out.println(String.format("Get CPoints from '%d' card", partyID));
-            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS);
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS, new byte[] {0}, (short) 0x7fff);
             System.out.println(Hex.toHexString(data));
             // set the CPoints to all the other cards
             for (int otherIndex = 0; otherIndex < readerIndeces.length; otherIndex++) {
@@ -1660,7 +1668,8 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
             System.out.println(String.format("Get APoints from '%d' card", partyID));
-            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_A_POINTS, 0x00, 0x00);
+            byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_A_POINTS, 0x00, 0x0); //, new byte[] {0}, (short) 0x7fff0);
+            // byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_A_POINTS, 0x00, 0x0, new byte[] {0}, (short) 0x7fff0);
             System.out.println(Hex.toHexString(data));
 
             for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
