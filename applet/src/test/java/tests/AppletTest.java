@@ -1560,6 +1560,36 @@ public class AppletTest extends BaseTest {
         System.out.println("Something");
     }
 
+    @Test
+    public void testExtApduEcho() throws Exception {
+        byte readerIndex = 2;
+        byte[] data = sendAPDU(readerIndex, Consts.CLA.DEBUG, Consts.INS.EXT_APDU_ECHO, 0x00, 0xff, new byte[] {1, 2, 3, 4});
+
+        // System.out.println(Hex.toHexString(data));
+        Assert.assertArrayEquals(new byte[] {Consts.CLA.DEBUG,
+            Consts.INS.EXT_APDU_ECHO, (byte) 0x00, (byte) 0xff, (byte) 0x04,
+            (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04}, data);
+
+        byte[] seed = new byte[32];
+        SecureRandom prng = new SecureRandom(seed);
+
+        short byteSize = 1024;
+        byte[] inputData = new byte[byteSize];
+
+        prng.nextBytes(inputData);
+
+        data = sendAPDU(readerIndex, Consts.CLA.DEBUG, Consts.INS.EXT_APDU_ECHO, 0x00, 0xff, inputData, (short) 0x07ff);
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        stream.write(new byte[] {
+            Consts.CLA.DEBUG, Consts.INS.EXT_APDU_ECHO, (byte) 0x00, (byte) 0xff,
+            (byte) 0x00, (byte) (byteSize >> 8), (byte) (byteSize & 0xFF)}
+            );
+        stream.write(inputData);
+
+        // System.out.println(Hex.toHexString(data));
+        Assert.assertArrayEquals(stream.toByteArray(), data);
+    }
 
     @Test
     public void testDleqKeyGeneration() throws Exception {
