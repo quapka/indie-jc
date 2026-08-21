@@ -100,6 +100,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private byte[] extApduBuffer = new byte[2048];
     private byte[] procBuffer = new byte[2048];
     private short extApduSize = 0;
+    private static final short extResponseChunkSize = (short) 0xFF;
 
     private boolean initialized = false;
 
@@ -448,24 +449,31 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // TODO send out C Points and shares
         short pubKeySize = 65;
 
-        byte[] apduBuffer = apdu.getBuffer();
-        apdu.setIncomingAndReceive();
+        // byte[] apduBuffer = loadApdu(apdu);
 
         for (short i = 0; i < dkg.nCoeffs; i++) {
             short index = (short) (dkg.partyIndex * dkg.nParties + i);
-            dkg.cPoints[index].encode(apduBuffer, (short) (i * pubKeySize), false);
+            dkg.cPoints[index].encode(tmp, (short) (i * pubKeySize), false);
         }
 
-        apdu.setOutgoingAndSend((short) 0, (short) (dkg.nCoeffs * pubKeySize));
+        short length = (short) (dkg.nCoeffs * pubKeySize);
+        sendExtendedResponse(apdu, tmp, (short) 0, length);
+        // apdu.setOutgoing();
+        // apdu.setOutgoingLength(length);
+        // apdu.sendBytesLong(apduBuffer, (short) 0, length);
     }
 
     public void getAPoints(APDU apdu) {
+        // FIXME apduBuffer unused
         byte[] apduBuffer = apdu.getBuffer();
         apdu.setIncomingAndReceive();
         // FIXME check size/offset
-        short length = dkg.getAPoints(apduBuffer);
+        short length = dkg.getAPoints(tmp);
 
-        apdu.setOutgoingAndSend((short) 0, length);
+        sendExtendedResponse(apdu, tmp, (short) 0, length);
+        // apdu.setOutgoing();
+        // apdu.setOutgoingLength(length);
+        // apdu.sendBytesLong(apduBuffer, (short) 0, length);
     }
 
     public void setAPoints(APDU apdu) {
@@ -535,11 +543,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void setCPoints(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        apdu.setIncomingAndReceive();
+        byte[] apduBuffer = loadApdu(apdu);
         byte fromPartyID = apduBuffer[ISO7816.OFFSET_P1];
 
-        dkg.setCPoints(fromPartyID, apduBuffer, ISO7816.OFFSET_CDATA);
+        dkg.setCPoints(fromPartyID, apduBuffer, apdu.getOffsetCdata());
     }
 
     public void setShares(APDU apdu) {
@@ -693,8 +700,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
         if ( !jwtIsvalid ) {
-            Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
-            apdu.setOutgoingAndSend((short) 0, (short) Bad.length);
+            Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
+            apdu.setOutgoingAndSend((short) 0, (short) Good.length);
             return;
         }
 
@@ -703,7 +710,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // zkNonce
         hasher.update(buffer, (short) (extApduSize - zkNonceSize), zkNonceSize);
         // clientPubpoint
-        hasher.doFinal(buffer, (short) 0, uncompressedECPointSize, procBuffer, (short) 0);
+        hasher.doFinal(buffer, offset, uncompressedECPointSize, procBuffer, (short) 0);
 
         short firstDot = indexOf(tmp, (short) 0,  ptxtLen, (byte) '.');
         short secondDot = indexOf(tmp, (short) (firstDot + 1), ptxtLen, (byte) '.');
@@ -726,9 +733,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         if ( jwtIsvalid && pubkeyIsValid) {
             // derive salt
-            short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize));
+            short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize + offset));
             // and encrypt it
-            ctxtLen = aesCtrEncryptInner(buffer, (short) 0, hashSize, apduBuffer, (short) 0);
+            ctxtLen = aesCtrEncryptInner(buffer, offset, hashSize, apduBuffer, (short) 0);
             apdu.setOutgoingAndSend((short) 0, ctxtLen);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
@@ -1311,6 +1318,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private byte[] loadApdu(APDU apdu) {
         byte[] apduBuffer = apdu.getBuffer();
+        // short LC = apdu.getIncomingLength();
+
         short recvLen = apdu.setIncomingAndReceive(); // + apdu.getOffsetCdata());
         if (apdu.getOffsetCdata() == ISO7816.OFFSET_CDATA) {
             extApduSize = (short) (recvLen + ISO7816.OFFSET_CDATA);
