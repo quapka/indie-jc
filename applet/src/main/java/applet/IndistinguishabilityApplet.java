@@ -64,7 +64,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static final byte[] Good = {'G', 'O', 'O', 'D'};
     public static final byte[] Bad = {'B', 'A', 'D'};
 
-    private byte[] salt = new byte[32];
     // at least shal handle 65 bytes of uncompressed points
     private byte[] tmp = new byte[2048];
     // TODO is the maximal ECDSA DER encoded signature 72 bytes?
