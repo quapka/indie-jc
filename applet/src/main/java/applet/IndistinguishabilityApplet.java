@@ -476,14 +476,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void setAPoints(APDU apdu) {
-        byte[] apduBuffer = apdu.getBuffer();
-        apdu.setIncomingAndReceive();
+        byte[] apduBuffer = loadApdu(apdu);
 
         // FIXME throw if the ID is not > 0;
         byte fromPartyID = apduBuffer[ISO7816.OFFSET_P1];
 
         // FIXME check size/offset
-        dkg.setAPoints(fromPartyID, apduBuffer, ISO7816.OFFSET_CDATA);
+        dkg.setAPoints(fromPartyID, apduBuffer, apdu.getOffsetCdata());
     }
 
     public void verifyAPoints(APDU apdu) {
