@@ -122,13 +122,13 @@ public class AppletTest extends BaseTest {
     public static byte[] CURVE_G = SecP256r1.G;
     public static short CURVE_K = SecP256r1.k;
 
-    public static short threshold = 2;
-    public static short nParties = 3;
+    public static short threshold = 3;
+    public static short nParties = 5;
     
     // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
     // or with different cards inserted into a system
-    public static int[] readerIndeces = new int[] {2, 3, 4}; //, 5, 6};
-    public static byte[] partyIDs = new byte[] {1, 2, 3}; //, 4, 5}; // parties are 1-indexed
+    public static int[] readerIndeces = new int[] {2, 3, 4, 5, 6};
+    public static byte[] partyIDs = new byte[] {1, 2, 3, 4, 5}; // parties are 1-indexed
     // NOTE: The c0 ff ee bytes are sent only to trigger the extended response working on jcardengine side.
     //       Sending only the 0x7fff would result in not being sent and thus no ext response.
     public static byte[] DUMMY_ARRAY = new byte[] {(byte) 0xc0, (byte) 0xff, (byte) 0xee};
@@ -144,6 +144,8 @@ public class AppletTest extends BaseTest {
         curveA = new BigInteger(1, CURVE_A);
         curveB = new BigInteger(1, CURVE_B);
         CURVE_SPEC = new ECParameterSpec(curve, Generator, new BigInteger(1, CURVE_R), BigInteger.valueOf(CURVE_K));
+
+        // FIXME add check that threshold <= nParties and there are correct number of readerIndeces and partyIDs set
 
         Security.addProvider(new BouncyCastleProvider());
     }
@@ -1867,7 +1869,7 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
             BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
-                new BigInteger[] { ONE, TWO, THREE}
+                    buildBigIntArray(nParties)
             );
             // System.out.println("lambda");
             // System.out.println(lambda);
@@ -1882,6 +1884,14 @@ public class AppletTest extends BaseTest {
 
         Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
         System.out.println(Hex.toHexString(salt.getEncoded(false)));
+    }
+
+    public static BigInteger[] buildBigIntArray(int n) {
+        BigInteger[] arr = new BigInteger[n];
+        for (int i = 0; i < n; i++) {
+            arr[i] = BigInteger.valueOf(i + 1);
+        }
+        return arr;
     }
 
     @Test
