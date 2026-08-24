@@ -1509,7 +1509,9 @@ public class AppletTest extends BaseTest {
 
             // get CPoint from readerIndex card
             sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.KEY_GEN_DLEQ, partyID, 0x00);
-            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS);
+            // NOTE: The c0 ff ee bytes are sent only to trigger the extended response working on jcardengine side.
+            //       Sending only the 0x7fff would result in not being sent and thus no ext response.
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_C_POINTS, new byte[] {(byte) 0xc0, (byte) 0xff, (byte) 0xee}, (short) 0x7fff);
             Assert.assertEquals(nParties * uncompressedPointSize, data.length);
         }
     }
