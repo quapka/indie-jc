@@ -577,6 +577,22 @@ public class AppletTest extends BaseTest {
         // FIXME use compressed to speed up processing and shorten data payloads?
         byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
 
+        byte channelNonceByteSize = 16;
+        byte[] channelNonce = new byte[channelNonceByteSize];
+        prng.nextBytes(channelNonce);
+
+        byte tokenNonceByteSize = 16;
+        byte[] tokenNonce = new byte[tokenNonceByteSize];
+        prng.nextBytes(tokenNonce);
+
+        System.out.println("Channel IV");
+        for (short i = 0; i < channelNonceByteSize; i++) {
+            System.out.print(String.format("%02X", channelNonce[i]));
+        }
+        System.out.println();
+
+        String jwt = createToken(pair, alg, tokenNonce);
+
         // Set and implicitly get the public key
         connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
 
@@ -618,10 +634,6 @@ public class AppletTest extends BaseTest {
         }
         System.out.println();
 
-        byte channelNonceByteSize = 16;
-        byte[] channelNonce = new byte[channelNonceByteSize];
-        prng.nextBytes(channelNonce);
-
         KeyParameter ctrKey = new KeyParameter(channelKey, 0, 16);
         short macSizeBits = 128;
         CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
@@ -630,17 +642,6 @@ public class AppletTest extends BaseTest {
         boolean forEncryption = true;
         cipher.init(forEncryption, params);
 
-        byte tokenNonceByteSize = 16;
-        byte[] tokenNonce = new byte[tokenNonceByteSize];
-        prng.nextBytes(tokenNonce);
-
-        System.out.println("Channel IV");
-        for (short i = 0; i < channelNonceByteSize; i++) {
-            System.out.print(String.format("%02X", channelNonce[i]));
-        }
-        System.out.println();
-
-        String jwt = createToken(pair, alg, tokenNonce);
 
         System.out.println(String.format("Token length: %d", jwt.getBytes().length));
         System.out.println("In-test token");
@@ -718,20 +719,11 @@ public class AppletTest extends BaseTest {
         // FIXME use compressed to speed up processing and shorten data payloads?
         byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
 
-        // Set and implicitly get the public key
-        connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
-
-        // Encrypt the token first and then verify it inside the card
-        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
-        ResponseAPDU responseAPDU = connect().transmit(cmd);
-        byte[] data = responseAPDU.getData();
-
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
         KeyFactory echdKeyFact = KeyFactory.getInstance("ECDH", "BC");
+
         ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
-        ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
-        ECPublicKey cardChannelKey = (ECPublicKey) echdKeyFact.generatePublic(dvrfPubSpec);
 
         // TODO the RNG seed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
@@ -740,13 +732,33 @@ public class AppletTest extends BaseTest {
 
         KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
         ecdh.init(epheClientChannelKey.getPrivate());
-        ecdh.doPhase(cardChannelKey, true);
 
         ECPublicKeySpec epheClientPubKeySpec = echdKeyFact.getKeySpec(epheClientPubKey, ECPublicKeySpec.class);
         // TODO does sending compressed point speed up the operations?
         // Need to consider also the uncompressing inside the card.
         compressed = false;
         byte[] encodedClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
+
+        byte[] zkNonce = nonceZkLogin();
+        MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+        hasher.update(zkNonce);
+        hasher.update(encodedClientPubPoint);
+        byte[] tokenNonce = hasher.digest();
+
+        String jwt = createToken(pair, alg, tokenNonce);
+
+        // Set and implicitly get the public key
+        connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
+
+        // Encrypt the token first and then verify it inside the card
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+        byte[] data = responseAPDU.getData();
+
+        ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
+        ECPublicKey cardChannelKey = (ECPublicKey) echdKeyFact.generatePublic(dvrfPubSpec);
+        ecdh.doPhase(cardChannelKey, true);
+
 
         byte[] sharedSecret = ecdh.generateSecret();
         MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
@@ -766,13 +778,6 @@ public class AppletTest extends BaseTest {
         boolean forEncryption = true;
         cipher.init(forEncryption, params);
 
-        byte[] zkNonce = nonceZkLogin();
-        MessageDigest hasher = MessageDigest.getInstance("SHA-256");
-        hasher.update(zkNonce);
-        hasher.update(encodedClientPubPoint);
-        byte[] tokenNonce = hasher.digest();
-
-        String jwt = createToken(pair, alg, tokenNonce);
 
         byte[] ctxtBuff = new byte[2048];
         int ctxtLen = cipher.processBytes(jwt.getBytes(), 0, jwt.getBytes().length, ctxtBuff, 0);
