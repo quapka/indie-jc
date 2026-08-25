@@ -1931,6 +1931,18 @@ public class AppletTest extends BaseTest {
         SignatureAlgorithm alg = Jwts.SIG.ES256; //or ES256 or ES384
         KeyPair pair = alg.keyPair().build();
 
+        KeyFactory keyFact = KeyFactory.getInstance("ECDSA", "BC");
+        ECPublicKeySpec pubSpec = keyFact.getKeySpec(pair.getPublic(), ECPublicKeySpec.class);
+        boolean compressed = false;
+        // FIXME use compressed to speed up processing and shorten data payloads?
+        byte[] uncompressedPubKey = pubSpec.getQ().getEncoded(compressed);
+
+        // Set and implicitly get the public key
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, uncompressedPubKey);
+        }
+
         byte tokenNonceByteSize = 16;
         byte[] tokenNonce = new byte[tokenNonceByteSize];
         prng.nextBytes(tokenNonce);
@@ -1945,9 +1957,6 @@ public class AppletTest extends BaseTest {
         // TODO how to concatenate the inputs properly?
         String derivationInput = issuer + subject;
         byte[] derInputBytes = derivationInput.getBytes();
-
-        System.out.println("Encoded point");
-        System.out.println(Hex.toHexString(hashedPoint.getEncoded(false)));
 
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
@@ -1972,7 +1981,7 @@ public class AppletTest extends BaseTest {
         }
 
         HashToCurveTest h2c = new HashToCurveTest(curve);
-        ECPoint hashedPoint = h2c.digest(msgBytes);
+        ECPoint hashedPoint = h2c.digest(derInputBytes);
         // aggregate salts
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];

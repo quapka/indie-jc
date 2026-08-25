@@ -540,7 +540,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short offset = apdu.getOffsetCdata();
 
-        // boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
+        if ( !validJwt(buffer, offset, extApduSize) ) {
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            return;
+        }
 
         short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
