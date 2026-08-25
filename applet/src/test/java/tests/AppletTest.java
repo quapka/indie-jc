@@ -1886,6 +1886,93 @@ public class AppletTest extends BaseTest {
         System.out.println(Hex.toHexString(salt.getEncoded(false)));
     }
 
+    @Test
+    public void testDeriveDleqFromJWT() throws Exception {
+        // TODO this test seems to be needed to be ran AFTER the testDleqKeyGeneration
+        // Cards initialization
+        int nCards = readerIndeces.length;
+        int nParties = readerIndeces.length;
+        int threshold = readerIndeces.length;
+
+        ECPoint[] individualVerKeys = new ECPoint[nParties];
+        ECPoint[] derivedSaltShares = new ECPoint[nParties];
+        byte[][] dleqProofs = new byte[nParties][64];
+        byte[][] hashComs = new byte[nParties][32];
+
+        System.out.println("Get DLEQ key");
+        // TODO we should verify that the GROUP DLEQ key of all devices is the correct one.
+        byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
+        ECPoint verificationPoint = curve.decodePoint(data);
+
+        // test n-out-of-n partial Dleq evaluation
+        SecureRandom prng = new SecureRandom(new byte[32]);
+
+        // TODO this message needs to come from a JWT, so:
+        // 1. create a token JWT
+        // 1. then sne
+
+        String message = "issuerJWTName||userStableIdenfitierValue";
+        byte[] msgBytes = message.getBytes();
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
+
+            dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
+            // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
+            derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 64, 64 + 65));
+
+            // verify individual salt shares
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
+            individualVerKeys[index] = curve.decodePoint(data);
+            // System.out.println(individualVerKeys[index]);
+
+            // byte[] ch = Arrays.copyOfRange(dleqProofs[index], 0, 32);
+            // BigInteger res = new BigInteger(1, Arrays.copyOfRange(dleqProofs[index], 0, 32));
+        }
+
+        HashToCurveTest h2c = new HashToCurveTest(curve);
+        ECPoint hashedPoint = h2c.digest(msgBytes);
+        // aggregate salts
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+
+            byte[] proof = dleqProofs[index];
+            ECPoint vk_i = individualVerKeys[index];
+            ECPoint v_i = derivedSaltShares[index];
+
+            // Assert.assertArrayEquals(hashCom, chVerifyData);
+            Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
+        }
+
+        ECPoint aggVerKeys = curve.getInfinity();
+        ECPoint salt = curve.getInfinity();
+        for (int index = 0; index < readerIndeces.length; index++) {
+            // int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
+                    buildBigIntArray(nParties)
+            );
+            // System.out.println("lambda");
+            // System.out.println(lambda);
+
+            ECPoint v_i = derivedSaltShares[index];
+            salt = salt.add(v_i.multiply(lambda));
+
+            // System.out.println(Hex.toHexString(individualVerKeys[index].getEncoded(false)));
+
+            aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
+        }
+
+        Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
+        System.out.println(Hex.toHexString(salt.getEncoded(false)));
+    }
+
     public static BigInteger[] buildBigIntArray(int n) {
         BigInteger[] arr = new BigInteger[n];
         for (int i = 0; i < n; i++) {
