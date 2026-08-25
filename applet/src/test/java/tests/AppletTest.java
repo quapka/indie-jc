@@ -218,8 +218,21 @@ public class AppletTest extends BaseTest {
     }
 
     private String createTokenPayload(byte[] nonce) {
+        return createTokenPayload(nonce, null, null);
+    }
+
+    private String createTokenPayload(byte[] nonce, String subject, String issuer) {
+        if ( subject == null ) {
+            subject = "12";
+        }
+
+        if ( issuer == null ) {
+            // FIXME use example.com
+            subject = "https://aexample.com";
+        }
+
         String payload = "{";
-        payload += "\"iss\":\"https://aexample.com\",";
+        payload += "\"iss\":\"" + issuer + "\",";
         payload += "\"aud\":[\"zkLogin\"],";
         payload += "\"name\":\"Firstname Lastname\",";
         payload += "\"nonce\":\"" + Hex.toHexString(nonce).toUpperCase() + "\",";
@@ -227,17 +240,22 @@ public class AppletTest extends BaseTest {
         payload += "\"exp\":1745777127,";
         payload += "\"auth_time\":1745773526,";
         payload += "\"at_hash\":\"E9FuK_jSk2tTaGXQQ0MzXA\",";
-        payload += "\"sub\":\"12\"}";
+        payload += "\"sub\":\"" + subject + "\"}";
 
         return payload;
     }
 
     private String createToken(KeyPair pair, SignatureAlgorithm alg) {
-        return createToken(pair, alg, new byte[16]);
+        return createToken(pair, alg, new byte[16], null, null);
     }
 
+
     private String createToken(KeyPair pair, SignatureAlgorithm alg, byte[] nonce) {
-        String payload = createTokenPayload(nonce);
+        return createToken(pair, alg, nonce, null, null);
+    }
+
+    private String createToken(KeyPair pair, SignatureAlgorithm alg, byte[] nonce, String issuer, String subject) {
+        String payload = createTokenPayload(nonce, issuer, subject);
 
         return Jwts.builder()
             .setHeaderParam("alg", "ES256")
