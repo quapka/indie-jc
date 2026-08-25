@@ -1919,24 +1919,44 @@ public class AppletTest extends BaseTest {
 
         System.out.println("Get DLEQ key");
         // TODO we should verify that the GROUP DLEQ key of all devices is the correct one.
+        // FIXME getting the DLEQ key should not be part of the calculation as it can be cached
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
 
-        // test n-out-of-n partial Dleq evaluation
-        SecureRandom prng = new SecureRandom(new byte[32]);
-
         // TODO this message needs to come from a JWT, so:
         // 1. create a token JWT
-        // 1. then sne
+        byte[] seed = new byte[32];
+        SecureRandom prng = new SecureRandom(seed);
 
-        String message = "issuerJWTName||userStableIdenfitierValue";
-        byte[] msgBytes = message.getBytes();
+        SignatureAlgorithm alg = Jwts.SIG.ES256; //or ES256 or ES384
+        KeyPair pair = alg.keyPair().build();
+
+        byte tokenNonceByteSize = 16;
+        byte[] tokenNonce = new byte[tokenNonceByteSize];
+        prng.nextBytes(tokenNonce);
+
+        String issuer = "https://example.com";
+        String subject = "1234";
+        String token = createToken(pair, alg, tokenNonce, subject, issuer);
+        System.out.println(token);
+        // must send also the public key
+        // 1. then encrypt it
+
+        // TODO how to concatenate the inputs properly?
+        String derivationInput = issuer + subject;
+        byte[] derInputBytes = derivationInput.getBytes();
+
+        System.out.println("Encoded point");
+        System.out.println(Hex.toHexString(hashedPoint.getEncoded(false)));
+
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
 
 
-            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
+            // data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, derInputBytes);
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, token.getBytes());
+            System.out.println(String.format("\"%s\"", new String(data, "UTF-8")));
 
             dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
             // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);

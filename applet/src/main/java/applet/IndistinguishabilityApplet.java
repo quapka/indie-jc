@@ -72,6 +72,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     private static final byte[] NONCE_FIELD_NAME = {'n', 'o', 'n', 'c', 'e'};
     private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
     private static final byte[] NAME_FIELD_NAME = {'n', 'a', 'm', 'e'};
+    private static final byte[] ISSUER_FIELD_NAME = {'i', 's', 's'};
+    private static final byte[] SUBJECT_FIELD_NAME = {'s', 'u', 'b'};
 
     public byte nParties;
     public byte threshold;
@@ -288,6 +290,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         break;
                     case Consts.INS.DERIVE_DLEQ_SALT_SHARE:
                         deriveDleqSaltShare(apdu);
+                        break;
+                    case Consts.INS.DERIVE_SEED_SHARE:
+                        deriveSeedShare(apdu);
                         break;
                     case Consts.INS.GET_PUBLIC_DLEQ_SHARE:
                         getDleqPublicShare(apdu);
@@ -527,6 +532,41 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoing();
         apdu.setOutgoingLength(length);
         apdu.sendBytesLong(apduBuffer, (short) 0, length);
+    }
+
+    public void deriveSeedShare(APDU apdu) {
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
+
+        short offset = apdu.getOffsetCdata();
+
+        // boolean jwtIsvalid = validJwt(tmp, (short) 0, ptxtLen);
+
+        short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
+        short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
+
+        short decodLength = 0;
+        decodLength = base64UrlSafeDecoder.decodeBase64Urlsafe(
+            buffer,
+            (short) (firstDot + 1),
+            (short) (secondDot - (firstDot + 1)),
+            tmp,
+            (short) 0
+        );
+
+        // plaintext JWT, locate the sub and iss
+        short issLength = getValueFor(tmp, (short) 0, decodLength, ISSUER_FIELD_NAME, procBuffer, (short) 0);
+        short subLength = getValueFor(tmp, (short) 0 , decodLength, SUBJECT_FIELD_NAME, procBuffer, issLength);
+
+        short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), apduBuffer, (short) 0);
+
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(length);
+        apdu.sendBytesLong(apduBuffer, (short) 0, length);
+    }
+
+    public void getStableIdentifier(byte[] in, short inOffset, short length, byte[] out, short outOffset) {
+        // retrieve the iss and sub values
     }
 
     public void getAllCPoints(APDU apdu) {
