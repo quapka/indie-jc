@@ -561,14 +561,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             (short) (firstDot + 1),
             (short) (secondDot - (firstDot + 1)),
             // this possible could write againt to tmp
-            buffer,
+            tmp,
             // overwrite the initial ciphertext
-            dataOffset
+            (short) 0
         );
 
         // FIXME add missing nonce, ephemeral key and epoch checks
-        short issLength = getValueFor(buffer, dataOffset, (short) (decodLength + dataOffset), ISSUER_FIELD_NAME, procBuffer, (short) 0);
-        short subLength = getValueFor(buffer, dataOffset, (short) (decodLength + dataOffset), SUBJECT_FIELD_NAME, procBuffer, issLength);
+        short issLength = getValueFor(tmp, (short) 0, decodLength, ISSUER_FIELD_NAME, procBuffer, (short) 0);
+        short subLength = getValueFor(tmp, (short) 0, decodLength, SUBJECT_FIELD_NAME, procBuffer, issLength);
 
         // again overwrite now the decoded values
         short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
