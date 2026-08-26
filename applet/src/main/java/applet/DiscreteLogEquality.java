@@ -181,21 +181,21 @@ public class DiscreteLogEquality {
         com2.copy(H);
         com2.multiplication(r);
         // compute ch <- H(g, h , x, y, com1, com2)
-        short hashSize = hashCommitments2(/*ECPoint G,*/ H, /*publicShare,*/ partialDerivedShare, com1, com2);
-        ch.fromByteArray(tmp, (short) 0, hashSize);
+
+        // write ch to out at outOffset
+        short hashSize = hashCommitments2(/*ECPoint G,*/ H, /*publicShare,*/ partialDerivedShare, com1, com2, out, outOffset);
+        ch.fromByteArray(out, outOffset, hashSize);
         // compute res = r + secretShare * ch
         ch.modMult(secretShare, IndistinguishabilityApplet.curve.rBN);
         // res = r
         r.modAdd(ch, IndistinguishabilityApplet.curve.rBN);
 
-        // return (ch, res) in out
-        Util.arrayCopyNonAtomic(tmp, (short) 0, out, outOffset, hashSize);
-        short resSize = r.copyToByteArray(tmp, (short) 0);
-        Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) (outOffset + hashSize), resSize);
+        // write res to out, thus return (ch, res) in out
+        short resSize = r.copyToByteArray(out, (short) (outOffset + hashSize));
         return (short) (hashSize + resSize);
     }
 
-    private short hashCommitments2(/*ECPoint G,*/ ECPoint H, /* ECPoint X,*/ ECPoint Y, ECPoint com1, ECPoint com2) {
+    private short hashCommitments2(/*ECPoint G,*/ ECPoint H, /* ECPoint X,*/ ECPoint Y, ECPoint com1, ECPoint com2, byte[] out, short outOffset) {
         hasher.reset();
         hasher.update(HASH_DLEQ_DOMAIN_SEPARATOR, (short) 0, (short) HASH_DLEQ_DOMAIN_SEPARATOR.length);
 
@@ -216,7 +216,7 @@ public class DiscreteLogEquality {
         hasher.update(tmp, (short) 0, pointByteLen);
 
         pointByteLen = com2.getW(tmp, (short) 0);
-        hasher.doFinal(tmp, (short) 0, pointByteLen, tmp, (short) 0);
+        hasher.doFinal(tmp, (short) 0, pointByteLen, out, outOffset);
 
         return hasher.getLength();
     }
