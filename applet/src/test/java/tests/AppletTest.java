@@ -1943,10 +1943,6 @@ public class AppletTest extends BaseTest {
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
         KeyFactory echdKeyFact = KeyFactory.getInstance("ECDH", "BC");
 
-        // byte tokenNonceByteSize = 16;
-        // byte[] tokenNonce = new byte[tokenNonceByteSize];
-        // prng.nextBytes(tokenNonce);
-
         String issuer = "https://example.com";
         String subject = "1234";
         // FIXME the tokenNonce is supposed to be a commitment to the ephemeral public key and something
@@ -1999,18 +1995,6 @@ public class AppletTest extends BaseTest {
             System.out.println(token);
 
 
-            // byte[] zkNonce = nonceZkLogin();
-            // MessageDigest hasher = MessageDigest.getInstance("SHA-256");
-            // hasher.update(zkNonce);
-            // hasher.update(encodedEpheClientPubPoint);
-            // byte[] tokenNonce = hasher.digest();
-
-            // String jwt = createToken(pair, alg, tokenNonce);
-
-            // Set and implicitly get the public key
-            // connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
-            ecdh.doPhase(cardIdentityKeys[index], true);
-
             byte[] sharedSecret = ecdh.generateSecret();
             MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
             byte[] fullChannelKey = sha1.digest(sharedSecret);
@@ -2045,9 +2029,6 @@ public class AppletTest extends BaseTest {
             System.arraycopy(ctxtBuff, 0, encPayload, payloadLength, ctxtLen);
             payloadLength += ctxtLen;
 
-            // System.arraycopy(zkNonce, 0, encPayload, payloadLength, zkNonce.length);
-            // payloadLength += zkNonce.length;
-
             data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, encPayload); //, 0, payloadLength);
             System.arraycopy(data, 0, channelNonce, 0, channelNonceByteSize);
             params = new ParametersWithIV(ctrKey, channelNonce);
@@ -2062,10 +2043,6 @@ public class AppletTest extends BaseTest {
             // responseAPDU = connect().transmit(cmd);
 
 
-            // data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, derInputBytes);
-            // data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, token.getBytes());
-            // System.out.println(String.format("\"%s\"", new String(data, "UTF-8")));
-
             dleqProofs[index] = Arrays.copyOfRange(ptxtBuff, 0, 64);
             // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
             derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
@@ -2073,10 +2050,6 @@ public class AppletTest extends BaseTest {
             // verify individual salt shares
             data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
             individualVerKeys[index] = curve.decodePoint(data);
-            // System.out.println(individualVerKeys[index]);
-
-            // byte[] ch = Arrays.copyOfRange(dleqProofs[index], 0, 32);
-            // BigInteger res = new BigInteger(1, Arrays.copyOfRange(dleqProofs[index], 0, 32));
         }
 
         HashToCurveTest h2c = new HashToCurveTest(curve);
