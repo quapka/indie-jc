@@ -189,9 +189,9 @@ public class DiscreteLogEquality {
         r.modAdd(ch, IndistinguishabilityApplet.curve.rBN);
 
         // return (ch, res) in out
-        Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) 0, hashSize);
+        Util.arrayCopyNonAtomic(tmp, (short) 0, out, outOffset, hashSize);
         short resSize = r.copyToByteArray(tmp, (short) 0);
-        Util.arrayCopyNonAtomic(tmp, (short) 0, out, hashSize, resSize);
+        Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) (outOffset + hashSize), resSize);
         return (short) (hashSize + resSize);
     }
 
