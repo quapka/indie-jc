@@ -1940,12 +1940,32 @@ public class AppletTest extends BaseTest {
             sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, uncompressedPubKey);
         }
 
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
+        KeyFactory echdKeyFact = KeyFactory.getInstance("ECDH", "BC");
+
+        ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
+        ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
+        ECPublicKey[] cardIdentityKeys = new ECPublicKey[nParties];
+        // initialize each card with it's own identity key
+        for (int index = 0; index < readerIndeces.length; index++) {
+            int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+            // generate and get the identity key and save it for later
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.KEY_GEN, 0x00, 0);
+            ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
+            ECPublicKey cardChannelKey = (ECPublicKey) echdKeyFact.generatePublic(dvrfPubSpec);
+            cardIdentityKeys[index] = cardChannelKey;
+        }
+        // ResponseAPDU responseAPDU = connect().transmit(cmd);
+        // byte[] data = responseAPDU.getData();
+
         byte tokenNonceByteSize = 16;
         byte[] tokenNonce = new byte[tokenNonceByteSize];
         prng.nextBytes(tokenNonce);
 
         String issuer = "https://example.com";
         String subject = "1234";
+        // FIXME the tokenNonce is supposed to be a commitment to the ephemeral public key and something
         String token = createToken(pair, alg, tokenNonce, subject, issuer);
         System.out.println(token);
         // must send also the public key
@@ -1955,18 +1975,95 @@ public class AppletTest extends BaseTest {
         String derivationInput = issuer + subject;
         byte[] derInputBytes = derivationInput.getBytes();
 
+
+        // TODO the RNG seed does not produce fixed keys for the test
+        kpg.initialize(ecGenSpec, new SecureRandom());
+        KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
+
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
+            KeyPair epheClientChannelKey = kpg.generateKeyPair();
+            ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
+
+            ecdh.init(epheClientChannelKey.getPrivate());
+
+            ECPublicKeySpec epheClientPubKeySpec = echdKeyFact.getKeySpec(epheClientPubKey, ECPublicKeySpec.class);
+            // TODO does sending compressed point speed up the operations?
+            // Need to consider also the uncompressing inside the card.
+            compressed = false;
+            byte[] encodedEpheClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
+
+            // byte[] zkNonce = nonceZkLogin();
+            // MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+            // hasher.update(zkNonce);
+            // hasher.update(encodedEpheClientPubPoint);
+            // byte[] tokenNonce = hasher.digest();
+
+            // String jwt = createToken(pair, alg, tokenNonce);
+
+            // Set and implicitly get the public key
+            // connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
+            ecdh.doPhase(cardIdentityKeys[index], true);
+
+            byte[] sharedSecret = ecdh.generateSecret();
+            MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+            byte[] fullChannelKey = sha1.digest(sharedSecret);
+
+            byte[] channelKey = Arrays.copyOf(fullChannelKey, 20);
+
+            byte channelNonceByteSize = 16;
+            byte[] channelNonce = new byte[channelNonceByteSize];
+            prng.nextBytes(channelNonce);
+
+            KeyParameter ctrKey = new KeyParameter(channelKey, 0, 16);
+            short macSizeBits = 128;
+            CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
+            ParametersWithIV params = new ParametersWithIV(ctrKey, channelNonce);
+
+            boolean forEncryption = true;
+            cipher.init(forEncryption, params);
+
+            byte[] ctxtBuff = new byte[2048];
+            int ctxtLen = cipher.processBytes(token.getBytes(), 0, token.getBytes().length, ctxtBuff, 0);
+
+            // Build the payload
+            // List<Byte> temp = new ArrayList<>();
+            byte[] encPayload = new byte [encodedEpheClientPubPoint.length + channelNonceByteSize + ctxtLen];
+            short payloadLength = 0;
+            System.arraycopy(encodedEpheClientPubPoint, 0, encPayload, payloadLength, encodedEpheClientPubPoint.length);
+            payloadLength += encodedEpheClientPubPoint.length;
+
+            System.arraycopy(channelNonce, 0, encPayload, payloadLength, channelNonceByteSize);
+            payloadLength += channelNonceByteSize;
+
+            System.arraycopy(ctxtBuff, 0, encPayload, payloadLength, ctxtLen);
+            payloadLength += ctxtLen;
+
+            // System.arraycopy(zkNonce, 0, encPayload, payloadLength, zkNonce.length);
+            // payloadLength += zkNonce.length;
+
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, encPayload); //, 0, payloadLength);
+            System.arraycopy(data, 0, channelNonce, 0, channelNonceByteSize);
+            params = new ParametersWithIV(ctrKey, channelNonce);
+
+            forEncryption = false;
+            cipher.init(forEncryption, params);
+
+            short dleqProof = 64;
+            short uncompressedPointSize = 65;
+            byte[] ptxtBuff = new byte[dleqProof + uncompressedPointSize];
+            int ptxtLen = cipher.processBytes(data, channelNonceByteSize, data.length - channelNonceByteSize, ptxtBuff, 0);
+            // responseAPDU = connect().transmit(cmd);
 
 
             // data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, derInputBytes);
-            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, token.getBytes());
-            System.out.println(String.format("\"%s\"", new String(data, "UTF-8")));
+            // data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, token.getBytes());
+            // System.out.println(String.format("\"%s\"", new String(data, "UTF-8")));
 
-            dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
+            dleqProofs[index] = Arrays.copyOfRange(ptxtBuff, 0, 64);
             // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
-            derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 64, 64 + 65));
+            derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
 
             // verify individual salt shares
             data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);

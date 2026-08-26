@@ -538,34 +538,55 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
 
-        short offset = apdu.getOffsetCdata();
+        short aesCtrNonceSize = 16;
+        short uncompressedECPointSize = 65;
+        // NOTE why zkNonceSize?
+        // short zkNonceSize = 32;
 
-        if ( !validJwt(buffer, offset, extApduSize) ) {
+        short offset = apdu.getOffsetCdata();
+        short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - offset);
+
+        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
+
+        // decrypt JWT first
+
+        if ( !validJwt(tmp, (short) 0, ptxtLen) ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             return;
         }
 
-        short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
-        short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
+        short firstDot = indexOf(tmp, (short) 0,  ptxtLen, (byte) '.');
+        short secondDot = indexOf(tmp, (short) (firstDot + 1), ptxtLen, (byte) '.');
 
+        short dataOffset = (short) (offset + uncompressedECPointSize + aesCtrNonceSize);
         short decodLength = 0;
         decodLength = base64UrlSafeDecoder.decodeBase64Urlsafe(
-            buffer,
+            tmp,
             (short) (firstDot + 1),
             (short) (secondDot - (firstDot + 1)),
-            tmp,
-            (short) 0
+            // this possible could write againt to tmp
+            buffer,
+            // overwrite the initial ciphertext
+            dataOffset
         );
 
+        // FIXME add missing nonce, ephemeral key and epoch checks
         // plaintext JWT, locate the sub and iss
-        short issLength = getValueFor(tmp, (short) 0, decodLength, ISSUER_FIELD_NAME, procBuffer, (short) 0);
-        short subLength = getValueFor(tmp, (short) 0 , decodLength, SUBJECT_FIELD_NAME, procBuffer, issLength);
+        short issLength = getValueFor(buffer, dataOffset, (short) (decodLength + dataOffset), ISSUER_FIELD_NAME, procBuffer, (short) 0);
+        short subLength = getValueFor(buffer, dataOffset, (short) (decodLength + dataOffset), SUBJECT_FIELD_NAME, procBuffer, issLength);
 
-        short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), apduBuffer, (short) 0);
+        // again overwrite now the decoded values
+        short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
+        // short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), apduBuffer, (short) 0);
+        // short length = 65;
 
-        apdu.setOutgoing();
-        apdu.setOutgoingLength(length);
-        apdu.sendBytesLong(apduBuffer, (short) 0, length);
+        ctxtLen = aesCtrEncryptInner(buffer, offset, length, apduBuffer, (short) 0);
+        apdu.setOutgoingAndSend((short) 0, ctxtLen);
+        // encrypt back
+
+        // apdu.setOutgoing();
+        // apdu.setOutgoingLength(length);
+        // apdu.sendBytesLong(apduBuffer, (short) 0, length);
     }
 
     public void getStableIdentifier(byte[] in, short inOffset, short length, byte[] out, short outOffset) {
@@ -823,6 +844,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     // Encrypt and decrypt is almost the same, except the mode, refactor into a single function?
     private short aesCtrEncryptInner(byte[] buffer, short offset, short ptxtLen, byte[] out, short outOff) {
+        // FIXME the outOff is not used
         short pointLen = 65;
         byte nonceByteSize = 16;
         // generate new nonce directly to the output
@@ -975,6 +997,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
     }
 
+    // FIXME validation Jwt decodes it as well, maybe it should return the decoded one if verified
     private boolean validJwt(byte[] buffer, short offset, short length) {
         // The expected JWT format in the buffer is
         // {header}.{body}.{signature}
