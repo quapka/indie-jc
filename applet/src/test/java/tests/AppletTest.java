@@ -1943,21 +1943,20 @@ public class AppletTest extends BaseTest {
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
         KeyFactory echdKeyFact = KeyFactory.getInstance("ECDH", "BC");
 
-        byte tokenNonceByteSize = 16;
-        byte[] tokenNonce = new byte[tokenNonceByteSize];
-        prng.nextBytes(tokenNonce);
+        // byte tokenNonceByteSize = 16;
+        // byte[] tokenNonce = new byte[tokenNonceByteSize];
+        // prng.nextBytes(tokenNonce);
 
         String issuer = "https://example.com";
         String subject = "1234";
         // FIXME the tokenNonce is supposed to be a commitment to the ephemeral public key and something
-        String token = createToken(pair, alg, tokenNonce, subject, issuer);
-        System.out.println(token);
         // must send also the public key
         // 1. then encrypt it
 
         ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
         ECPublicKey[] cardIdentityKeys = new ECPublicKey[nParties];
+
         // initialize each card with it's own identity key
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
@@ -1973,7 +1972,6 @@ public class AppletTest extends BaseTest {
         // TODO how to concatenate the inputs properly?
         String derivationInput = issuer + subject;
         byte[] derInputBytes = derivationInput.getBytes();
-
 
         // TODO the RNG seed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
@@ -1992,6 +1990,14 @@ public class AppletTest extends BaseTest {
             // Need to consider also the uncompressing inside the card.
             compressed = false;
             byte[] encodedEpheClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
+
+            MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+            hasher.update(encodedEpheClientPubPoint);
+            hasher.update(new byte[64]);
+            byte[] tokenNonce = hasher.digest();
+            String token = createToken(pair, alg, tokenNonce, subject, issuer);
+            System.out.println(token);
+
 
             // byte[] zkNonce = nonceZkLogin();
             // MessageDigest hasher = MessageDigest.getInstance("SHA-256");

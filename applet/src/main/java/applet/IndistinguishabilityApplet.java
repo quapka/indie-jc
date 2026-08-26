@@ -565,6 +565,22 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             // overwrite the initial ciphertext
             (short) 0
         );
+        // verify the nonce commitment
+        // missing the domain separator
+        hasher.reset();
+        // hash users ephemeral public key point
+        hasher.update(buffer, offset, uncompressedECPointSize);
+        // and hash our own current epoch
+        short hashSize = hasher.doFinal(currentEpoch, (short) 0, (short) 64, procBuffer, (short) 0);
+        // fetch epoch, fetch ephemeral pubkey, hash them and compare to JWT.nonce
+        short nonceLength = getValueFor(tmp, (short) 0, decodLength, NONCE_FIELD_NAME, procBuffer, hashSize);
+        // decode the hexadecimal nonce values into bytes
+        Utils.fromUppercaseHex(procBuffer, hashSize, nonceLength, procBuffer, hashSize);
+
+        if ( Util.arrayCompare(procBuffer, (short) 0, procBuffer, hashSize, (short) 32) != 0 ) {
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            return;
+        }
 
         // FIXME add missing nonce, ephemeral key and epoch checks
         short issLength = getValueFor(tmp, (short) 0, decodLength, ISSUER_FIELD_NAME, procBuffer, (short) 0);
