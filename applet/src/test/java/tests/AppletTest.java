@@ -1943,6 +1943,18 @@ public class AppletTest extends BaseTest {
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
         KeyFactory echdKeyFact = KeyFactory.getInstance("ECDH", "BC");
 
+        byte tokenNonceByteSize = 16;
+        byte[] tokenNonce = new byte[tokenNonceByteSize];
+        prng.nextBytes(tokenNonce);
+
+        String issuer = "https://example.com";
+        String subject = "1234";
+        // FIXME the tokenNonce is supposed to be a commitment to the ephemeral public key and something
+        String token = createToken(pair, alg, tokenNonce, subject, issuer);
+        System.out.println(token);
+        // must send also the public key
+        // 1. then encrypt it
+
         ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
         ECPublicKey[] cardIdentityKeys = new ECPublicKey[nParties];
@@ -1956,20 +1968,7 @@ public class AppletTest extends BaseTest {
             ECPublicKey cardChannelKey = (ECPublicKey) echdKeyFact.generatePublic(dvrfPubSpec);
             cardIdentityKeys[index] = cardChannelKey;
         }
-        // ResponseAPDU responseAPDU = connect().transmit(cmd);
-        // byte[] data = responseAPDU.getData();
 
-        byte tokenNonceByteSize = 16;
-        byte[] tokenNonce = new byte[tokenNonceByteSize];
-        prng.nextBytes(tokenNonce);
-
-        String issuer = "https://example.com";
-        String subject = "1234";
-        // FIXME the tokenNonce is supposed to be a commitment to the ephemeral public key and something
-        String token = createToken(pair, alg, tokenNonce, subject, issuer);
-        System.out.println(token);
-        // must send also the public key
-        // 1. then encrypt it
 
         // TODO how to concatenate the inputs properly?
         String derivationInput = issuer + subject;
