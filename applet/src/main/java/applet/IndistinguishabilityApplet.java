@@ -540,15 +540,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short aesCtrNonceSize = 16;
         short uncompressedECPointSize = 65;
-        // NOTE why zkNonceSize?
-        // short zkNonceSize = 32;
 
         short offset = apdu.getOffsetCdata();
         short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - offset);
 
         short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
-
-        // decrypt JWT first
 
         if ( !validJwt(tmp, (short) 0, ptxtLen) ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
@@ -571,22 +567,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         );
 
         // FIXME add missing nonce, ephemeral key and epoch checks
-        // plaintext JWT, locate the sub and iss
         short issLength = getValueFor(buffer, dataOffset, (short) (decodLength + dataOffset), ISSUER_FIELD_NAME, procBuffer, (short) 0);
         short subLength = getValueFor(buffer, dataOffset, (short) (decodLength + dataOffset), SUBJECT_FIELD_NAME, procBuffer, issLength);
 
         // again overwrite now the decoded values
         short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
-        // short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), apduBuffer, (short) 0);
-        // short length = 65;
 
         ctxtLen = aesCtrEncryptInner(buffer, offset, length, apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, ctxtLen);
-        // encrypt back
-
-        // apdu.setOutgoing();
-        // apdu.setOutgoingLength(length);
-        // apdu.sendBytesLong(apduBuffer, (short) 0, length);
     }
 
     public void getStableIdentifier(byte[] in, short inOffset, short length, byte[] out, short outOffset) {
