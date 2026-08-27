@@ -32,12 +32,12 @@ tests=(
     testMusig2SignatureInternal
     testEpochGeneration
     testNofNEpochGeneration
-    testNofNDLEQSecretDerivation
     testNofNDLEQSetup
     testNofNDleqGetCPoints
     testNofNDleqSetCPoints
     testDleqKeyGeneration
     testDeriveDleq
+    testDeriveDleqFromJWT
     testLagrange
 )
 
