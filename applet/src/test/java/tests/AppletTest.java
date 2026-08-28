@@ -1403,7 +1403,7 @@ public class AppletTest extends BaseTest {
 
     public byte[] sendAPDU(int readerIndex, int klass, int instruction, int p1, int p2, byte[] data, int le) throws Exception {
         CommandAPDU cmd = new CommandAPDU(klass, instruction, p1, p2, data, le);
-        ResponseAPDU responseAPDU = connectRawAtIndex(null, readerIndex).transmit(cmd);
+        ResponseAPDU responseAPDU = connectAtIndex(null, readerIndex).transmit(cmd);
         Assert.assertEquals(Consts.SW.OK, (short) responseAPDU.getSW());
 
         return responseAPDU.getData();

@@ -10,6 +10,8 @@ import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import applet.IndistinguishabilityApplet;
 import applet.jcmathlib;
@@ -30,8 +32,9 @@ public class BaseTest {
 
     protected CardType cardType = CardType.JCARDSIMLOCAL;
 
-    protected boolean simulateStateful = false;
+    protected boolean simulateStateful = true;
     protected CardManager statefulCard = null;
+    protected Map<Integer, CardManager> statefulCards = new HashMap<>();
 
     public BaseTest() {
         // Check if the test card type is forced via system property
@@ -156,6 +159,30 @@ public class BaseTest {
 
         if (!cardMngr.connect(runCfg)) {
             throw new RuntimeException("Connection failed");
+        }
+
+        return cardMngr;
+    }
+
+    /**
+     * Connect to a specific card reader by index, reusing existing connection if stateful mode is enabled.
+     * @param readerIndex the index of the card reader
+     * @return CardManager instance for the specified reader
+     * @throws Exception
+     */
+    public CardManager connectAtIndex(int readerIndex) throws Exception {
+        return connectAtIndex(null, readerIndex);
+    }
+
+    public CardManager connectAtIndex(byte[] installData, int readerIndex) throws Exception {
+        if (simulateStateful && statefulCards.containsKey(readerIndex)) {
+            return statefulCards.get(readerIndex);
+        }
+
+        CardManager cardMngr = connectRawAtIndex(installData, readerIndex);
+
+        if (simulateStateful) {
+            statefulCards.put(readerIndex, cardMngr);
         }
 
         return cardMngr;
