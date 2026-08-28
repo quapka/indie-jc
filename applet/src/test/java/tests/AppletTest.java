@@ -1485,19 +1485,6 @@ public class AppletTest extends BaseTest {
     }
 
     @Test
-    public void testNofNDLEQSecretDerivation() throws Exception {
-        // Cards initialization
-        int nCards = readerIndeces.length;
-        for (int index = 0; index < nCards; index++) {
-
-        }
-
-        //  - secret keys
-        // derive secret using DLEQ
-        // verify aggregated DLEQ
-    }
-
-    @Test
     public void testNofNDLEQSetup() throws Exception {
         // Cards setup
         int nParties = readerIndeces.length;
