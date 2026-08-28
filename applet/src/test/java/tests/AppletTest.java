@@ -1425,9 +1425,9 @@ public class AppletTest extends BaseTest {
         byte[] digest = hasher.digest();
 
         // Cards initialization
-        int nCards = readerIndeces.length;
-        ECPoint[] keys = new ECPoint[nCards];
-        ECPoint[][] cardsPubNonces = new ECPoint[nCards][Constants.V];
+        int nParties = readerIndeces.length;
+        ECPoint[] keys = new ECPoint[nParties];
+        ECPoint[][] cardsPubNonces = new ECPoint[nParties][Constants.V];
 
         // Cards generate individual public keys
         for (int index = 0; index < readerIndeces.length; index++) {
@@ -1460,7 +1460,7 @@ public class AppletTest extends BaseTest {
 
 
         // Signing: Generate partial signatures
-        BigInteger[] partialSigs = new BigInteger[nCards];
+        BigInteger[] partialSigs = new BigInteger[nParties];
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             BigInteger coefA = keyAggCoeff(keys, keys[index]);
@@ -1520,8 +1520,8 @@ public class AppletTest extends BaseTest {
     @Test
     public void testNofNDleqGetCPoints() throws Exception {
         // Cards setup
-        int nParties = readerIndeces.length;
-        int threshold = nParties;
+        // int nParties = readerIndeces.length;
+        // int threshold = nParties;
 
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
@@ -1542,8 +1542,8 @@ public class AppletTest extends BaseTest {
     @Test
     public void testNofNDleqSetCPoints() throws Exception {
         // Cards setup
-        int nParties = readerIndeces.length;
-        int threshold = nParties;
+        // int nParties = readerIndeces.length;
+        // int threshold = nParties;
 
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
@@ -1614,9 +1614,9 @@ public class AppletTest extends BaseTest {
     @Test
     public void testDleqKeyGeneration() throws Exception {
         // Cards initialization
-        int nCards = readerIndeces.length;
-        int nParties = readerIndeces.length;
-        int threshold = readerIndeces.length;
+        // int nCards = readerIndeces.length;
+        // int nParties = readerIndeces.length;
+        // int threshold = readerIndeces.length;
 
         ECPoint[][] cPoints = new ECPoint[nParties][nParties];
         for (int index = 0; index < readerIndeces.length; index++) {
@@ -1659,7 +1659,7 @@ public class AppletTest extends BaseTest {
 
             byte[] data = null;
 
-            for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
+            for (int otherIndex = 0; otherIndex < nParties; otherIndex++) {
                 int otherReaderIndex = readerIndeces[otherIndex];
                 byte otherPartyID = partyIDs[otherIndex];
                 System.out.println(String.format("Getting shares from '%d' for '%d' card.", partyID, otherPartyID));
@@ -1695,7 +1695,7 @@ public class AppletTest extends BaseTest {
             System.out.println(String.format("Get APoints from '%d' card", partyID));
             byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_A_POINTS, 0x00, 0x00, DUMMY_ARRAY, 0x7fff);
 
-            for (int otherIndex = 0; otherIndex < nCards; otherIndex++) {
+            for (int otherIndex = 0; otherIndex < nParties; otherIndex++) {
                 int otherReaderIndex = readerIndeces[otherIndex];
                 byte otherPartyID = partyIDs[otherIndex];
                 if ( otherPartyID == partyID ) {
@@ -1784,9 +1784,9 @@ public class AppletTest extends BaseTest {
     public void testDeriveDleq() throws Exception {
         // TODO this test seems to be needed to be ran AFTER the testDleqKeyGeneration
         // Cards initialization
-        int nCards = readerIndeces.length;
-        int nParties = readerIndeces.length;
-        int threshold = readerIndeces.length;
+        // int nCards = readerIndeces.length;
+        // int nParties = readerIndeces.length;
+        // int threshold = readerIndeces.length;
 
         ECPoint[] individualVerKeys = new ECPoint[nParties];
         ECPoint[] derivedSaltShares = new ECPoint[nParties];
@@ -1884,7 +1884,7 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
             BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
-                    buildBigIntArray(nParties)
+                    buildPartyIDsBigIntArray(partyIDs)
             );
             // System.out.println("lambda");
             // System.out.println(lambda);
@@ -1897,17 +1897,21 @@ public class AppletTest extends BaseTest {
             aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
         }
 
-        Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
         System.out.println(Hex.toHexString(salt.getEncoded(false)));
+        Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
     }
 
     @Test
     public void testDeriveDleqFromJWT() throws Exception {
+        // FIXME This test does not handle 3-out-of-5, that is, how to derive a threshold seed?
+        //       It could be that there needs to be threshold + 1 cards
+        //       Or that there is some reliance on all nParties within the test
+
         // TODO this test seems to be needed to be ran AFTER the testDleqKeyGeneration
         // Cards initialization
-        int nCards = readerIndeces.length;
-        int nParties = readerIndeces.length;
-        int threshold = readerIndeces.length;
+        // int nCards = readerIndeces.length;
+        // int nParties = readerIndeces.length;
+        // int threshold = readerIndeces.length;
 
         ECPoint[] individualVerKeys = new ECPoint[nParties];
         ECPoint[] derivedSaltShares = new ECPoint[nParties];
@@ -1916,7 +1920,7 @@ public class AppletTest extends BaseTest {
 
         System.out.println("Get DLEQ key");
         // TODO we should verify that the GROUP DLEQ key of all devices is the correct one.
-        // FIXME getting the DLEQ key should not be part of the calculation as it can be cached
+        // FIXME getting the DLEQ key should not be part of the measurements as it can be cached
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
 
@@ -2075,7 +2079,7 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
             BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
-                    buildBigIntArray(nParties)
+                    buildPartyIDsBigIntArray(partyIDs)
             );
             // System.out.println("lambda");
             // System.out.println(lambda);
@@ -2092,10 +2096,10 @@ public class AppletTest extends BaseTest {
         System.out.println(Hex.toHexString(salt.getEncoded(false)));
     }
 
-    public static BigInteger[] buildBigIntArray(int n) {
-        BigInteger[] arr = new BigInteger[n];
-        for (int i = 0; i < n; i++) {
-            arr[i] = BigInteger.valueOf(i + 1);
+    public static BigInteger[] buildPartyIDsBigIntArray(byte[] ids) throws Exception {
+        BigInteger[] arr = new BigInteger[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            arr[i] = BigInteger.valueOf(ids[i]);
         }
         return arr;
     }

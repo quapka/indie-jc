@@ -14,7 +14,8 @@ import javacardx.framework.util.*;
 public class DistributedKeyGen {
     // FIXME 
     // private byte maxParties = 2;
-    public byte threshold;
+    public byte threshold; // in the original paper the threshold is what the attacker
+                           // can compromise. Here it is how many parties are honest.
     public byte nParties;
     public byte partyID; // partyIndex + 1
     public byte partyIndex; // partyID - 1 
@@ -74,24 +75,27 @@ public class DistributedKeyGen {
         ECPrivateKey privKey = IndistinguishabilityApplet.curve.disposablePriv;
         secretShare = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
-        aCoeffs = new BigNat[nParties];
-        bCoeffs = new BigNat[nParties];
+        this.nCoeffs = threshold;
+        aCoeffs = new BigNat[nCoeffs];
+        bCoeffs = new BigNat[nCoeffs];
         aShares = new BigNat[nParties];
         bShares = new BigNat[nParties];
         otherAShares = new BigNat[nParties];
         otherBShares = new BigNat[nParties];
 
+        // FIXME there are nCoeffs * nParties cPoins
         cPoints = new ECPoint[nParties * nParties];
         aPoints = new ECPoint[nParties * nParties];
 
-        this.nCoeffs = nParties;
 
         for (short i = 0; i < nCoeffs; i++) {
             // FIXME load from persistent to transient upon select to speed up?
             // FIXME generate coeffs as a hash of some seed to avoid persistent memory
             aCoeffs[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
             bCoeffs[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        }
 
+        for (short i = 0; i < nParties; i++) {
             aShares[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
             bShares[i] = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
@@ -118,7 +122,7 @@ public class DistributedKeyGen {
     public void generateCoefficientsAndShares() {
 
         // generate coefficients
-        for (short i = 0; i < nParties; i++) {
+        for (short i = 0; i < nCoeffs; i++) {
             rng.nextBytes(tmp, (short) 0, (short) 32);
             aCoeffs[i].fromByteArray(tmp, (short) 0, (short) 32);
             aCoeffs[i].mod(IndistinguishabilityApplet.curve.rBN);
@@ -159,13 +163,14 @@ public class DistributedKeyGen {
         }
     }
 
+    // FIXME remove as its unused?
     public void getABCoeffs(byte[] out) {
-        for (short i = 0; i < nParties; i++) {
+        for (short i = 0; i < nCoeffs; i++) {
             aCoeffs[i].copyToByteArray(tmp, (short) 0);
             Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) (i * 32), (short) 32);
         }
 
-        for (short i = 0; i < nParties; i++) {
+        for (short i = 0; i < nCoeffs; i++) {
             bCoeffs[i].copyToByteArray(tmp, (short) 0);
             Util.arrayCopyNonAtomic(tmp, (short) 0, out, (short) (i * 32 + 64), (short) 32);
         }
@@ -189,7 +194,7 @@ public class DistributedKeyGen {
         byte fromPartyIndex = (byte) (fromPartyID - 1);
         short pubKeySize = 65;
 
-        for (short i = 0; i < nParties; i++) {
+        for (short i = 0; i < nCoeffs; i++) {
             short from = (short) (i * pubKeySize + offset);
 
             short index = (short) (fromPartyIndex * nParties + i);
@@ -242,7 +247,7 @@ public class DistributedKeyGen {
         short index = (short) (fromPartyIndex * nParties + k);
         tmpPointC.copy(cPoints[index]);
 
-        for (k = 1; k < nParties; k++) {
+        for (k = 1; k < nCoeffs; k++) {
             // C_ik
             index = (short) (fromPartyIndex * nParties + k);
             tmpPointB.copy(cPoints[index]);
@@ -304,7 +309,7 @@ public class DistributedKeyGen {
             short index = (short) (i * nParties + k);
             tmpPointC.copy(aPoints[index]);
 
-            for (k = 1; k < nParties; k++) {
+            for (k = 1; k < nCoeffs; k++) {
                 index = (short) (i * nParties + k);
                 // A_ik
                 tmpPointA.copy(aPoints[index]);
