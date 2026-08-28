@@ -1985,7 +1985,7 @@ public class AppletTest extends BaseTest {
             String token = createToken(pair, alg, tokenNonce, subject, issuer);
             System.out.println(token);
 
-
+            ecdh.doPhase(cardIdentityKeys[index], true);
             byte[] sharedSecret = ecdh.generateSecret();
             MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
             byte[] fullChannelKey = sha1.digest(sharedSecret);
