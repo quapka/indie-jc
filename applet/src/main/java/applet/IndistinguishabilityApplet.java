@@ -511,8 +511,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] apduBuffer = apdu.getBuffer();
         short bytesRead = apdu.setIncomingAndReceive();
 
-        h2c.hash(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, DiscreteLogEquality.tmpPoint);
-        short size = DiscreteLogEquality.tmpPoint.encode(apduBuffer, (short) 0, false);
+        h2c.hash(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, DiscreteLogEquality.userPoint);
+        short size = DiscreteLogEquality.userPoint.encode(apduBuffer, (short) 0, false);
 
         apdu.setOutgoingAndSend((short) 0, size);
     }
@@ -1207,11 +1207,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         DiscreteLogEquality.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
         System.out.println();
         // 3. multiply by secret
-        DiscreteLogEquality.M.copy(DiscreteLogEquality.userPoint);
-        DiscreteLogEquality.M.multiplication(DiscreteLogEquality.secretShare);
+        DiscreteLogEquality.partialDerivedShare.copy(DiscreteLogEquality.userPoint);
+        DiscreteLogEquality.partialDerivedShare.multiplication(DiscreteLogEquality.secretShare);
         // provide a proof of usage of the secret
         short proofLength = dleq.exampleProof(apduBuffer);
-        short partialLength = DiscreteLogEquality.M.getW(apduBuffer, proofLength);
+        short partialLength = DiscreteLogEquality.partialDerivedShare.getW(apduBuffer, proofLength);
 
         apdu.setOutgoingAndSend((short) 0, (short) (proofLength + partialLength));
     }

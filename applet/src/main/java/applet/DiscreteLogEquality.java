@@ -17,12 +17,11 @@ import javacard.security.MessageDigest;
 import javacard.framework.APDU;
 
 public class DiscreteLogEquality {
-    // FIXME M is H actually :D
-    public static ECPoint G, com1, com2, userPoint, M, tmpPoint, publicShare, hashToCurvePoint, partialDerivedShare;
+    public static ECPoint G, com1, com2, userPoint, publicShare, partialDerivedShare;
     public static BigNat r, ch, tmpNum, secretShare;
     public static BigNat curveOrder;
     public static BigNat aBN, bBN;
-    private byte[] tmp = JCSystem.makeTransientByteArray((short) 128, JCSystem.CLEAR_ON_DESELECT);
+    private byte[] tmp = JCSystem.makeTransientByteArray((short) 65, JCSystem.CLEAR_ON_DESELECT);
     public boolean initialized = false;
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
@@ -47,13 +46,10 @@ public class DiscreteLogEquality {
         ch = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         G = new ECPoint(IndistinguishabilityApplet.curve);
         publicShare = new ECPoint(IndistinguishabilityApplet.curve);
-        hashToCurvePoint = new ECPoint(IndistinguishabilityApplet.curve);
         partialDerivedShare = new ECPoint(IndistinguishabilityApplet.curve);
         com1 = new ECPoint(IndistinguishabilityApplet.curve);
         com2 = new ECPoint(IndistinguishabilityApplet.curve);
         userPoint = new ECPoint(IndistinguishabilityApplet.curve);
-        tmpPoint = new ECPoint(IndistinguishabilityApplet.curve);
-        M = new ECPoint(IndistinguishabilityApplet.curve);
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
         curveOrder = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
 
@@ -268,9 +264,9 @@ public class DiscreteLogEquality {
         // G.multiplication(secretShare);
         System.out.println();
         short byteLength = IndistinguishabilityApplet.curve.disposablePub.getW(tmp, (short) 0);
-        tmpPoint.setW(tmp, (short) 0, byteLength);
+        partialDerivedShare.setW(tmp, (short) 0, byteLength);
 
-        return proveEq(userPoint, tmpPoint, M, out);
+        return proveEq(userPoint, partialDerivedShare, userPoint, out);
     }
 
     /**
