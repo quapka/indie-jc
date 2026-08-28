@@ -227,6 +227,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         getSetup(apdu);
                         break;
                     case Consts.INS.KEY_GEN:
+                        // this should be moved to the initialization
                         generateDVRFKeypair(apdu);
                         break;
                     case Consts.INS.GET_VERIFICATION_PUBKEY:
@@ -546,6 +547,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
 
+        // FIXME Add out buffer to valid JWT where it returns the deocoded JWT?
+        //       The tricky part is to both return the validity status and size of the decoded JWT
         if ( !validJwt(tmp, (short) 0, ptxtLen) ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             return;
@@ -854,11 +857,11 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // generate new nonce directly to the output
         rng.nextBytes(out, (short) 0, nonceByteSize);
 
-        System.out.println("nonce");
-        for (short i = 0; i < nonceByteSize; i++) {
-            System.out.print(String.format("%02X", out[i]));
-        }
-        System.out.println();
+        // System.out.println("nonce");
+        // for (short i = 0; i < nonceByteSize; i++) {
+        //     System.out.print(String.format("%02X", out[i]));
+        // }
+        // System.out.println();
 
         // FIXME use dedicated key-identity card?
         ecdh.init(privDVRFKey);
@@ -1220,6 +1223,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
      *
      *
      */
+    // FIXME speed up gettin value by iterating once and retrieving more values
     public short getValueFor(byte[] input, short inputOffset, short inputLen, byte[] key, byte[] output, short outputOffset) {
 
         // NOTE assumes doublequotes and appearing in pairs

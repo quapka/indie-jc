@@ -122,13 +122,14 @@ public class AppletTest extends BaseTest {
     public static byte[] CURVE_G = SecP256r1.G;
     public static short CURVE_K = SecP256r1.k;
 
-    public static short threshold = 3;
+    public static short threshold = 5;
     public static short nParties = 5;
     
     // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
     // or with different cards inserted into a system
     public static int[] readerIndeces = new int[] {2, 3, 4, 5, 6};
     public static byte[] partyIDs = new byte[] {1, 2, 3, 4, 5}; // parties are 1-indexed
+
     // NOTE: The c0 ff ee bytes are sent only to trigger the extended response working on jcardengine side.
     //       Sending only the 0x7fff would result in not being sent and thus no ext response.
     public static byte[] DUMMY_ARRAY = new byte[] {(byte) 0xc0, (byte) 0xff, (byte) 0xee};
@@ -1553,6 +1554,7 @@ public class AppletTest extends BaseTest {
                 int otherReaderIndex = readerIndeces[otherIndex];
                 byte otherPartyID = partyIDs[otherIndex];
                 System.out.println(String.format("Set CPoints from '%d' to '%d' card", partyID, otherPartyID));
+                System.out.println(Hex.toHexString(data));
                 sendAPDU(otherReaderIndex, Consts.CLA.INDIE, Consts.INS.SET_C_POINTS, partyID, 0x00, data);
             }
         }
@@ -1890,16 +1892,8 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testDeriveDleqFromJWT() throws Exception {
-        // FIXME This test does not handle 3-out-of-5, that is, how to derive a threshold seed?
-        //       It could be that there needs to be threshold + 1 cards
-        //       Or that there is some reliance on all nParties within the test
-
         // TODO this test seems to be needed to be ran AFTER the testDleqKeyGeneration
         // Cards initialization
-        // int nCards = readerIndeces.length;
-        // int nParties = readerIndeces.length;
-        // int threshold = readerIndeces.length;
-
         ECPoint[] individualVerKeys = new ECPoint[nParties];
         ECPoint[] derivedSaltShares = new ECPoint[nParties];
         byte[][] dleqProofs = new byte[nParties][64];
@@ -1911,8 +1905,6 @@ public class AppletTest extends BaseTest {
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
 
-        // TODO this message needs to come from a JWT, so:
-        // 1. create a token JWT
         byte[] seed = new byte[32];
         SecureRandom prng = new SecureRandom(seed);
 
@@ -1936,9 +1928,6 @@ public class AppletTest extends BaseTest {
 
         String issuer = "https://example.com";
         String subject = "1234";
-        // FIXME the tokenNonce is supposed to be a commitment to the ephemeral public key and something
-        // must send also the public key
-        // 1. then encrypt it
 
         ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
@@ -2007,8 +1996,6 @@ public class AppletTest extends BaseTest {
             byte[] ctxtBuff = new byte[2048];
             int ctxtLen = cipher.processBytes(token.getBytes(), 0, token.getBytes().length, ctxtBuff, 0);
 
-            // Build the payload
-            // List<Byte> temp = new ArrayList<>();
             byte[] encPayload = new byte [encodedEpheClientPubPoint.length + channelNonceByteSize + ctxtLen];
             short payloadLength = 0;
             System.arraycopy(encodedEpheClientPubPoint, 0, encPayload, payloadLength, encodedEpheClientPubPoint.length);
@@ -2031,8 +2018,6 @@ public class AppletTest extends BaseTest {
             short uncompressedPointSize = 65;
             byte[] ptxtBuff = new byte[dleqProof + uncompressedPointSize];
             int ptxtLen = cipher.processBytes(data, channelNonceByteSize, data.length - channelNonceByteSize, ptxtBuff, 0);
-            // responseAPDU = connect().transmit(cmd);
-
 
             dleqProofs[index] = Arrays.copyOfRange(ptxtBuff, 0, 64);
             // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
@@ -2062,19 +2047,14 @@ public class AppletTest extends BaseTest {
         ECPoint aggVerKeys = curve.getInfinity();
         ECPoint salt = curve.getInfinity();
         for (int index = 0; index < readerIndeces.length; index++) {
-            // int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
 
             BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
                     buildPartyIDsBigIntArray(partyIDs)
             );
-            // System.out.println("lambda");
-            // System.out.println(lambda);
 
             ECPoint v_i = derivedSaltShares[index];
             salt = salt.add(v_i.multiply(lambda));
-
-            // System.out.println(Hex.toHexString(individualVerKeys[index].getEncoded(false)));
 
             aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
         }
