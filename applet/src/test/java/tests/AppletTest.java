@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.stream.*;
 import java.util.Base64;
+import java.util.concurrent.*;
 
 import applet.jcmathlib.*;
 import applet.Constants;
@@ -367,17 +368,40 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testSetup() throws Exception {
-        byte partyID = 0x04;
-        byte partyIndex = 0x03;
+        // Establish all card connections sequentially first (PC/SC doesn't handle concurrent context establishment)
+        for (int readerIndex : readerIndeces) {
+            connectAtIndex(readerIndex);
+        }
 
-        sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
+        // Now run APDU commands in parallel
+        ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
+        List<Future<Void>> futures = new ArrayList<>();
 
-        byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
+        for (int index = 0; index < readerIndeces.length; index++) {
+            final int readerIndex = readerIndeces[index];
+            final byte partyID = partyIDs[index];
+            final byte expectedPartyIndex = (byte) index;
 
-        Assert.assertEquals(data[0], nParties);
-        Assert.assertEquals(data[1], threshold);
-        Assert.assertEquals(data[2], partyID);
-        Assert.assertEquals(data[3], partyIndex);
+            futures.add(executor.submit(() -> {
+                sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
+
+                byte[] data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
+
+                Assert.assertEquals(data[0], nParties);
+                Assert.assertEquals(data[1], threshold);
+                Assert.assertEquals(data[2], partyID);
+                Assert.assertEquals(data[3], expectedPartyIndex);
+
+                return null;
+            }));
+        }
+
+        executor.shutdown();
+
+        // Wait for all tasks and propagate any exceptions
+        for (Future<Void> future : futures) {
+            future.get();
+        }
     }
 
     public void printBuffer(byte[] buf, short size) {
