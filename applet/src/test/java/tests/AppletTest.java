@@ -1920,6 +1920,11 @@ public class AppletTest extends BaseTest {
         byte[][] dleqProofs = new byte[nParties][64];
         byte[][] hashComs = new byte[nParties][32];
 
+        // Establish all card connections sequentially first
+        for (int readerIndex : readerIndeces) {
+            connectAtIndex(readerIndex);
+        }
+
         System.out.println("Get DLEQ key");
         // TODO we should verify that the GROUP DLEQ key of all devices is the correct one.
         // FIXME getting the DLEQ key should not be part of the measurements as it can be cached
@@ -1972,19 +1977,20 @@ public class AppletTest extends BaseTest {
 
         // TODO the RNG seed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
-        KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
+
+        // Prepare all payloads and crypto context sequentially
+        byte[][] encPayloads = new byte[nParties][];
+        KeyParameter[] ctrKeys = new KeyParameter[nParties];
+        byte[][] channelNonces = new byte[nParties][16];
 
         for (int index = 0; index < readerIndeces.length; index++) {
-            int readerIndex = readerIndeces[index];
-            byte partyID = partyIDs[index];
+            KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
             KeyPair epheClientChannelKey = kpg.generateKeyPair();
             ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
 
             ecdh.init(epheClientChannelKey.getPrivate());
 
             ECPublicKeySpec epheClientPubKeySpec = echdKeyFact.getKeySpec(epheClientPubKey, ECPublicKeySpec.class);
-            // TODO does sending compressed point speed up the operations?
-            // Need to consider also the uncompressing inside the card.
             compressed = false;
             byte[] encodedEpheClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
 
@@ -2005,19 +2011,19 @@ public class AppletTest extends BaseTest {
             byte channelNonceByteSize = 16;
             byte[] channelNonce = new byte[channelNonceByteSize];
             prng.nextBytes(channelNonce);
+            channelNonces[index] = channelNonce;
 
             KeyParameter ctrKey = new KeyParameter(channelKey, 0, 16);
-            short macSizeBits = 128;
+            ctrKeys[index] = ctrKey;
             CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
             ParametersWithIV params = new ParametersWithIV(ctrKey, channelNonce);
 
-            boolean forEncryption = true;
-            cipher.init(forEncryption, params);
+            cipher.init(true, params);
 
             byte[] ctxtBuff = new byte[2048];
             int ctxtLen = cipher.processBytes(token.getBytes(), 0, token.getBytes().length, ctxtBuff, 0);
 
-            byte[] encPayload = new byte [encodedEpheClientPubPoint.length + channelNonceByteSize + ctxtLen];
+            byte[] encPayload = new byte[encodedEpheClientPubPoint.length + channelNonceByteSize + ctxtLen];
             short payloadLength = 0;
             System.arraycopy(encodedEpheClientPubPoint, 0, encPayload, payloadLength, encodedEpheClientPubPoint.length);
             payloadLength += encodedEpheClientPubPoint.length;
@@ -2026,27 +2032,52 @@ public class AppletTest extends BaseTest {
             payloadLength += channelNonceByteSize;
 
             System.arraycopy(ctxtBuff, 0, encPayload, payloadLength, ctxtLen);
-            payloadLength += ctxtLen;
 
-            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, encPayload); //, 0, payloadLength);
-            System.arraycopy(data, 0, channelNonce, 0, channelNonceByteSize);
-            params = new ParametersWithIV(ctrKey, channelNonce);
+            encPayloads[index] = encPayload;
+        }
 
-            forEncryption = false;
-            cipher.init(forEncryption, params);
+        // Run DERIVE_SEED_SHARE and GET_PUBLIC_DLEQ_SHARE in parallel
+        ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
+        List<Future<Void>> futures = new ArrayList<>();
 
-            short dleqProof = 64;
-            short uncompressedPointSize = 65;
-            byte[] ptxtBuff = new byte[dleqProof + uncompressedPointSize];
-            int ptxtLen = cipher.processBytes(data, channelNonceByteSize, data.length - channelNonceByteSize, ptxtBuff, 0);
+        for (int index = 0; index < readerIndeces.length; index++) {
+            final int idx = index;
+            final int readerIndex = readerIndeces[index];
+            final byte[] encPayload = encPayloads[index];
+            final KeyParameter ctrKey = ctrKeys[index];
 
-            dleqProofs[index] = Arrays.copyOfRange(ptxtBuff, 0, 64);
-            // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
-            derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
+            futures.add(executor.submit(() -> {
+                byte[] respData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, encPayload);
 
-            // verify individual salt shares
-            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
-            individualVerKeys[index] = curve.decodePoint(data);
+                byte channelNonceByteSize = 16;
+                byte[] channelNonce = new byte[channelNonceByteSize];
+                System.arraycopy(respData, 0, channelNonce, 0, channelNonceByteSize);
+                ParametersWithIV params = new ParametersWithIV(ctrKey, channelNonce);
+
+                CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
+                cipher.init(false, params);
+
+                short dleqProofSize = 64;
+                short uncompressedPointSize = 65;
+                byte[] ptxtBuff = new byte[dleqProofSize + uncompressedPointSize];
+                cipher.processBytes(respData, channelNonceByteSize, respData.length - channelNonceByteSize, ptxtBuff, 0);
+
+                dleqProofs[idx] = Arrays.copyOfRange(ptxtBuff, 0, 64);
+                derivedSaltShares[idx] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
+
+                // verify individual salt shares
+                byte[] verKeyData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
+                individualVerKeys[idx] = curve.decodePoint(verKeyData);
+
+                return null;
+            }));
+        }
+
+        executor.shutdown();
+
+        // Wait for all tasks and propagate any exceptions
+        for (Future<Void> future : futures) {
+            future.get();
         }
 
         HashToCurveTest h2c = new HashToCurveTest(curve);
