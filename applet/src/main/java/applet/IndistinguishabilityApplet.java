@@ -98,8 +98,14 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private byte[] tokenNonce = new byte[32];
 
-    private byte[] extApduBuffer = new byte[2048];
-    private byte[] procBuffer = new byte[2048];
+    private byte[] extApduBuffer = JCSystem.makeTransientByteArray((short) 628, JCSystem.CLEAR_ON_DESELECT);
+    // private byte[] extApduBuffer = new byte[2048];
+    // private byte[] procBuffer = new byte[2048];
+    private byte[] procBuffer = JCSystem.makeTransientByteArray((short) 512, JCSystem.CLEAR_ON_DESELECT);
+    // at least shal handle 65 bytes of uncompressed points
+    private byte[] tmp = new byte[2048];
+    // private byte[] tmp = JCSystem.makeTransientByteArray((short) 512, JCSystem.CLEAR_ON_DESELECT);
+
     private short extApduSize = 0;
     private static final short extResponseChunkSize = (short) 0xFF;
 
@@ -545,26 +551,27 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short offset = apdu.getOffsetCdata();
         short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - offset);
 
-        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
+        // use only procBuffer and buffer?
+        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, procBuffer, (short) 0);
 
         // FIXME Add out buffer to valid JWT where it returns the deocoded JWT?
         //       The tricky part is to both return the validity status and size of the decoded JWT
-        if ( !validJwt(tmp, (short) 0, ptxtLen) ) {
+        if ( !validJwt(procBuffer, (short) 0, ptxtLen) ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             return;
         }
 
-        short firstDot = indexOf(tmp, (short) 0,  ptxtLen, (byte) '.');
-        short secondDot = indexOf(tmp, (short) (firstDot + 1), ptxtLen, (byte) '.');
+        short firstDot = indexOf(procBuffer, (short) 0,  ptxtLen, (byte) '.');
+        short secondDot = indexOf(procBuffer, (short) (firstDot + 1), ptxtLen, (byte) '.');
 
         short dataOffset = (short) (offset + uncompressedECPointSize + aesCtrNonceSize);
         short decodLength = 0;
         decodLength = base64UrlSafeDecoder.decodeBase64Urlsafe(
-            tmp,
+            procBuffer,
             (short) (firstDot + 1),
             (short) (secondDot - (firstDot + 1)),
-            // this possible could write againt to tmp
-            tmp,
+            // this possible could write againt to procBuffer
+            procBuffer,
             // overwrite the initial ciphertext
             (short) 0
         );
@@ -574,23 +581,23 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // hash users ephemeral public key point
         hasher.update(buffer, offset, uncompressedECPointSize);
         // and hash our own current epoch
-        short hashSize = hasher.doFinal(currentEpoch, (short) 0, (short) 64, procBuffer, (short) 0);
+        short hashSize = hasher.doFinal(currentEpoch, (short) 0, (short) 64, tmp, (short) 0);
         // fetch epoch, fetch ephemeral pubkey, hash them and compare to JWT.nonce
-        short nonceLength = getValueFor(tmp, (short) 0, decodLength, NONCE_FIELD_NAME, procBuffer, hashSize);
+        short nonceLength = getValueFor(procBuffer, (short) 0, decodLength, NONCE_FIELD_NAME, tmp, hashSize);
         // decode the hexadecimal nonce values into bytes
-        Utils.fromUppercaseHex(procBuffer, hashSize, nonceLength, procBuffer, hashSize);
+        Utils.fromUppercaseHex(tmp, hashSize, nonceLength, tmp, hashSize);
 
-        if ( Util.arrayCompare(procBuffer, (short) 0, procBuffer, hashSize, (short) 32) != 0 ) {
+        if ( Util.arrayCompare(tmp, (short) 0, tmp, hashSize, (short) 32) != 0 ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             return;
         }
 
         // FIXME add missing nonce, ephemeral key and epoch checks
-        short issLength = getValueFor(tmp, (short) 0, decodLength, ISSUER_FIELD_NAME, procBuffer, (short) 0);
-        short subLength = getValueFor(tmp, (short) 0, decodLength, SUBJECT_FIELD_NAME, procBuffer, issLength);
+        short issLength = getValueFor(procBuffer, (short) 0, decodLength, ISSUER_FIELD_NAME, tmp, (short) 0);
+        short subLength = getValueFor(procBuffer, (short) 0, decodLength, SUBJECT_FIELD_NAME, tmp, issLength);
 
         // again overwrite now the decoded values
-        short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
+        short length = dleq.partialEval(tmp, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
 
         ctxtLen = aesCtrEncryptInner(buffer, offset, length, apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, ctxtLen);
