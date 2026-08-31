@@ -32,10 +32,10 @@ public class DistributedKeyGen {
     public static ECPoint G, H,tmpPointA, tmpPointB, tmpPointC, groupKey;
     public ECPoint publicShare;
     // FIXME rewrite tmpNum to tmpBN
-    public static BigNat r, ch, tmpNum;
-    public static BigNat curveOrder;
+    public static BigNat ch, tmpNum;
     // NOTE evaluation should hold up to 14 parties
-    private byte[] tmp = new byte[512];
+    // FIXME move to RAM
+    private static byte[] tmp;
     boolean initialized = false;
 
     public DistributedKeyGen(byte threshold, byte nParties) {
@@ -54,7 +54,6 @@ public class DistributedKeyGen {
             return;
         }
         rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
-        r = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         ch = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         tmpNum = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         G = new ECPoint(IndistinguishabilityApplet.curve);
@@ -64,6 +63,7 @@ public class DistributedKeyGen {
         tmpPointC = new ECPoint(IndistinguishabilityApplet.curve);
         groupKey = new ECPoint(IndistinguishabilityApplet.curve);
         H = new ECPoint(IndistinguishabilityApplet.curve);
+        DistributedKeyGen.tmp = DiscreteLogEquality.tmp;
 
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
 

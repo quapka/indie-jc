@@ -21,7 +21,7 @@ public class DiscreteLogEquality {
     public static BigNat r, ch, tmpNum, secretShare;
     public static BigNat curveOrder;
     public static BigNat aBN, bBN;
-    private byte[] tmp = JCSystem.makeTransientByteArray((short) 65, JCSystem.CLEAR_ON_DESELECT);
+    public static byte[] tmp = null;
     public boolean initialized = false;
     MessageDigest hasher = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     public static final byte[] HASH_DLEQ_DOMAIN_SEPARATOR = {
@@ -52,7 +52,7 @@ public class DiscreteLogEquality {
         userPoint = new ECPoint(IndistinguishabilityApplet.curve);
         G.setW(SecP256r1.G, (short) 0, (short) SecP256r1.G.length);
         curveOrder = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-
+        this.tmp = JCSystem.makeTransientByteArray((short) 65, JCSystem.CLEAR_ON_DESELECT);
 
         aBN = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         bBN = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);

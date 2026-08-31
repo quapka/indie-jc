@@ -65,10 +65,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     public static final byte[] Good = {'G', 'O', 'O', 'D'};
     public static final byte[] Bad = {'B', 'A', 'D'};
 
-    // at least shal handle 65 bytes of uncompressed points
-    private byte[] tmp = new byte[2048];
     // TODO is the maximal ECDSA DER encoded signature 72 bytes?
-    private byte[] derSignature = new byte[72];
+    // Using transient byte array seems to reduce the time about 10ms
+    private byte[] derSignature = JCSystem.makeTransientByteArray((short) 72, JCSystem.CLEAR_ON_DESELECT);
+    // private byte[] derSignature = new byte[72];
 
     private static final byte[] NONCE_FIELD_NAME = {'n', 'o', 'n', 'c', 'e'};
     private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
