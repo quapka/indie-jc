@@ -584,24 +584,24 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // hash users ephemeral public key point
         hasher.update(buffer, offset, uncompressedECPointSize);
         // and hash our own current epoch
-        short hashSize = hasher.doFinal(currentEpoch, (short) 0, (short) 64, tmp, (short) 0);
+        short hashSize = hasher.doFinal(currentEpoch, (short) 0, (short) 64, procBuffer, (short) 0);
         // fetch epoch, fetch ephemeral pubkey, hash them and compare to JWT.nonce
-        short nonceLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), NONCE_FIELD_NAME, tmp, hashSize);
+        short nonceLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), NONCE_FIELD_NAME, procBuffer, hashSize);
         // decode the hexadecimal nonce values into bytes
-        Utils.fromUppercaseHex(tmp, hashSize, nonceLength, tmp, hashSize);
+        Utils.fromUppercaseHex(procBuffer, hashSize, nonceLength, procBuffer, hashSize);
 
-        if ( Util.arrayCompare(tmp, (short) 0, tmp, hashSize, (short) 32) != 0 ) {
+        if ( Util.arrayCompare(procBuffer, (short) 0, procBuffer, hashSize, (short) 32) != 0 ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             return;
         }
 
 
         // FIXME add missing nonce, ephemeral key and epoch checks
-        short issLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), ISSUER_FIELD_NAME, tmp, (short) 0);
-        short subLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), SUBJECT_FIELD_NAME, tmp, issLength);
+        short issLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), ISSUER_FIELD_NAME, procBuffer, (short) 0);
+        short subLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), SUBJECT_FIELD_NAME, procBuffer, issLength);
 
         // again overwrite now the decoded values
-        short length = dleq.partialEval(tmp, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
+        short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
 
         ctxtLen = aesCtrEncryptInner(buffer, offset, length, apduBuffer, (short) 0);
         apdu.setOutgoingAndSend((short) 0, ctxtLen);
