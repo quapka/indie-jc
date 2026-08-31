@@ -14,7 +14,7 @@ public class Utils {
     public static final short REASON_INVALID_ENCODING_CHARACTER = 0x0003;
     public static final short REASON_INVALID_DATA_SIZE = 0x0004;
 
-    public static byte derEncodeRawEcdsaSignature(byte[] signature, byte[] out) {
+    public static byte derEncodeRawEcdsaSignature(byte[] signature, short inOff, byte[] out) {
         // SEQUENCE
         byte index = 0;
         out[index++] = 0x30;
@@ -25,10 +25,10 @@ public class Utils {
         // byte mask = 0x80;
 
         // NOTE maybe flip == 0 to != 0?
-        if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
+        if ( (/* r[0] */ signature[(short) (inOff + 0)] & (byte) 0x80) == (byte) 0x80 ) {
             rLen += 1;
         }
-        if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
+        if ( (/* s[0] */ signature[(short) (inOff + 32)] & (byte) 0x80) == (byte) 0x80 ) {
             sLen += 1;
         }
         // FIXME sequenceLen is byte
@@ -44,23 +44,23 @@ public class Utils {
         out[index++] = (byte) 0x02;
         out[index++] = (byte) rLen;
 
-        if ( (/* r[0] */ signature[0] & (byte) 0x80) == (byte) 0x80 ) {
+        if ( (/* r[0] */ signature[(short) (inOff + 0)] & (byte) 0x80) == (byte) 0x80 ) {
             out[index++] = (byte) 0x00;
         }
 
         // copy r value
-        Util.arrayCopyNonAtomic(signature, (short) 0, out, index, (short) 32);
+        Util.arrayCopyNonAtomic(signature, (short) (inOff + 0), out, index, (short) 32);
         index += 32;
 
         out[index++] = (byte) 0x02;
         out[index++] = (byte) sLen;
         
-        if ( (/* s[0] */ signature[32] & (byte) 0x80) == (byte) 0x80 ) {
+        if ( (/* s[0] */ signature[(short) (inOff + 32)] & (byte) 0x80) == (byte) 0x80 ) {
             out[index++] = (byte) 0x00;
         }
 
         // copy s value
-        Util.arrayCopyNonAtomic(signature, (short) 32, out, index, (short) 32);
+        Util.arrayCopyNonAtomic(signature, (short) (inOff + 32), out, index, (short) 32);
         index += 32;
         return index;
     }
