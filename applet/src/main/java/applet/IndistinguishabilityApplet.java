@@ -1,6 +1,7 @@
 package applet;
 
 import javacard.framework.Util;
+import javacard.framework.JCSystem;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
 import javacard.framework.APDUException;
@@ -603,7 +604,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // again overwrite now the decoded values
         short length = dleq.partialEval(procBuffer, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
 
-        ctxtLen = aesCtrEncryptInner(buffer, offset, length, apduBuffer, (short) 0);
+        ctxtLen = aesCtrEncryptInner(buffer, offset, length, apduBuffer, (short) 0, true);
         apdu.setOutgoingAndSend((short) 0, ctxtLen);
     }
 
@@ -815,7 +816,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             // derive salt
             short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize + offset));
             // and encrypt it
-            ctxtLen = aesCtrEncryptInner(buffer, offset, hashSize, apduBuffer, (short) 0);
+            ctxtLen = aesCtrEncryptInner(buffer, offset, hashSize, apduBuffer, (short) 0, true);
             apdu.setOutgoingAndSend((short) 0, ctxtLen);
         } else {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
@@ -853,15 +854,20 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         // FIXME use dedicated key-identity card?
         ecdh.init(privDVRFKey);
-        ecdh.generateSecret(buffer, offset, pointLen, tmp, (short) 0);
-        aesCtrKey.setKey(tmp, (short) 0);
+        ecdh.generateSecret(buffer, offset, pointLen, procBuffer, (short) 0);
+        aesCtrKey.setKey(procBuffer, (short) 0);
         aesCtr.init(aesCtrKey, Cipher.MODE_DECRYPT, buffer, (short) (offset + pointLen), (short) nonceByteSize);
 
         return aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ctxtLen, out, outOff);
     }
 
-    // Encrypt and decrypt is almost the same, except the mode, refactor into a single function?
-    private short aesCtrEncryptInner(byte[] buffer, short offset, short ptxtLen, byte[] out, short outOff) {
+    // TODO Encrypt and decrypt is almost the same, except the mode, refactor into a single function?
+    /*
+     * If `initialized` is set, the shared secret key for the AES CTR
+     * encryption is expected to be already set. This is possible when the
+     * caller already called decryption routine.
+     */
+    private short aesCtrEncryptInner(byte[] buffer, short offset, short ptxtLen, byte[] out, short outOff, boolean initialized) {
         // FIXME the outOff is not used
         short pointLen = 65;
         byte nonceByteSize = 16;
@@ -875,9 +881,13 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // System.out.println();
 
         // FIXME use dedicated key-identity card?
-        ecdh.init(privDVRFKey);
-        ecdh.generateSecret(buffer, offset, pointLen, tmp, (short) 0);
-        aesCtrKey.setKey(tmp, (short) 0);
+        // FIXME the ecdh is already initialized thus we can skipp doing it again, 
+        // buf probably should be guarded by some kind of "if initalized" check
+        if ( !initialized ) {
+            ecdh.init(privDVRFKey);
+            ecdh.generateSecret(buffer, offset, pointLen, procBuffer, (short) 0);
+            aesCtrKey.setKey(procBuffer, (short) 0);
+        }
         aesCtr.init(aesCtrKey, Cipher.MODE_ENCRYPT, out, (short) 0, (short) nonceByteSize);
 
         return (short) (nonceByteSize + aesCtr.doFinal(buffer, (short) (offset + nonceByteSize + pointLen), ptxtLen, out, nonceByteSize));
