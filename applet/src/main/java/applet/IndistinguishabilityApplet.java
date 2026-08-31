@@ -1005,35 +1005,27 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     // FIXME validation Jwt decodes it as well, maybe it should return the decoded one if verified
+    /*
+     * Validates the JWT signature over the JWT body. It decodes the Base64URL
+     * encoded signature into the input buffer at the same position in the
+     * buffer. The expected JWT format, each part Base64URL encoded in the buffer is
+     * {header}.{body}.{signature}
+     *
+     */
     private boolean validJwt(byte[] buffer, short offset, short length) {
-        // The expected JWT format in the buffer is
-        // {header}.{body}.{signature}
         short firstDot = indexOf(buffer, offset,  length, (byte) '.');
-        System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), length, (byte) '.');
-        System.out.println(String.format("secondDot: %d", secondDot));
 
+        short sigOffset = (short) (secondDot + 1);
         short nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
-            (short) (secondDot + 1),
-            (short) (length - (secondDot + 1)),
-            procBuffer,
-            (short) 0
+            sigOffset,
+            (short) (length - sigOffset),
+            buffer,
+            sigOffset
         );
 
-        System.out.println("Base64 signature");
-        for (short i = (short) (secondDot + 1); i < length; i++) {
-            System.out.print(String.format("%02X", buffer[i]));
-        }
-        System.out.println();
-
-        System.out.println("Decoded signature:");
-        for (short i = 0; i < nDecoded; i++) {
-            System.out.print(String.format("%02X", procBuffer[i]));
-        }
-        System.out.println();
-
-        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, (short) 0, derSignature, (short) 0);
+        short sigLen = Utils.derEncodeRawEcdsaSignature(buffer, sigOffset, derSignature, (short) 0);
         short payloadLength = (short) (secondDot - offset);
         return verifySignature(buffer, offset, payloadLength, derSignature, (short) 0, sigLen);
     }
