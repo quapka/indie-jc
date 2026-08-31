@@ -39,7 +39,7 @@ public class UtilsTest {
         sigV.add(new ASN1Integer(new BigInteger(s)));
         DERSequence sequence = new DERSequence(sigV);
 
-        Utils.derEncodeRawEcdsaSignature(rawSignature, (short) 0, out);
+        Utils.derEncodeRawEcdsaSignature(rawSignature, (short) 0, out, (short) 0);
         // System.out.println(Hex.toHexString(rawSignature));
         // System.out.println(Hex.toHexString(sequence.getEncoded(ASN1Encoding.DER)));
         // System.out.println(Hex.toHexString(out));

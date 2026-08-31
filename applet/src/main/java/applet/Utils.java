@@ -14,10 +14,9 @@ public class Utils {
     public static final short REASON_INVALID_ENCODING_CHARACTER = 0x0003;
     public static final short REASON_INVALID_DATA_SIZE = 0x0004;
 
-    public static byte derEncodeRawEcdsaSignature(byte[] signature, short inOff, byte[] out) {
+    public static short derEncodeRawEcdsaSignature(byte[] signature, short inOff, byte[] out, short outOff) {
         // SEQUENCE
-        byte index = 0;
-        out[index++] = 0x30;
+        out[outOff++] = 0x30;
         // NOTE assuming P256
         short rLen = 32;
         short sLen = 32;
@@ -40,29 +39,29 @@ public class Utils {
         // short wholeLen = sequenceLen;
         // wholeLen += (short) 1;
 
-        out[index++] = (byte) sequenceLen;
-        out[index++] = (byte) 0x02;
-        out[index++] = (byte) rLen;
+        out[outOff++] = (byte) sequenceLen;
+        out[outOff++] = (byte) 0x02;
+        out[outOff++] = (byte) rLen;
 
         if ( (/* r[0] */ signature[(short) (inOff + 0)] & (byte) 0x80) == (byte) 0x80 ) {
-            out[index++] = (byte) 0x00;
+            out[outOff++] = (byte) 0x00;
         }
 
         // copy r value
-        Util.arrayCopyNonAtomic(signature, (short) (inOff + 0), out, index, (short) 32);
-        index += 32;
+        Util.arrayCopyNonAtomic(signature, (short) (inOff + 0), out, outOff, (short) 32);
+        outOff += 32;
 
-        out[index++] = (byte) 0x02;
-        out[index++] = (byte) sLen;
+        out[outOff++] = (byte) 0x02;
+        out[outOff++] = (byte) sLen;
         
         if ( (/* s[0] */ signature[(short) (inOff + 32)] & (byte) 0x80) == (byte) 0x80 ) {
-            out[index++] = (byte) 0x00;
+            out[outOff++] = (byte) 0x00;
         }
 
         // copy s value
-        Util.arrayCopyNonAtomic(signature, (short) (inOff + 32), out, index, (short) 32);
-        index += 32;
-        return index;
+        Util.arrayCopyNonAtomic(signature, (short) (inOff + 32), out, outOff, (short) 32);
+        outOff += 32;
+        return outOff;
     }
 
     /**

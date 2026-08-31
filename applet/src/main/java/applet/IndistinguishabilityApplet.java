@@ -1033,7 +1033,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         }
         System.out.println();
 
-        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, (short) 0, derSignature);
+        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, (short) 0, derSignature, (short) 0);
         short payloadLength = (short) (secondDot - offset);
         return verifySignature(buffer, offset, payloadLength, derSignature, (short) 0, sigLen);
     }
@@ -1127,7 +1127,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             (short) 0
         );
         // encode signature
-        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, (short) 0, derSignature);
+        short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, (short) 0, derSignature, (short) 0);
         System.out.println(sigLen);
         for (short i = 0; i < sigLen; i++ ) {
             System.out.print(String.format("%02x", derSignature[i]));
