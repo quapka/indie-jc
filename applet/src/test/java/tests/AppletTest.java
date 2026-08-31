@@ -370,12 +370,9 @@ public class AppletTest extends BaseTest {
         byte partyID = 0x04;
         byte partyIndex = 0x03;
 
-        CommandAPDU setupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
-        ResponseAPDU responseAPDU = connect().transmit(setupCmd);
+        sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.SETUP, nParties, threshold, new byte[] {partyID});
 
-        CommandAPDU getSetupCmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
-        responseAPDU = connect().transmit(getSetupCmd);
-        byte[] data = responseAPDU.getData();
+        byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_SETUP, 0, 0);
 
         Assert.assertEquals(data[0], nParties);
         Assert.assertEquals(data[1], threshold);
