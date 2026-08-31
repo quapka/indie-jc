@@ -1370,8 +1370,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
      * Returns the index of a byte `token` in the `buffer` if found
      * and -1 otherwise.
      */
-    public short indexOf(byte[] buffer, short offset, short bufferSize, byte token) {
-        for (short i = offset; i < bufferSize; i++) {
+    public short indexOf(byte[] buffer, short from, short toExclusive, byte token) {
+        for (short i = from; i < toExclusive; i++) {
             if ( buffer[i] == token ) {
                 return i;
             }
