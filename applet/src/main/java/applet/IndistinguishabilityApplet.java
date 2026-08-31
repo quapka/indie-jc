@@ -552,29 +552,32 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short ctxtLen = (short) (extApduSize - aesCtrNonceSize - uncompressedECPointSize - offset);
 
         // use only procBuffer and buffer?
-        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, procBuffer, (short) 0);
+        short newDataOffset = (short) (offset + uncompressedECPointSize);
+        short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, buffer, newDataOffset);
 
         // FIXME Add out buffer to valid JWT where it returns the deocoded JWT?
         //       The tricky part is to both return the validity status and size of the decoded JWT
-        if ( !validJwt(procBuffer, (short) 0, ptxtLen) ) {
+        if ( !validJwt(buffer, newDataOffset, (short) (newDataOffset + ptxtLen)) ) {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
             return;
         }
 
-        short firstDot = indexOf(procBuffer, (short) 0,  ptxtLen, (byte) '.');
-        short secondDot = indexOf(procBuffer, (short) (firstDot + 1), ptxtLen, (byte) '.');
+
+        short firstDot = indexOf(buffer, newDataOffset,  (short) (newDataOffset + ptxtLen), (byte) '.');
+        short secondDot = indexOf(buffer, (short) (firstDot + 1), (short) (newDataOffset + ptxtLen), (byte) '.');
 
         short dataOffset = (short) (offset + uncompressedECPointSize + aesCtrNonceSize);
         short decodLength = 0;
         decodLength = base64UrlSafeDecoder.decodeBase64Urlsafe(
-            procBuffer,
+            buffer,
             (short) (firstDot + 1),
             (short) (secondDot - (firstDot + 1)),
             // this possible could write againt to procBuffer
-            procBuffer,
+            buffer,
             // overwrite the initial ciphertext
-            (short) 0
+            newDataOffset
         );
+
         // verify the nonce commitment
         // missing the domain separator
         hasher.reset();
@@ -583,7 +586,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // and hash our own current epoch
         short hashSize = hasher.doFinal(currentEpoch, (short) 0, (short) 64, tmp, (short) 0);
         // fetch epoch, fetch ephemeral pubkey, hash them and compare to JWT.nonce
-        short nonceLength = getValueFor(procBuffer, (short) 0, decodLength, NONCE_FIELD_NAME, tmp, hashSize);
+        short nonceLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), NONCE_FIELD_NAME, tmp, hashSize);
         // decode the hexadecimal nonce values into bytes
         Utils.fromUppercaseHex(tmp, hashSize, nonceLength, tmp, hashSize);
 
@@ -592,9 +595,10 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             return;
         }
 
+
         // FIXME add missing nonce, ephemeral key and epoch checks
-        short issLength = getValueFor(procBuffer, (short) 0, decodLength, ISSUER_FIELD_NAME, tmp, (short) 0);
-        short subLength = getValueFor(procBuffer, (short) 0, decodLength, SUBJECT_FIELD_NAME, tmp, issLength);
+        short issLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), ISSUER_FIELD_NAME, tmp, (short) 0);
+        short subLength = getValueFor(buffer, newDataOffset, (short) (newDataOffset + decodLength), SUBJECT_FIELD_NAME, tmp, issLength);
 
         // again overwrite now the decoded values
         short length = dleq.partialEval(tmp, (short) 0, (short) (issLength + subLength), buffer,  dataOffset);
