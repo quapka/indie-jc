@@ -160,13 +160,11 @@ public class HashToCurve {
         md.update(tmpBuffer, (short) 0, (short) 64);
         // Add message
         md.update(msg, msgOffset, msgLength);
-        // Add I2OSP(96, 2) - length in bytes
+        // Add I2OSP(96, 2) || I2OSP(0, 1) - combined to reduce writes
         tmpBuffer[0] = (byte) 0x00;
         tmpBuffer[1] = (byte) 0x60; // 96 in hex
-        md.update(tmpBuffer, (short) 0, (short) 2);
-        // Add I2OSP(0, 1)
-        tmpBuffer[0] = (byte) 0x00;
-        md.update(tmpBuffer, (short) 0, (short) 1);
+        tmpBuffer[2] = (byte) 0x00;
+        md.update(tmpBuffer, (short) 0, (short) 3);
         // Add DST_prime
         md.update(dstPrimeBuffer, (short) 0, (short) (RFC9380_DST.length + 1));
         md.doFinal(tmpBuffer, (short) 0, (short) 0, b0Buffer, (short) 0);
@@ -612,33 +610,33 @@ public class HashToCurve {
         gx1.modMult(tmp, curve.pBN); // x1(x1² - 3)
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
-        // x2 = Z * u^2 * x1
-        // Reuse tv1 which already contains Z*u² (computed at line 589-590)
-        x2.copy(tv1);
-        x2.modMult(x1, curve.pBN);
-
-        // gx2 = x2^3 + A*x2 + B
-        // For P-256: A = -3, so gx2 = x2^3 - 3*x2 + B = x2(x2² - 3) + B
-        tmp.copy(x2);
-        tmp.modSq(curve.pBN);        // x2²
-        gx2.setValue((byte) 3);
-        tmp.modSub(gx2, curve.pBN);  // x2² - 3
-        gx2.copy(x2);
-        gx2.modMult(tmp, curve.pBN); // x2(x2² - 3)
-        gx2.modAdd(curve.bBN, curve.pBN); // + B
-
-        // Choose x based on which gx is a square
+        // Check if gx1 is a quadratic residue early to potentially skip x2/gx2 computation
         // y is already defined as rfc_y at the top
         jcmathlib.BigNat chosenX;  // Will point to x1 or x2
 
         y.copy(gx1);
         if (y.isQuadraticResidue(curve.pBN)) {
-            // gx1 is a square, use x1
-            // y already contains gx1 from line 643, no need to copy again
+            // gx1 is a square, use x1 (skip x2/gx2 computation entirely!)
+            // y already contains gx1, no need to copy again
             chosenX = x1;
             y.modSqrt(curve.pBN);
         } else {
-            // gx1 is not a square, use x2
+            // gx1 is not a square, compute x2/gx2 and use those
+            // x2 = Z * u^2 * x1
+            // Reuse tv1 which already contains Z*u² (computed earlier)
+            x2.copy(tv1);
+            x2.modMult(x1, curve.pBN);
+
+            // gx2 = x2^3 + A*x2 + B
+            // For P-256: A = -3, so gx2 = x2^3 - 3*x2 + B = x2(x2² - 3) + B
+            tmp.copy(x2);
+            tmp.modSq(curve.pBN);        // x2²
+            gx2.setValue((byte) 3);
+            tmp.modSub(gx2, curve.pBN);  // x2² - 3
+            gx2.copy(x2);
+            gx2.modMult(tmp, curve.pBN); // x2(x2² - 3)
+            gx2.modAdd(curve.bBN, curve.pBN); // + B
+
             chosenX = x2;
             y.copy(gx2);
             y.modSqrt(curve.pBN);
@@ -658,8 +656,11 @@ public class HashToCurve {
         byte[] pointBuffer = curve.rm.POINT_ARRAY_A;
         pointBuffer[0] = (byte) 0x04;
 
+        // Zero the entire coordinate area once (64 bytes for both x and y)
+        Util.arrayFillNonAtomic(pointBuffer, (short) 1, (short) 64, (byte) 0);
+
         // Write x coordinate to buffer (32 bytes)
-        // Copy to tmpBuffer first, then manually pad to avoid prependZeros size issues
+        // Copy to tmpBuffer first, strip leading zeros, then write to END of 32-byte field
         short xLen = chosenX.copyToByteArray(tmpBuffer, (short) 0);
         short xStart = 0;
         while (xStart < xLen && tmpBuffer[xStart] == 0) {
@@ -670,9 +671,8 @@ public class HashToCurve {
             xDataLen = 32;
             xStart = (short) (xLen - 32);
         }
-        short xPadLen = (short) (32 - xDataLen);
-        Util.arrayFillNonAtomic(pointBuffer, (short) 1, xPadLen, (byte) 0);
-        Util.arrayCopyNonAtomic(tmpBuffer, xStart, pointBuffer, (short) (1 + xPadLen), xDataLen);
+        // Write to the END of the 32-byte x field (bytes 1-32 of pointBuffer)
+        Util.arrayCopyNonAtomic(tmpBuffer, xStart, pointBuffer, (short) (33 - xDataLen), xDataLen);
 
         // Write y coordinate to buffer (32 bytes)
         short yLen = y.copyToByteArray(tmpBuffer, (short) 0);
@@ -685,9 +685,8 @@ public class HashToCurve {
             yDataLen = 32;
             yStart = (short) (yLen - 32);
         }
-        short yPadLen = (short) (32 - yDataLen);
-        Util.arrayFillNonAtomic(pointBuffer, (short) 33, yPadLen, (byte) 0);
-        Util.arrayCopyNonAtomic(tmpBuffer, yStart, pointBuffer, (short) (33 + yPadLen), yDataLen);
+        // Write to the END of the 32-byte y field (bytes 33-64 of pointBuffer)
+        Util.arrayCopyNonAtomic(tmpBuffer, yStart, pointBuffer, (short) (65 - yDataLen), yDataLen);
 
         // Set the point using setW which validates the point is on the curve
         // POINT_SIZE = 1 + 2*COORD_SIZE = 1 + 2*32 = 65 for P-256
