@@ -38,14 +38,16 @@ public class HashToCurve {
     private final byte[] dstPrimeBuffer = JCSystem.makeTransientByteArray((short) 45, JCSystem.CLEAR_ON_RESET); // DST length + 1
     private final byte[] tmpBuffer = JCSystem.makeTransientByteArray((short) 64, JCSystem.CLEAR_ON_RESET);
 
-    // RFC 9380 dedicated BigNats (persistent memory, sized appropriately)
-    // These are used exclusively for hash-to-curve to avoid conflicts with ResourceManager BigNats
-    private jcmathlib.BigNat rfc_u0;      // Field element from first 48 bytes (32 bytes for P-256)
-    private jcmathlib.BigNat rfc_u1;      // Field element from second 48 bytes (32 bytes for P-256)
-    private jcmathlib.BigNat rfc_tmp;     // Temporary for 48-byte values (48 bytes)
-    private jcmathlib.BigNat rfc_Z;       // Constant Z = -10
-    private jcmathlib.BigNat rfc_tv1;     // Temporary variable 1
-    private jcmathlib.BigNat rfc_tv2;     // Temporary variable 2
+    // RFC 9380 BigNats - reuse existing transient BigNats from DiscreteLogEquality to save memory
+    // These point to DiscreteLogEquality's TRANSIENT BigNats (not used during hash-to-curve operations)
+    private jcmathlib.BigNat rfc_u0;      // -> DiscreteLogEquality.r (32 bytes)
+    private jcmathlib.BigNat rfc_u1;      // -> DiscreteLogEquality.ch (32 bytes)
+    private jcmathlib.BigNat rfc_tmp;     // -> DiscreteLogEquality.tmpNum (48 bytes)
+    private jcmathlib.BigNat rfc_Z;       // -> DiscreteLogEquality.curveOrder (32 bytes)
+    private jcmathlib.BigNat rfc_tv1;     // -> DiscreteLogEquality.aBN (32 bytes)
+    private jcmathlib.BigNat rfc_tv2;     // -> DiscreteLogEquality.bBN (32 bytes)
+
+    // These are allocated locally (only needed during mapToSswu execution)
     private jcmathlib.BigNat rfc_x1;      // x1 candidate
     private jcmathlib.BigNat rfc_x2;      // x2 candidate
     private jcmathlib.BigNat rfc_gx1;     // g(x1)
@@ -54,15 +56,15 @@ public class HashToCurve {
     private jcmathlib.BigNat rfc_work;    // General work variable
 
     public HashToCurve() {
-        // Initialize RFC9380 BigNats in TRANSIENT memory (allows resizing during operations)
-        // Use 48 bytes for rfc_tmp to hold the 48-byte field element before reduction
-        // Use 32 bytes for all others (sufficient for P-256 field elements)
-        rfc_tmp = new jcmathlib.BigNat((short) 48, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_u0 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_u1 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_Z = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_tv1 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_tv2 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        // Reuse DiscreteLogEquality's transient BigNats (saves 208 bytes)
+        rfc_tmp = DiscreteLogEquality.tmpNum;      // 48 bytes
+        rfc_u0 = DiscreteLogEquality.r;            // 32 bytes
+        rfc_u1 = DiscreteLogEquality.ch;           // 32 bytes
+        rfc_Z = DiscreteLogEquality.curveOrder;    // 32 bytes
+        rfc_tv1 = DiscreteLogEquality.aBN;         // 32 bytes
+        rfc_tv2 = DiscreteLogEquality.bBN;         // 32 bytes
+
+        // Allocate only the BigNats needed during mapToSswu (192 bytes total)
         rfc_x1 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         rfc_x2 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         rfc_gx1 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
