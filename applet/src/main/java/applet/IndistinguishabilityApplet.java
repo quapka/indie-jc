@@ -51,7 +51,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private static byte[] currentEpoch = new byte[64];
 
-    private Musig2 musig2;
+    public static Musig2 musig2;
 
     // Compiling the CAP with ./gradlew buildJavaCard fails due to the symbol
     // Cipher.ALG_AES_CTR not being found. The constants are defined in:
@@ -390,8 +390,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         dleq = new DiscreteLogEquality();
         dkg = new DistributedKeyGen(threshold, nParties);
-        h2c = new HashToCurve();
         musig2 = new Musig2(curve, rm);
+        h2c = new HashToCurve();
         if ( CARD_TYPE == OperationSupport.JCOP4_P71 ) {
             rm.fixModSqMod(curve.rBN);
         }

@@ -38,8 +38,8 @@ public class HashToCurve {
     private final byte[] dstPrimeBuffer = JCSystem.makeTransientByteArray((short) 45, JCSystem.CLEAR_ON_RESET); // DST length + 1
     private final byte[] tmpBuffer = JCSystem.makeTransientByteArray((short) 64, JCSystem.CLEAR_ON_RESET);
 
-    // RFC 9380 BigNats - reuse existing transient BigNats from DiscreteLogEquality to save memory
-    // These point to DiscreteLogEquality's TRANSIENT BigNats (not used during hash-to-curve operations)
+    // RFC 9380 BigNats - reuse existing transient BigNats to save memory
+    // Reuse from DiscreteLogEquality (TRANSIENT_RESET)
     private jcmathlib.BigNat rfc_u0;      // -> DiscreteLogEquality.r (32 bytes)
     private jcmathlib.BigNat rfc_u1;      // -> DiscreteLogEquality.ch (32 bytes)
     private jcmathlib.BigNat rfc_tmp;     // -> DiscreteLogEquality.tmpNum (48 bytes)
@@ -47,16 +47,20 @@ public class HashToCurve {
     private jcmathlib.BigNat rfc_tv1;     // -> DiscreteLogEquality.aBN (32 bytes)
     private jcmathlib.BigNat rfc_tv2;     // -> DiscreteLogEquality.bBN (32 bytes)
 
-    // These are allocated locally (only needed during mapToSswu execution)
-    private jcmathlib.BigNat rfc_x1;      // x1 candidate
-    private jcmathlib.BigNat rfc_x2;      // x2 candidate
-    private jcmathlib.BigNat rfc_gx1;     // g(x1)
-    private jcmathlib.BigNat rfc_gx2;     // g(x2)
-    private jcmathlib.BigNat rfc_y;       // y coordinate
+    // Reuse from DistributedKeyGen (TRANSIENT_RESET)
+    private jcmathlib.BigNat rfc_x1;      // -> DistributedKeyGen.ch (32 bytes)
+    private jcmathlib.BigNat rfc_x2;      // -> DistributedKeyGen.tmpNum (32 bytes)
+
+    // Reuse from Musig2 (TRANSIENT_DESELECT)
+    private jcmathlib.BigNat rfc_gx1;     // -> Musig2.tmpBigNat (32 bytes)
+    private jcmathlib.BigNat rfc_gx2;     // -> Musig2.coefB (32 bytes)
+    private jcmathlib.BigNat rfc_y;       // -> Musig2.challangeE (32 bytes)
+
+    // Allocated locally (32 bytes total)
     private jcmathlib.BigNat rfc_work;    // General work variable
 
     public HashToCurve() {
-        // Reuse DiscreteLogEquality's transient BigNats (saves 208 bytes)
+        // Reuse DiscreteLogEquality's transient BigNats (208 bytes saved)
         rfc_tmp = DiscreteLogEquality.tmpNum;      // 48 bytes
         rfc_u0 = DiscreteLogEquality.r;            // 32 bytes
         rfc_u1 = DiscreteLogEquality.ch;           // 32 bytes
@@ -64,12 +68,17 @@ public class HashToCurve {
         rfc_tv1 = DiscreteLogEquality.aBN;         // 32 bytes
         rfc_tv2 = DiscreteLogEquality.bBN;         // 32 bytes
 
-        // Allocate only the BigNats needed during mapToSswu (192 bytes total)
-        rfc_x1 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_x2 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_gx1 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_gx2 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
-        rfc_y = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        // Reuse DistributedKeyGen's transient BigNats (64 bytes saved)
+        rfc_x1 = DistributedKeyGen.ch;             // 32 bytes
+        rfc_x2 = DistributedKeyGen.tmpNum;         // 32 bytes
+
+        // Reuse Musig2's transient BigNats (96 bytes saved)
+        rfc_gx1 = IndistinguishabilityApplet.musig2.tmpBigNat;      // 32 bytes
+        rfc_gx2 = IndistinguishabilityApplet.musig2.coefB;          // 32 bytes
+        rfc_y = IndistinguishabilityApplet.musig2.challangeE;       // 32 bytes
+
+        // Allocate only one work variable (32 bytes total)
+        // Total memory saved: 368 bytes of TRANSIENT memory
         rfc_work = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
     }
 

@@ -13,7 +13,7 @@ public class Musig2 {
     // Data storage
     private byte[] digestHelper;
     private byte[] tmpArray;
-    private BigNat tmpBigNat;
+    public BigNat tmpBigNat;
 
     // States
     private byte stateKeyPairGenerated; // Set to TRUE if key share pair is generated
@@ -34,10 +34,10 @@ public class Musig2 {
     private ECPoint[] aggNonce;
     private BigNat secretShare;
     private BigNat coefA;
-    private BigNat coefB; // Temporary attribute
-    private BigNat challangeE;
+    public BigNat coefB; // Temporary attribute
+    public BigNat challangeE;
     private BigNat partialSig;
-    private BigNat modulo;
+    public BigNat modulo;
     private BigNat[] secNonce;
 
     public Musig2(ECCurve curve, ResourceManager rm) {
