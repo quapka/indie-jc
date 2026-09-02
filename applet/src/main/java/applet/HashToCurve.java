@@ -59,6 +59,9 @@ public class HashToCurve {
     // Allocated locally (32 bytes total)
     private jcmathlib.BigNat rfc_work;    // General work variable
 
+    // Temporary ECPoint for P1 in hashToCurveRfc9380 (reused to avoid allocation in hot path)
+    private jcmathlib.ECPoint rfc_P1;
+
     public HashToCurve() {
         // Reuse DiscreteLogEquality's transient BigNats (208 bytes saved)
         rfc_tmp = DiscreteLogEquality.tmpNum;      // 48 bytes
@@ -77,9 +80,10 @@ public class HashToCurve {
         rfc_gx2 = IndistinguishabilityApplet.musig2.coefB;          // 32 bytes
         rfc_y = IndistinguishabilityApplet.musig2.challangeE;       // 32 bytes
 
-        // Allocate only one work variable (32 bytes total)
+        // Allocate work variable and temporary point
         // Total memory saved: 368 bytes of TRANSIENT memory
         rfc_work = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
+        rfc_P1 = new jcmathlib.ECPoint(IndistinguishabilityApplet.curve);
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -197,12 +201,11 @@ public class HashToCurve {
         rfc_u1.copy(rfc_tmp);
 
         // Step 4: Map u1 to second curve point
-        // We need a temporary point - create it and map u1 to it
-        jcmathlib.ECPoint P1 = new jcmathlib.ECPoint(curve);
-        mapToSswu(rfc_u1, P1);
+        // Use pre-allocated rfc_P1 to avoid allocation in hot path
+        mapToSswu(rfc_u1, rfc_P1);
 
         // Step 5: Add the points: output = P0 + P1
-        output.add(P1);
+        output.add(rfc_P1);
 
         return true;
     }
