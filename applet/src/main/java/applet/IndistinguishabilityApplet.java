@@ -99,8 +99,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private byte[] tokenNonce = new byte[32];
 
-    // private byte[] extApduBuffer = JCSystem.makeTransientByteArray((short) 628, JCSystem.CLEAR_ON_DESELECT);
-    private byte[] extApduBuffer = new byte[2048];
+    private byte[] extApduBuffer = JCSystem.makeTransientByteArray((short) 628, JCSystem.CLEAR_ON_DESELECT);
+    // private byte[] extApduBuffer = new byte[2048];
     // private byte[] procBuffer = new byte[2048];
     private byte[] procBuffer = JCSystem.makeTransientByteArray((short) 512, JCSystem.CLEAR_ON_DESELECT);
     // at least shal handle 65 bytes of uncompressed points
