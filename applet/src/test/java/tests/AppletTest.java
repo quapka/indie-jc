@@ -2082,7 +2082,7 @@ public class AppletTest extends BaseTest {
         }
 
         HashToCurveTest h2c = new HashToCurveTest(curve);
-        ECPoint hashedPoint = h2c.digest(derInputBytes);
+        ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
         // aggregate salts
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];

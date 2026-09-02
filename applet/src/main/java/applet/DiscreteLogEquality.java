@@ -134,7 +134,7 @@ public class DiscreteLogEquality {
     }
 
     public short partialEval(byte[] userInput, short offset, short length, byte[] out, short outOffset) {
-        if ( !IndistinguishabilityApplet.h2c.hash(userInput, offset, length, userPoint) ) {
+        if ( !IndistinguishabilityApplet.h2c.hashToCurveRfc9380(userInput, offset, length, userPoint) ) {
             return (short) 0;
         }
 
