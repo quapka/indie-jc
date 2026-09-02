@@ -78,7 +78,7 @@ import io.jsonwebtoken.Claims;
 import java.io.IOException;
 
 import tests.HashCustomTest;
-import test.HashToCurveTest;
+import tests.HashToCurveTest;
 import tests.DiscreteLogEqualityTest;
 
 import applet.HashCustom;
@@ -1835,7 +1835,8 @@ public class AppletTest extends BaseTest {
         }
 
         HashToCurveTest h2c = new HashToCurveTest(curve);
-        ECPoint hashedPoint = h2c.digest(msgBytes);
+        // ECPoint hashedPoint = h2c.digest(msgBytes);
+        ECPoint hashedPoint = h2c.hashToCurveRfc9380(msgBytes, 0, msgBytes.length);
         // aggregate salts
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
@@ -2141,5 +2142,631 @@ public class AppletTest extends BaseTest {
         }
 
         Assert.assertTrue(coeffSum.compareTo(ZERO) == 0);
+    }
+
+    @Test
+    public void testRfc9380HashToCurveImplementation() throws Exception {
+        // This test verifies the correctness of the RFC9380 implementation
+        // by running the official test vectors from RFC 9380 Appendix J.1.1
+        // for P256_XMD:SHA-256_SSWU_RO_
+        HashToCurveTest h2c = new HashToCurveTest(curve);
+        h2c.testRfc9380Vectors();
+    }
+
+    @Test
+    public void testRfc9380GetU0() throws Exception {
+        // This test verifies that u0 (first field element from expand_message_xmd) matches
+        HashToCurveTest h2cOffCard = new HashToCurveTest(curve);
+
+        String[] testMessages = { "", "abc" };
+
+        for (String message : testMessages) {
+            byte[] msgBytes = message.getBytes();
+
+            // Compute off-card u0 value
+            // u0 = (first 48 bytes of expand_message_xmd output) mod p
+            // We need to manually compute expand_message_xmd here
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+            // DST_prime = DST || I2OSP(len(DST), 1)
+            byte[] dst = HashToCurveTest.RFC9380_DST;
+            byte[] dstPrime = new byte[dst.length + 1];
+            System.arraycopy(dst, 0, dstPrime, 0, dst.length);
+            dstPrime[dst.length] = (byte) dst.length;
+
+            // Compute b_0 = H(Z_pad || msg || I2OSP(96, 2) || I2OSP(0, 1) || DST_prime)
+            byte[] zPad = new byte[64];  // 64 zero bytes for SHA-256 block size
+            md.update(zPad);
+            md.update(msgBytes);
+            md.update(new byte[]{(byte) 0x00, (byte) 0x60});  // 96 in big-endian
+            md.update(new byte[]{0});
+            md.update(dstPrime);
+            byte[] b0 = md.digest();
+
+            // Compute b_1 = H(b_0 || I2OSP(1, 1) || DST_prime)
+            md.reset();
+            md.update(b0);
+            md.update(new byte[]{1});
+            md.update(dstPrime);
+            byte[] b1 = md.digest();
+
+            // Compute b_2 = H(b_0 XOR b_1 || I2OSP(2, 1) || DST_prime)
+            byte[] xorResult = new byte[32];
+            for (int j = 0; j < 32; j++) {
+                xorResult[j] = (byte) (b0[j] ^ b1[j]);
+            }
+            md.reset();
+            md.update(xorResult);
+            md.update(new byte[]{2});
+            md.update(dstPrime);
+            byte[] b2 = md.digest();
+
+            // Build first 48 bytes: b1 (32 bytes) || first 16 bytes of b2
+            byte[] u0Bytes48 = new byte[48];
+            System.arraycopy(b1, 0, u0Bytes48, 0, 32);
+            System.arraycopy(b2, 0, u0Bytes48, 32, 16);
+
+            // Reduce modulo p
+            BigInteger p = curve.getField().getCharacteristic();
+            BigInteger u0Expected = new BigInteger(1, u0Bytes48).mod(p);
+            byte[] u0ExpectedBytes = u0Expected.toByteArray();
+
+            // Remove leading zero byte if present (BigInteger adds it for positive numbers)
+            if (u0ExpectedBytes.length == 33 && u0ExpectedBytes[0] == 0) {
+                byte[] tmp = new byte[32];
+                System.arraycopy(u0ExpectedBytes, 1, tmp, 0, 32);
+                u0ExpectedBytes = tmp;
+            }
+
+            // Get on-card u0
+            CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_GET_U0, 0, 0, msgBytes);
+            ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+            System.out.println("u0 test for message: \"" + message + "\"");
+            System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+            if (responseAPDU.getSW() != 0x9000) {
+                System.out.println("  ERROR: Non-9000 status");
+                Assert.fail("u0 calculation failed on-card for message: \"" + message + "\" with SW: " + String.format("%04X", responseAPDU.getSW()));
+            }
+
+            byte[] onCardU0 = responseAPDU.getData();
+
+            System.out.println("  Off-card u0: " + bytesToHex(u0ExpectedBytes));
+            System.out.println("  On-card u0:  " + bytesToHex(onCardU0));
+
+            // Compare u0 values
+            Assert.assertArrayEquals(
+                "u0 should match for message: \"" + message + "\"",
+                u0ExpectedBytes,
+                onCardU0
+            );
+        }
+    }
+
+    @Test
+    public void testRfc9380GetTv1Tv2() throws Exception {
+        // This test verifies tv1 and tv2 (after inversion) values
+        String message = "";  // Test with empty message
+        byte[] msgBytes = message.getBytes();
+
+        // Compute off-card values manually
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] dst = HashToCurveTest.RFC9380_DST;
+        byte[] dstPrime = new byte[dst.length + 1];
+        System.arraycopy(dst, 0, dstPrime, 0, dst.length);
+        dstPrime[dst.length] = (byte) dst.length;
+
+        byte[] zPad = new byte[64];
+        md.update(zPad);
+        md.update(msgBytes);
+        md.update(new byte[]{(byte) 0x00, (byte) 0x60});
+        md.update(new byte[]{0});
+        md.update(dstPrime);
+        byte[] b0 = md.digest();
+
+        md.reset();
+        md.update(b0);
+        md.update(new byte[]{1});
+        md.update(dstPrime);
+        byte[] b1 = md.digest();
+
+        byte[] xorResult = new byte[32];
+        for (int j = 0; j < 32; j++) {
+            xorResult[j] = (byte) (b0[j] ^ b1[j]);
+        }
+        md.reset();
+        md.update(xorResult);
+        md.update(new byte[]{2});
+        md.update(dstPrime);
+        byte[] b2 = md.digest();
+
+        byte[] u0Bytes48 = new byte[48];
+        System.arraycopy(b1, 0, u0Bytes48, 0, 32);
+        System.arraycopy(b2, 0, u0Bytes48, 32, 16);
+
+        BigInteger p = curve.getField().getCharacteristic();
+        BigInteger u0 = new BigInteger(1, u0Bytes48).mod(p);
+        BigInteger Z = p.subtract(BigInteger.TEN);
+
+        // Compute tv1 and tv2 off-card
+        BigInteger uSq = u0.modPow(TWO, p);
+        BigInteger tv1Expected = Z.multiply(uSq).mod(p);
+        BigInteger tv2 = tv1Expected.modPow(TWO, p);
+        tv2 = tv2.add(tv1Expected).mod(p);
+        BigInteger tv2InvExpected = tv2.equals(ZERO) ? ZERO : tv2.modInverse(p);
+
+        byte[] tv1ExpectedBytes = tv1Expected.toByteArray();
+        if (tv1ExpectedBytes.length == 33 && tv1ExpectedBytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(tv1ExpectedBytes, 1, tmp, 0, 32);
+            tv1ExpectedBytes = tmp;
+        }
+
+        byte[] tv2InvExpectedBytes = tv2InvExpected.toByteArray();
+        if (tv2InvExpectedBytes.length == 33 && tv2InvExpectedBytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(tv2InvExpectedBytes, 1, tmp, 0, 32);
+            tv2InvExpectedBytes = tmp;
+        }
+
+        // Get on-card values
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_GET_TV1_TV2, 0, 0, msgBytes);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        System.out.println("tv1/tv2 test for message: \"" + message + "\"");
+        System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+        if (responseAPDU.getSW() != 0x9000) {
+            System.out.println("  ERROR: Non-9000 status");
+            Assert.fail("tv1/tv2 calculation failed");
+        }
+
+        byte[] result = responseAPDU.getData();
+        byte[] tv1OnCard = new byte[32];
+        byte[] tv2InvOnCard = new byte[32];
+        System.arraycopy(result, 0, tv1OnCard, 0, 32);
+        System.arraycopy(result, 32, tv2InvOnCard, 0, 32);
+
+        System.out.println("  Off-card tv1:     " + bytesToHex(tv1ExpectedBytes));
+        System.out.println("  On-card tv1:      " + bytesToHex(tv1OnCard));
+        System.out.println("  Off-card tv2_inv: " + bytesToHex(tv2InvExpectedBytes));
+        System.out.println("  On-card tv2_inv:  " + bytesToHex(tv2InvOnCard));
+
+        Assert.assertArrayEquals("tv1 should match", tv1ExpectedBytes, tv1OnCard);
+        Assert.assertArrayEquals("tv2_inv should match", tv2InvExpectedBytes, tv2InvOnCard);
+    }
+
+    @Test
+    public void testRfc9380GetZ() throws Exception {
+        // This test verifies the Z value (Z = p - 10 for P-256)
+        BigInteger p = curve.getField().getCharacteristic();
+        BigInteger zExpected = p.subtract(BigInteger.TEN);
+
+        byte[] zExpectedBytes = zExpected.toByteArray();
+        if (zExpectedBytes.length == 33 && zExpectedBytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(zExpectedBytes, 1, tmp, 0, 32);
+            zExpectedBytes = tmp;
+        } else if (zExpectedBytes.length < 32) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(zExpectedBytes, 0, tmp, 32 - zExpectedBytes.length, zExpectedBytes.length);
+            zExpectedBytes = tmp;
+        }
+
+        // Get on-card Z value
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_GET_Z, 0, 0);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        System.out.println("Z value test:");
+        System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+        if (responseAPDU.getSW() != 0x9000) {
+            System.out.println("  ERROR: Non-9000 status");
+            Assert.fail("Z calculation failed");
+        }
+
+        byte[] zOnCard = responseAPDU.getData();
+
+        System.out.println("  Off-card Z: " + bytesToHex(zExpectedBytes));
+        System.out.println("  On-card Z:  " + bytesToHex(zOnCard));
+
+        Assert.assertArrayEquals("Z value should match", zExpectedBytes, zOnCard);
+    }
+
+    @Test
+    public void testRfc9380GetU2() throws Exception {
+        // This test verifies u^2 calculation from mapToSswu
+        String message = "";  // Test with empty message
+        byte[] msgBytes = message.getBytes();
+
+        // Compute off-card u^2
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] dst = HashToCurveTest.RFC9380_DST;
+        byte[] dstPrime = new byte[dst.length + 1];
+        System.arraycopy(dst, 0, dstPrime, 0, dst.length);
+        dstPrime[dst.length] = (byte) dst.length;
+
+        byte[] zPad = new byte[64];
+        md.update(zPad);
+        md.update(msgBytes);
+        md.update(new byte[]{(byte) 0x00, (byte) 0x60});
+        md.update(new byte[]{0});
+        md.update(dstPrime);
+        byte[] b0 = md.digest();
+
+        md.reset();
+        md.update(b0);
+        md.update(new byte[]{1});
+        md.update(dstPrime);
+        byte[] b1 = md.digest();
+
+        byte[] xorResult = new byte[32];
+        for (int j = 0; j < 32; j++) {
+            xorResult[j] = (byte) (b0[j] ^ b1[j]);
+        }
+        md.reset();
+        md.update(xorResult);
+        md.update(new byte[]{2});
+        md.update(dstPrime);
+        byte[] b2 = md.digest();
+
+        byte[] u0Bytes48 = new byte[48];
+        System.arraycopy(b1, 0, u0Bytes48, 0, 32);
+        System.arraycopy(b2, 0, u0Bytes48, 32, 16);
+
+        BigInteger p = curve.getField().getCharacteristic();
+        BigInteger u0 = new BigInteger(1, u0Bytes48).mod(p);
+
+        // Print u0 for debugging
+        byte[] u0Bytes = u0.toByteArray();
+        if (u0Bytes.length == 33 && u0Bytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(u0Bytes, 1, tmp, 0, 32);
+            u0Bytes = tmp;
+        } else if (u0Bytes.length < 32) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(u0Bytes, 0, tmp, 32 - u0Bytes.length, u0Bytes.length);
+            u0Bytes = tmp;
+        }
+        System.out.println("  Off-card u0:  " + bytesToHex(u0Bytes));
+
+        BigInteger u2Expected = u0.modPow(TWO, p);
+
+        byte[] u2ExpectedBytes = u2Expected.toByteArray();
+        if (u2ExpectedBytes.length == 33 && u2ExpectedBytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(u2ExpectedBytes, 1, tmp, 0, 32);
+            u2ExpectedBytes = tmp;
+        } else if (u2ExpectedBytes.length < 32) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(u2ExpectedBytes, 0, tmp, 32 - u2ExpectedBytes.length, u2ExpectedBytes.length);
+            u2ExpectedBytes = tmp;
+        }
+
+        // First get on-card u0 for comparison
+        CommandAPDU u0Cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_GET_U0, 0, 0, msgBytes);
+        ResponseAPDU u0Response = connect().transmit(u0Cmd);
+        byte[] u0OnCard = u0Response.getData();
+        System.out.println("  On-card u0:   " + bytesToHex(u0OnCard));
+
+        // Get on-card u^2 value
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_GET_U2, 0, 0, msgBytes);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        System.out.println("u^2 test for message: \"" + message + "\"");
+        System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+        if (responseAPDU.getSW() != 0x9000) {
+            System.out.println("  ERROR: Non-9000 status");
+            Assert.fail("u^2 calculation failed");
+        }
+
+        byte[] u2OnCard = responseAPDU.getData();
+
+        System.out.println("  Off-card u^2: " + bytesToHex(u2ExpectedBytes));
+        System.out.println("  On-card u^2:  " + bytesToHex(u2OnCard));
+
+        Assert.assertArrayEquals("u^2 should match", u2ExpectedBytes, u2OnCard);
+    }
+
+    @Test
+    public void testRfc9380GetX1Gx1() throws Exception {
+        // This test verifies intermediate x1 and gx1 values from mapToSswu
+        HashToCurveTest h2cOffCard = new HashToCurveTest(curve);
+
+        String message = "";  // Test with empty message
+        byte[] msgBytes = message.getBytes();
+
+        // Compute off-card values manually using the same algorithm
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] dst = HashToCurveTest.RFC9380_DST;
+        byte[] dstPrime = new byte[dst.length + 1];
+        System.arraycopy(dst, 0, dstPrime, 0, dst.length);
+        dstPrime[dst.length] = (byte) dst.length;
+
+        byte[] zPad = new byte[64];
+        md.update(zPad);
+        md.update(msgBytes);
+        md.update(new byte[]{(byte) 0x00, (byte) 0x60});
+        md.update(new byte[]{0});
+        md.update(dstPrime);
+        byte[] b0 = md.digest();
+
+        md.reset();
+        md.update(b0);
+        md.update(new byte[]{1});
+        md.update(dstPrime);
+        byte[] b1 = md.digest();
+
+        byte[] xorResult = new byte[32];
+        for (int j = 0; j < 32; j++) {
+            xorResult[j] = (byte) (b0[j] ^ b1[j]);
+        }
+        md.reset();
+        md.update(xorResult);
+        md.update(new byte[]{2});
+        md.update(dstPrime);
+        byte[] b2 = md.digest();
+
+        byte[] u0Bytes48 = new byte[48];
+        System.arraycopy(b1, 0, u0Bytes48, 0, 32);
+        System.arraycopy(b2, 0, u0Bytes48, 32, 16);
+
+        BigInteger p = curve.getField().getCharacteristic();
+        BigInteger u0 = new BigInteger(1, u0Bytes48).mod(p);
+        BigInteger A = curve.getA().toBigInteger();
+        BigInteger B = curve.getB().toBigInteger();
+        BigInteger Z = p.subtract(BigInteger.TEN);
+
+        // Compute x1 and gx1 off-card
+        BigInteger uSq = u0.modPow(TWO, p);
+        BigInteger tv1 = Z.multiply(uSq).mod(p);
+        BigInteger tv2 = tv1.modPow(TWO, p);
+        tv2 = tv2.add(tv1).mod(p);
+        BigInteger tv2Inv = tv2.equals(BigInteger.ZERO) ? BigInteger.ZERO : tv2.modInverse(p);
+
+        BigInteger x1Expected = B.multiply(BigInteger.valueOf(3).modInverse(p)).mod(p);
+        x1Expected = x1Expected.multiply(BigInteger.ONE.add(tv2Inv)).mod(p);
+
+        BigInteger gx1Expected = x1Expected.modPow(BigInteger.valueOf(3), p)
+            .add(A.multiply(x1Expected))
+            .add(B).mod(p);
+
+        byte[] x1ExpectedBytes = x1Expected.toByteArray();
+        if (x1ExpectedBytes.length == 33 && x1ExpectedBytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(x1ExpectedBytes, 1, tmp, 0, 32);
+            x1ExpectedBytes = tmp;
+        }
+
+        byte[] gx1ExpectedBytes = gx1Expected.toByteArray();
+        if (gx1ExpectedBytes.length == 33 && gx1ExpectedBytes[0] == 0) {
+            byte[] tmp = new byte[32];
+            System.arraycopy(gx1ExpectedBytes, 1, tmp, 0, 32);
+            gx1ExpectedBytes = tmp;
+        }
+
+        // Get on-card values
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_GET_X1_GX1, 0, 0, msgBytes);
+        ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+        System.out.println("x1/gx1 test for message: \"" + message + "\"");
+        System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+        if (responseAPDU.getSW() != 0x9000) {
+            System.out.println("  ERROR: Non-9000 status");
+            Assert.fail("x1/gx1 calculation failed");
+        }
+
+        byte[] result = responseAPDU.getData();
+        byte[] x1OnCard = new byte[32];
+        byte[] gx1OnCard = new byte[32];
+        System.arraycopy(result, 0, x1OnCard, 0, 32);
+        System.arraycopy(result, 32, gx1OnCard, 0, 32);
+
+        System.out.println("  Off-card x1:  " + bytesToHex(x1ExpectedBytes));
+        System.out.println("  On-card x1:   " + bytesToHex(x1OnCard));
+        System.out.println("  Off-card gx1: " + bytesToHex(gx1ExpectedBytes));
+        System.out.println("  On-card gx1:  " + bytesToHex(gx1OnCard));
+
+        Assert.assertArrayEquals("x1 should match", x1ExpectedBytes, x1OnCard);
+        Assert.assertArrayEquals("gx1 should match", gx1ExpectedBytes, gx1OnCard);
+    }
+
+    @Test
+    public void testRfc9380OnCardVsOffCard_P0() throws Exception {
+        // This test compares P0 (first intermediate point) between on-card and off-card
+        HashToCurveTest h2cOffCard = new HashToCurveTest(curve);
+
+        String[] testMessages = { "", "abc" };
+
+        for (String message : testMessages) {
+            byte[] msgBytes = message.getBytes();
+
+            // Get off-card P0
+            ECPoint offCardP0 = h2cOffCard.getP0Only(msgBytes, 0, msgBytes.length);
+            byte[] offCardBytes = offCardP0.getEncoded(false);
+
+            // Get on-card P0
+            CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_P0_ONLY, 0, 0, msgBytes);
+            ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+            System.out.println("P0 test for message: \"" + message + "\"");
+            System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+            if (responseAPDU.getSW() != 0x9000) {
+                System.out.println("  ERROR: Non-9000 status");
+                Assert.fail("P0 calculation failed on-card for message: \"" + message + "\" with SW: " + String.format("%04X", responseAPDU.getSW()));
+            }
+
+            byte[] onCardBytes = responseAPDU.getData();
+
+            System.out.println("  Off-card P0: " + bytesToHex(offCardBytes));
+            System.out.println("  On-card P0:  " + bytesToHex(onCardBytes));
+
+            // Compare results
+            Assert.assertArrayEquals(
+                "P0 should match for message: \"" + message + "\"",
+                offCardBytes,
+                onCardBytes
+            );
+        }
+    }
+
+    @Test
+    public void testRfc9380OnCardVsOffCard_P1() throws Exception {
+        // This test compares P1 (second intermediate point) between on-card and off-card
+        HashToCurveTest h2cOffCard = new HashToCurveTest(curve);
+
+        String[] testMessages = { "", "abc" };
+
+        for (String message : testMessages) {
+            byte[] msgBytes = message.getBytes();
+
+            // Get off-card P1
+            ECPoint offCardP1 = h2cOffCard.getP1Only(msgBytes, 0, msgBytes.length);
+            byte[] offCardBytes = offCardP1.getEncoded(false);
+
+            // Get on-card P1
+            CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DEBUG_RFC9380_P1_ONLY, 0, 0, msgBytes);
+            ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+            System.out.println("P1 test for message: \"" + message + "\"");
+            System.out.println("  Status word: " + String.format("%04X", responseAPDU.getSW()));
+
+            if (responseAPDU.getSW() != 0x9000) {
+                System.out.println("  ERROR: Non-9000 status");
+                Assert.fail("P1 calculation failed on-card for message: \"" + message + "\" with SW: " + String.format("%04X", responseAPDU.getSW()));
+            }
+
+            byte[] onCardBytes = responseAPDU.getData();
+
+            System.out.println("  Off-card P1: " + bytesToHex(offCardBytes));
+            System.out.println("  On-card P1:  " + bytesToHex(onCardBytes));
+
+            // Compare results
+            Assert.assertArrayEquals(
+                "P1 should match for message: \"" + message + "\"",
+                offCardBytes,
+                onCardBytes
+            );
+        }
+    }
+
+    @Test
+    public void testRfc9380OfficialTestVectors() throws Exception {
+        // Official test vectors from RFC 9380 Appendix J.1.1
+        // P256_XMD:SHA-256_SSWU_RO_
+
+        System.out.println("\n=== RFC 9380 Official Test Vectors for P256_XMD:SHA-256_SSWU_RO_ ===\n");
+
+        // Test vector structure: message, expected x-coordinate, expected y-coordinate
+        String[][] testVectors = {
+            // msg = ""
+            {
+                "",
+                "2c15230b26dbc6fc9a37051158c95b79656e17a1a920b11394ca91c44247d3e4",
+                "8a7a74985cc5c776cdfe4b1f19884970453912e9d31528c060be9ab5c43e8415"
+            },
+            // msg = "abc"
+            {
+                "abc",
+                "0bb8b87485551aa43ed54f009230450b492fead5f1cc91658775dac4a3388a0f",
+                "5c41b3d0731a27a7b14bc0bf0ccded2d8751f83493404c84a88e71ffd424212e"
+            },
+            // msg = "abcdef0123456789"
+            {
+                "abcdef0123456789",
+                "65038ac8f2b1def042a5df0b33b1f4eca6bff7cb0f9c6c1526811864e544ed80",
+                "cad44d40a656e7aff4002a8de287abc8ae0482b5ae825822bb870d6df9b56ca3"
+            },
+            // msg = "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+            {
+                "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+                "4be61ee205094282ba8a2042bcb48d88dfbb609301c49aa8b078533dc65a0b5d",
+                "98f8df449a072c4721d241a3b1236d3caccba603f916ca680f4539d2bfb3c29e"
+            },
+            // msg = "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            {
+                "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "457ae2981f70ca85d8e24c308b14db22f3e3862c5ea0f652ca38b5e49cd64bc5",
+                "ecb9f0eadc9aeed232dabc53235368c1394c78de05dd96893eefa62b0f4757dc"
+            }
+        };
+
+        int passed = 0;
+        int failed = 0;
+
+        for (int i = 0; i < testVectors.length; i++) {
+            String message = testVectors[i][0];
+            String expectedX = testVectors[i][1];
+            String expectedY = testVectors[i][2];
+
+            byte[] msgBytes = message.getBytes();
+
+            // Get result from card
+            CommandAPDU cmd = new CommandAPDU(Consts.CLA.INDIE, Consts.INS.COMPUTE_HASH_TO_CURVE_RFC9380, 0, 0, msgBytes);
+            ResponseAPDU responseAPDU = connect().transmit(cmd);
+
+            if (responseAPDU.getSW() != 0x9000) {
+                System.out.println("Test vector " + (i + 1) + " FAILED: Non-9000 status: " +
+                    String.format("%04X", responseAPDU.getSW()));
+                failed++;
+                continue;
+            }
+
+            byte[] result = responseAPDU.getData();
+
+            // Result should be uncompressed point: 0x04 || x || y (65 bytes)
+            if (result.length != 65 || result[0] != 0x04) {
+                System.out.println("Test vector " + (i + 1) + " FAILED: Invalid point encoding");
+                failed++;
+                continue;
+            }
+
+            byte[] xCoord = new byte[32];
+            byte[] yCoord = new byte[32];
+            System.arraycopy(result, 1, xCoord, 0, 32);
+            System.arraycopy(result, 33, yCoord, 0, 32);
+
+            String actualX = bytesToHex(xCoord);
+            String actualY = bytesToHex(yCoord);
+
+            boolean xMatches = actualX.equals(expectedX);
+            boolean yMatches = actualY.equals(expectedY);
+
+            if (xMatches && yMatches) {
+                System.out.println("Test vector " + (i + 1) + " PASSED");
+                System.out.println("  Message: \"" + (message.length() > 50 ? message.substring(0, 50) + "..." : message) + "\"");
+                passed++;
+            } else {
+                System.out.println("Test vector " + (i + 1) + " FAILED");
+                System.out.println("  Message: \"" + (message.length() > 50 ? message.substring(0, 50) + "..." : message) + "\"");
+                if (!xMatches) {
+                    System.out.println("  Expected X: " + expectedX);
+                    System.out.println("  Actual X:   " + actualX);
+                }
+                if (!yMatches) {
+                    System.out.println("  Expected Y: " + expectedY);
+                    System.out.println("  Actual Y:   " + actualY);
+                }
+                failed++;
+            }
+        }
+
+        System.out.println("\n=== Test Summary ===");
+        System.out.println("Passed: " + passed + "/" + testVectors.length);
+        System.out.println("Failed: " + failed + "/" + testVectors.length);
+
+        Assert.assertEquals("All RFC 9380 test vectors should pass", testVectors.length, passed);
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

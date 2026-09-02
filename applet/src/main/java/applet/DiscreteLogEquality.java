@@ -45,6 +45,7 @@ public class DiscreteLogEquality {
         r = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         ch = new BigNat(IndistinguishabilityApplet.curve.rBN.length(), JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         G = new ECPoint(IndistinguishabilityApplet.curve);
+        tmpNum = new BigNat((short) 48, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         publicShare = new ECPoint(IndistinguishabilityApplet.curve);
         partialDerivedShare = new ECPoint(IndistinguishabilityApplet.curve);
         com1 = new ECPoint(IndistinguishabilityApplet.curve);

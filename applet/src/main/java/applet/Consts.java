@@ -23,14 +23,12 @@ public class Consts {
         public static final byte SET_MUSIG2_AGG_KEY = (byte) 0x0b;
         public static final byte SET_MUSIG2_AGG_NONCE = (byte) 0x0c;
         public static final byte GET_PUBLIC_NONCE_SHARE = (byte) 0x0d;
-        public static final byte SETUP_TEST_DATA = (byte) 0x0e;
         public static final byte CREATE_PARTIAL_EPOCH = (byte) 0x0f;
         public static final byte KEY_GEN_DLEQ = (byte) 0x10;
         public static final byte GET_C_POINTS = (byte) 0x11;
         public static final byte SET_C_POINTS = (byte) 0x12;
         public static final byte SET_SHARES = (byte) 0x13;
         public static final byte GET_SHARES = (byte) 0x14;
-        public static final byte GET_ALL_C_POINTS = (byte) 0x15;
         public static final byte COMPUTE_X_SHARE = (byte) 0x16;
         public static final byte GET_A_POINTS = (byte) 0x17;
         public static final byte SET_A_POINTS = (byte) 0x18;
@@ -43,6 +41,7 @@ public class Consts {
         public static final byte GET_COMMITMENTS = (byte) 0x1f;
         public static final byte GET_SECRET_SHARE = (byte) 0x20;
         public static final byte DERIVE_SEED_SHARE = (byte) 0x21;
+        public static final byte COMPUTE_HASH_TO_CURVE_RFC9380 = (byte) 0x22;
 
         // NOTE the following are debug instructions
         public static final byte GOOD = (byte) 0x88;
@@ -58,6 +57,20 @@ public class Consts {
         public static final byte IS_INITIALIZED = (byte) 0x0b;
         public static final byte TEST_EXT_APDU_SIZE = (byte) 0x0c;
         public static final byte EXT_APDU_ECHO = (byte) 0x0d;
+        public static final byte SETUP_TEST_DATA = (byte) 0x0e;
+        public static final byte DEBUG_EXPAND_MESSAGE_XMD = (byte) 0x0f;
+        public static final byte DEBUG_HASH_TO_FIELD = (byte) 0x10;
+        public static final byte DEBUG_GET_UNIFORM_BYTES = (byte) 0x11;
+        public static final byte DEBUG_HASH_TO_FIELD_VERBOSE = (byte) 0x12;
+        public static final byte DEBUG_RFC9380_P0_ONLY = (byte) 0x13;
+        public static final byte DEBUG_RFC9380_P1_ONLY = (byte) 0x14;
+        public static final byte GET_ALL_C_POINTS = (byte) 0x15;
+        public static final byte DEBUG_RFC9380_GET_U0 = (byte) 0x16;
+        public static final byte DEBUG_RFC9380_GET_X1_GX1 = (byte) 0x17;
+        public static final byte DEBUG_RFC9380_GET_CHOSEN_X_Y = (byte) 0x18;
+        public static final byte DEBUG_RFC9380_GET_TV1_TV2 = (byte) 0x19;
+        public static final byte DEBUG_RFC9380_GET_Z = (byte) 0x1a;
+        public static final byte DEBUG_RFC9380_GET_U2 = (byte) 0x1b;
     }
     // TODO: add the list from https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
     public class SW {

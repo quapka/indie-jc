@@ -67,8 +67,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     // TODO is the maximal ECDSA DER encoded signature 72 bytes?
     // Using transient byte array seems to reduce the time about 10ms
-    private byte[] derSignature = JCSystem.makeTransientByteArray((short) 72, JCSystem.CLEAR_ON_DESELECT);
-    // private byte[] derSignature = new byte[72];
+    // private byte[] derSignature = JCSystem.makeTransientByteArray((short) 72, JCSystem.CLEAR_ON_DESELECT);
+    private byte[] derSignature = new byte[72];
 
     private static final byte[] NONCE_FIELD_NAME = {'n', 'o', 'n', 'c', 'e'};
     private static final byte[] AUD_FIELD_NAME = {'a', 'u', 'd'};
@@ -99,8 +99,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private byte[] tokenNonce = new byte[32];
 
-    private byte[] extApduBuffer = JCSystem.makeTransientByteArray((short) 628, JCSystem.CLEAR_ON_DESELECT);
-    // private byte[] extApduBuffer = new byte[2048];
+    // private byte[] extApduBuffer = JCSystem.makeTransientByteArray((short) 628, JCSystem.CLEAR_ON_DESELECT);
+    private byte[] extApduBuffer = new byte[2048];
     // private byte[] procBuffer = new byte[2048];
     private byte[] procBuffer = JCSystem.makeTransientByteArray((short) 512, JCSystem.CLEAR_ON_DESELECT);
     // at least shal handle 65 bytes of uncompressed points
@@ -218,6 +218,27 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.EXT_APDU_ECHO:
                         echoExtApduBuffer(apdu);
                         break;
+                    case Consts.INS.DEBUG_RFC9380_P0_ONLY:
+                        getHashToCurveRfc9380_P0Only(apdu);
+                        break;
+                    case Consts.INS.DEBUG_RFC9380_P1_ONLY:
+                        getHashToCurveRfc9380_P1Only(apdu);
+                        break;
+                    case Consts.INS.DEBUG_RFC9380_GET_U0:
+                        getU0Value(apdu);
+                        break;
+                    case Consts.INS.DEBUG_RFC9380_GET_X1_GX1:
+                        getX1Gx1Values(apdu);
+                        break;
+                    case Consts.INS.DEBUG_RFC9380_GET_TV1_TV2:
+                        getTv1Tv2Values(apdu);
+                        break;
+                    case Consts.INS.DEBUG_RFC9380_GET_Z:
+                        getZValue(apdu);
+                        break;
+                    case Consts.INS.DEBUG_RFC9380_GET_U2:
+                        getU2Value(apdu);
+                        break;
                 }
             } else if ( cla == Consts.CLA.INDIE ) {
                 switch (ins) {
@@ -310,6 +331,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         break;
                     case Consts.INS.COMPUTE_HASH_TO_CURVE:
                         getHashToCurve(apdu);
+                        break;
+                    case Consts.INS.COMPUTE_HASH_TO_CURVE_RFC9380:
+                        getHashToCurveRfc9380(apdu);
                         break;
                     case Consts.INS.GET_DLEQ_PARAMS:
                         getDleqParams(apdu);
@@ -520,6 +544,82 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         h2c.hash(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, DiscreteLogEquality.userPoint);
         short size = DiscreteLogEquality.userPoint.encode(apduBuffer, (short) 0, false);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getHashToCurveRfc9380(APDU apdu) {
+        byte[] buffer = loadApdu(apdu);
+        byte[] apduBuffer = apdu.getBuffer();
+        short offset = apdu.getOffsetCdata();
+        // short bytesRead = apdu.setIncomingAndReceive();
+
+        h2c.hashToCurveRfc9380(buffer, offset, (short) (extApduSize - offset), DiscreteLogEquality.userPoint);
+        short size = DiscreteLogEquality.userPoint.encode(apduBuffer, (short) 0, false);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getHashToCurveRfc9380_P0Only(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        h2c.hashToCurveRfc9380_P0Only(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, DiscreteLogEquality.userPoint);
+        short size = DiscreteLogEquality.userPoint.encode(apduBuffer, (short) 0, false);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getHashToCurveRfc9380_P1Only(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        h2c.hashToCurveRfc9380_P1Only(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, DiscreteLogEquality.userPoint);
+        short size = DiscreteLogEquality.userPoint.encode(apduBuffer, (short) 0, false);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getU0Value(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short size = h2c.getU0Value(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getX1Gx1Values(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short size = h2c.getX1Gx1Values(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getTv1Tv2Values(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short size = h2c.getTv1Tv2Values(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getZValue(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+
+        short size = h2c.getZValue(apduBuffer, (short) 0);
+
+        apdu.setOutgoingAndSend((short) 0, size);
+    }
+
+    public void getU2Value(APDU apdu) {
+        byte[] apduBuffer = apdu.getBuffer();
+        short bytesRead = apdu.setIncomingAndReceive();
+
+        short size = h2c.getU2Value(apduBuffer, ISO7816.OFFSET_CDATA, bytesRead, apduBuffer, (short) 0);
 
         apdu.setOutgoingAndSend((short) 0, size);
     }
