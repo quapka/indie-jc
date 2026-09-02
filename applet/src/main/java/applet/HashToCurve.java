@@ -62,6 +62,11 @@ public class HashToCurve {
     // Temporary ECPoint for P1 in hashToCurveRfc9380 (reused to avoid allocation in hot path)
     private jcmathlib.ECPoint rfc_P1;
 
+    // Pre-computed constants for P-256 (stored in PERSISTENT memory)
+    private jcmathlib.BigNat Z_constant;        // Z = p - 10 (constant for P-256 SSWU)
+    private jcmathlib.BigNat B_div_3_constant;  // B/3 mod p (constant for P-256)
+    private jcmathlib.BigNat B_div_ZA_constant; // B/(Z*A) mod p (for tv2==0 edge case)
+
     public HashToCurve() {
         // Reuse DiscreteLogEquality's transient BigNats (208 bytes saved)
         rfc_tmp = DiscreteLogEquality.tmpNum;      // 48 bytes
@@ -84,6 +89,34 @@ public class HashToCurve {
         // Total memory saved: 368 bytes of TRANSIENT memory
         rfc_work = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         rfc_P1 = new jcmathlib.ECPoint(IndistinguishabilityApplet.curve);
+
+        // Allocate and pre-compute P-256 constants (96 bytes PERSISTENT)
+        Z_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        B_div_3_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        B_div_ZA_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+
+        // Pre-compute Z = p - 10 for P-256 SSWU
+        Z_constant.copy(IndistinguishabilityApplet.curve.pBN);
+        rfc_work.setValue((byte) 10);
+        Z_constant.modSub(rfc_work, IndistinguishabilityApplet.curve.pBN);
+
+        // Pre-compute B/3 mod p for P-256
+        B_div_3_constant.copy(IndistinguishabilityApplet.curve.bBN);
+        rfc_work.setValue((byte) 3);
+        rfc_work.modInv(IndistinguishabilityApplet.curve.pBN);
+        B_div_3_constant.modMult(rfc_work, IndistinguishabilityApplet.curve.pBN);
+
+        // Pre-compute B/(Z*A) mod p for P-256 (for tv2==0 edge case)
+        // B/(Z*A) = B * (1/(Z*A))
+        B_div_ZA_constant.copy(Z_constant);
+        B_div_ZA_constant.modMult(IndistinguishabilityApplet.curve.aBN, IndistinguishabilityApplet.curve.pBN);  // Z*A
+        B_div_ZA_constant.modInv(IndistinguishabilityApplet.curve.pBN);  // 1/(Z*A)
+        B_div_ZA_constant.modMult(IndistinguishabilityApplet.curve.bBN, IndistinguishabilityApplet.curve.pBN);  // B/(Z*A)
+
+        // Pre-compute DST_prime = DST || I2OSP(len(DST), 1)
+        // This is constant for RFC9380, so compute once
+        Util.arrayCopyNonAtomic(RFC9380_DST, (short) 0, dstPrimeBuffer, (short) 0, (short) RFC9380_DST.length);
+        dstPrimeBuffer[RFC9380_DST.length] = (byte) RFC9380_DST.length;
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -117,14 +150,12 @@ public class HashToCurve {
      * Result is stored in expandBuffer
      */
     private void expandMessageXmd(byte[] msg, short msgOffset, short msgLength) {
-        // DST_prime = DST || I2OSP(len(DST), 1)
-        Util.arrayCopyNonAtomic(RFC9380_DST, (short) 0, dstPrimeBuffer, (short) 0, (short) RFC9380_DST.length);
-        dstPrimeBuffer[RFC9380_DST.length] = (byte) RFC9380_DST.length;
+        // DST_prime is pre-computed in constructor (constant for RFC9380)
 
         // Compute b_0 = H(Z_pad || msg || I2OSP(len_in_bytes, 2) || I2OSP(0, 1) || DST_prime)
         // Z_pad is 64 zero bytes (SHA-256 block size)
         md.reset();
-        // Add 64 zero bytes
+        // Must zero tmpBuffer as it's reused within this function
         Util.arrayFillNonAtomic(tmpBuffer, (short) 0, (short) 64, (byte) 0);
         md.update(tmpBuffer, (short) 0, (short) 64);
         // Add message
@@ -280,24 +311,18 @@ public class HashToCurve {
 
         // Now run the beginning of mapToSswu to get x1 and gx1
         jcmathlib.BigNat u = rfc_u0;
-        jcmathlib.BigNat Z = rfc_Z;
         jcmathlib.BigNat tv1 = rfc_tv1;
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat x1 = rfc_x1;
         jcmathlib.BigNat gx1 = rfc_gx1;
         jcmathlib.BigNat tmp = rfc_work;
 
-        // Z = -10 = p - 10
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
-
         // tv1 = u^2
         tv1.copy(u);
         tv1.modSq(curve.pBN);
 
-        // tv1 = Z * u^2
-        tv1.modMult(Z, curve.pBN);
+        // tv1 = Z * u^2 (use Z_constant directly)
+        tv1.modMult(Z_constant, curve.pBN);
 
         // tv2 = tv1^2
         tv2.copy(tv1);
@@ -315,22 +340,21 @@ public class HashToCurve {
         }
 
         // x1 = (-B / A) * (1 + tv2)
-        x1.copy(curve.bBN);
-        tmp.setValue((byte) 3);
-        tmp.modInv(curve.pBN);
-        x1.modMult(tmp, curve.pBN);  // x1 = B/3
+        // B/3 is pre-computed constant
+        x1.copy(B_div_3_constant);
 
         tmp.setValue((byte) 1);
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
         x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
 
         // gx1 = x1^3 + A*x1 + B
+        // For P-256: A = -3, so gx1 = x1^3 - 3*x1 + B = x1(x1² - 3) + B
+        tmp.copy(x1);
+        tmp.modSq(curve.pBN);        // x1²
+        gx1.setValue((byte) 3);
+        tmp.modSub(gx1, curve.pBN);  // x1² - 3
         gx1.copy(x1);
-        gx1.modSq(curve.pBN);      // x1^2
-        gx1.modMult(x1, curve.pBN); // x1^3
-        tmp.copy(curve.aBN);
-        tmp.modMult(x1, curve.pBN);
-        gx1.modAdd(tmp, curve.pBN); // + A*x1
+        gx1.modMult(tmp, curve.pBN); // x1(x1² - 3)
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
         // Format output: x1 (32 bytes) || gx1 (32 bytes)
@@ -379,22 +403,16 @@ public class HashToCurve {
         rfc_u0.copy(rfc_tmp);
 
         jcmathlib.BigNat u = rfc_u0;
-        jcmathlib.BigNat Z = rfc_Z;
         jcmathlib.BigNat tv1 = rfc_tv1;
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat tmp = rfc_work;
-
-        // Z = -10 = p - 10
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
 
         // tv1 = u^2
         tv1.copy(u);
         tv1.modSq(curve.pBN);
 
-        // tv1 = Z * u^2
-        tv1.modMult(Z, curve.pBN);
+        // tv1 = Z * u^2 (use Z_constant directly)
+        tv1.modMult(Z_constant, curve.pBN);
 
         // tv2 = tv1^2
         tv2.copy(tv1);
@@ -453,15 +471,9 @@ public class HashToCurve {
      * Returns: Z (32 bytes)
      */
     public short getZValue(byte[] output, short outOffset) {
-        jcmathlib.ECCurve curve = IndistinguishabilityApplet.curve;
-
-        // Compute Z = p - 10
+        // Z is pre-computed constant, copy directly for output formatting
         jcmathlib.BigNat Z = rfc_Z;
-        jcmathlib.BigNat tmp = rfc_work;
-
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
+        Z.copy(Z_constant);
 
         // Format output
         short zLen = Z.copyToByteArray(tmpBuffer, (short) 0);
@@ -548,7 +560,6 @@ public class HashToCurve {
 
         // Use dedicated RFC9380 BigNats - no conflicts with ResourceManager or other operations
         // All of these are 32 bytes, sized for P-256 field elements
-        jcmathlib.BigNat Z = rfc_Z;
         jcmathlib.BigNat tv1 = rfc_tv1;
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat x1 = rfc_x1;
@@ -561,17 +572,12 @@ public class HashToCurve {
         // Save u's oddness (u is already in a dedicated BigNat, so it's safe)
         boolean sgn0_u = u.isOdd();
 
-        // Z = -10 = p - 10
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
-
         // tv1 = u^2
         tv1.copy(u);
         tv1.modSq(curve.pBN);
 
-        // tv1 = Z * u^2
-        tv1.modMult(Z, curve.pBN);
+        // tv1 = Z * u^2 (use Z_constant directly, no need to copy)
+        tv1.modMult(Z_constant, curve.pBN);
 
         // tv2 = tv1^2
         tv2.copy(tv1);
@@ -582,58 +588,44 @@ public class HashToCurve {
 
         // tv2 = inv0(tv2) - compute modular inverse if tv2 != 0, else 0
         boolean tv2IsZero = tv2.isZero();
-        if (!tv2IsZero) {
-            tv2.modInv(curve.pBN);
-        } else {
-            tv2.zero();
-        }
 
-        // x1 = (-B / A) * (1 + tv2)
-        // For P-256: A = -3, B = curve.b
-        // -B/A = B/3
-        x1.copy(curve.bBN);
-        tmp.setValue((byte) 3);
-        tmp.modInv(curve.pBN);
-        x1.modMult(tmp, curve.pBN);  // x1 = B/3
-
-        tmp.setValue((byte) 1);
-        tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
-        x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
-
-        // If tv2 == 0, set x1 = B / (Z * A)
-        // For P-256: A = -3, so Z * A = Z * (-3) = -3Z
+        // x1 computation depends on whether tv2 is zero
         if (tv2IsZero) {
-            x1.copy(curve.bBN);       // x1 = B
-            tmp.copy(Z);
-            tmp.modMult(curve.aBN, curve.pBN);  // tmp = Z * A
-            tmp.modInv(curve.pBN);     // tmp = 1 / (Z * A)
-            x1.modMult(tmp, curve.pBN); // x1 = B / (Z * A)
+            // Edge case: x1 = B / (Z * A) - pre-computed constant
+            x1.copy(B_div_ZA_constant);
+        } else {
+            // Normal case: x1 = (B/3) * (1 + tv2)
+            tv2.modInv(curve.pBN);
+            x1.copy(B_div_3_constant);
+            tmp.setValue((byte) 1);
+            tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
+            x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
         }
 
         // gx1 = x1^3 + A*x1 + B
+        // For P-256: A = -3, so gx1 = x1^3 - 3*x1 + B = x1(x1² - 3) + B
+        tmp.copy(x1);
+        tmp.modSq(curve.pBN);        // x1²
+        gx1.setValue((byte) 3);
+        tmp.modSub(gx1, curve.pBN);  // x1² - 3
         gx1.copy(x1);
-        gx1.modSq(curve.pBN);      // x1^2
-        gx1.modMult(x1, curve.pBN); // x1^3
-        tmp.copy(curve.aBN);
-        tmp.modMult(x1, curve.pBN);
-        gx1.modAdd(tmp, curve.pBN); // + A*x1
+        gx1.modMult(tmp, curve.pBN); // x1(x1² - 3)
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
         // x2 = Z * u^2 * x1
-        x2.copy(Z);
-        tmp.copy(u);
-        tmp.modSq(curve.pBN);
-        x2.modMult(tmp, curve.pBN);
+        // Reuse tv1 which already contains Z*u² (computed at line 589-590)
+        x2.copy(tv1);
         x2.modMult(x1, curve.pBN);
 
         // gx2 = x2^3 + A*x2 + B
+        // For P-256: A = -3, so gx2 = x2^3 - 3*x2 + B = x2(x2² - 3) + B
+        tmp.copy(x2);
+        tmp.modSq(curve.pBN);        // x2²
+        gx2.setValue((byte) 3);
+        tmp.modSub(gx2, curve.pBN);  // x2² - 3
         gx2.copy(x2);
-        gx2.modSq(curve.pBN);
-        gx2.modMult(x2, curve.pBN);
-        tmp.copy(curve.aBN);
-        tmp.modMult(x2, curve.pBN);
-        gx2.modAdd(tmp, curve.pBN);
-        gx2.modAdd(curve.bBN, curve.pBN);
+        gx2.modMult(tmp, curve.pBN); // x2(x2² - 3)
+        gx2.modAdd(curve.bBN, curve.pBN); // + B
 
         // Choose x based on which gx is a square
         // y is already defined as rfc_y at the top
@@ -642,8 +634,8 @@ public class HashToCurve {
         y.copy(gx1);
         if (y.isQuadraticResidue(curve.pBN)) {
             // gx1 is a square, use x1
+            // y already contains gx1 from line 643, no need to copy again
             chosenX = x1;
-            y.copy(gx1);
             y.modSqrt(curve.pBN);
         } else {
             // gx1 is not a square, use x2
