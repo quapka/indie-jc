@@ -723,45 +723,30 @@ public class HashToCurve {
         Util.arrayFillNonAtomic(pointBuffer, (short) 1, (short) 64, (byte) 0);
 
         // Write x coordinate to buffer (32 bytes)
+        // Copy to tmpBuffer first, strip leading zeros, then write to END of 32-byte field
         short xLen = chosenX.copyToByteArray(tmpBuffer, (short) 0);
-        short xStart, xDataLen;
-        if (xLen > 32) {
-            // Value needs more than 32 bytes, take last 32 bytes
+        short xStart = 0;
+        while (xStart < xLen && tmpBuffer[xStart] == 0) {
+            xStart++;
+        }
+        short xDataLen = (short) (xLen - xStart);
+        if (xDataLen > 32) {
+            xDataLen = 32;
             xStart = (short) (xLen - 32);
-            xDataLen = 32;
-        } else if (xLen == 32) {
-            // Exactly 32 bytes - most common case for P-256, skip leading-zero scan
-            xStart = 0;
-            xDataLen = 32;
-        } else {
-            // Less than 32 bytes, need to find first non-zero byte
-            xStart = 0;
-            while (xStart < xLen && tmpBuffer[xStart] == 0) {
-                xStart++;
-            }
-            xDataLen = (short) (xLen - xStart);
         }
         // Write to the END of the 32-byte x field (bytes 1-32 of pointBuffer)
         Util.arrayCopyNonAtomic(tmpBuffer, xStart, pointBuffer, (short) (33 - xDataLen), xDataLen);
 
         // Write y coordinate to buffer (32 bytes)
         short yLen = y.copyToByteArray(tmpBuffer, (short) 0);
-        short yStart, yDataLen;
-        if (yLen > 32) {
-            // Value needs more than 32 bytes, take last 32 bytes
+        short yStart = 0;
+        while (yStart < yLen && tmpBuffer[yStart] == 0) {
+            yStart++;
+        }
+        short yDataLen = (short) (yLen - yStart);
+        if (yDataLen > 32) {
+            yDataLen = 32;
             yStart = (short) (yLen - 32);
-            yDataLen = 32;
-        } else if (yLen == 32) {
-            // Exactly 32 bytes - most common case for P-256, skip leading-zero scan
-            yStart = 0;
-            yDataLen = 32;
-        } else {
-            // Less than 32 bytes, need to find first non-zero byte
-            yStart = 0;
-            while (yStart < yLen && tmpBuffer[yStart] == 0) {
-                yStart++;
-            }
-            yDataLen = (short) (yLen - yStart);
         }
         // Write to the END of the 32-byte y field (bytes 33-64 of pointBuffer)
         Util.arrayCopyNonAtomic(tmpBuffer, yStart, pointBuffer, (short) (65 - yDataLen), yDataLen);
