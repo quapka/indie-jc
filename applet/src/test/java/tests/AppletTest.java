@@ -123,13 +123,13 @@ public class AppletTest extends BaseTest {
     public static byte[] CURVE_G = SecP256r1.G;
     public static short CURVE_K = SecP256r1.k;
 
-    public static short threshold = 2;
-    public static short nParties = 2;
+    public static short threshold = 5;
+    public static short nParties = 5;
     
     // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
     // or with different cards inserted into a system
-    public static int[] readerIndeces = new int[] {2, 3};//, 4, 5, 6};
-    public static byte[] partyIDs = new byte[] {1, 2};//, 3, 4, 5}; // parties are 1-indexed
+    public static int[] readerIndeces = new int[] {2, 3, 4, 5, 6};
+    public static byte[] partyIDs = new byte[] {1, 2, 3, 4, 5}; // parties are 1-indexed
 
     // NOTE: The c0 ff ee bytes are sent only to trigger the extended response working on jcardengine side.
     //       Sending only the 0x7fff would result in not being sent and thus no ext response.
