@@ -59,9 +59,10 @@ public class HashToCurve {
     // Allocated locally (32 bytes total)
     private jcmathlib.BigNat rfc_work;    // General work variable
 
-    // Precomputed constants (64 bytes total)
+    // Precomputed constants (96 bytes total)
     private jcmathlib.BigNat precomp_inv3;   // 1/3 mod p (for x1 calculation)
     private jcmathlib.BigNat precomp_B_div_3; // B/3 mod p (for x1 calculation)
+    private jcmathlib.BigNat precomp_Z;      // Z = -10 mod p (for SSWU map)
 
     // Temporary ECPoint for P1 in hashToCurveRfc9380 (reused to avoid allocation in hot path)
     private jcmathlib.ECPoint rfc_P1;
@@ -92,6 +93,7 @@ public class HashToCurve {
         // Precompute constants for SSWU optimization
         precomp_inv3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         precomp_B_div_3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        precomp_Z = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         // Compute 1/3 mod p
         precomp_inv3.setValue((byte) 3);
@@ -100,6 +102,11 @@ public class HashToCurve {
         // Compute B/3 mod p
         precomp_B_div_3.copy(IndistinguishabilityApplet.curve.bBN);
         precomp_B_div_3.modMult(precomp_inv3, IndistinguishabilityApplet.curve.pBN);
+
+        // Compute Z = -10 mod p = p - 10
+        precomp_Z.copy(IndistinguishabilityApplet.curve.pBN);
+        rfc_work.setValue((byte) 10);
+        precomp_Z.modSub(rfc_work, IndistinguishabilityApplet.curve.pBN);
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -303,10 +310,8 @@ public class HashToCurve {
         jcmathlib.BigNat gx1 = rfc_gx1;
         jcmathlib.BigNat tmp = rfc_work;
 
-        // Z = -10 = p - 10
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
+        // Z = -10 mod p (precomputed)
+        Z.copy(precomp_Z);
 
         // tv1 = u^2
         tv1.copy(u);
@@ -397,10 +402,8 @@ public class HashToCurve {
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat tmp = rfc_work;
 
-        // Z = -10 = p - 10
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
+        // Z = -10 mod p (precomputed)
+        Z.copy(precomp_Z);
 
         // tv1 = u^2
         tv1.copy(u);
@@ -466,15 +469,9 @@ public class HashToCurve {
      * Returns: Z (32 bytes)
      */
     public short getZValue(byte[] output, short outOffset) {
-        jcmathlib.ECCurve curve = IndistinguishabilityApplet.curve;
-
-        // Compute Z = p - 10
+        // Return precomputed Z value
         jcmathlib.BigNat Z = rfc_Z;
-        jcmathlib.BigNat tmp = rfc_work;
-
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
+        Z.copy(precomp_Z);
 
         // Format output
         short zLen = Z.copyToByteArray(tmpBuffer, (short) 0);
@@ -574,10 +571,8 @@ public class HashToCurve {
         // Save u's oddness (u is already in a dedicated BigNat, so it's safe)
         boolean sgn0_u = u.isOdd();
 
-        // Z = -10 = p - 10
-        Z.copy(curve.pBN);
-        tmp.setValue((byte) 10);
-        Z.modSub(tmp, curve.pBN);
+        // Z = -10 mod p (precomputed)
+        Z.copy(precomp_Z);
 
         // tv1 = u^2
         tv1.copy(u);
