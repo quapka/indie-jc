@@ -649,8 +649,7 @@ public class HashToCurve {
         // y is already defined as rfc_y at the top
         jcmathlib.BigNat chosenX;  // Will point to x1 or x2
 
-        y.copy(gx1);
-        if (y.isQuadraticResidue(curve.pBN)) {
+        if (gx1.isQuadraticResidue(curve.pBN)) {
             // gx1 is a square, use x1
             chosenX = x1;
             y.copy(gx1);
