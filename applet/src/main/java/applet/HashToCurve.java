@@ -484,6 +484,10 @@ public class HashToCurve {
         // tv2 = tv2 + tv1
         tv2.modAdd(tv1, curve.pBN);
 
+        // Save tv2 before inversion
+        jcmathlib.BigNat tv2_before_inv = rfc_x1;  // Borrow x1 temporarily
+        tv2_before_inv.copy(tv2);
+
         // tv2 = inv0(tv2)
         boolean tv2IsZero = tv2.isZero();
         if (!tv2IsZero) {
