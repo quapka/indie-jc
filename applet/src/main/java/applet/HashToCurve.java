@@ -66,8 +66,6 @@ public class HashToCurve {
     private jcmathlib.BigNat Z_constant;        // Z = p - 10 (constant for P-256 SSWU)
     private jcmathlib.BigNat B_div_3_constant;  // B/3 mod p (constant for P-256)
     private jcmathlib.BigNat B_div_ZA_constant; // B/(Z*A) mod p (for tv2==0 edge case)
-    private jcmathlib.BigNat THREE_constant;    // 3 (used in curve equation)
-    private jcmathlib.BigNat ONE_constant;      // 1 (used in x1 computation)
 
     public HashToCurve() {
         // Reuse DiscreteLogEquality's transient BigNats (208 bytes saved)
@@ -92,12 +90,10 @@ public class HashToCurve {
         rfc_work = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         rfc_P1 = new jcmathlib.ECPoint(IndistinguishabilityApplet.curve);
 
-        // Allocate and pre-compute P-256 constants (160 bytes PERSISTENT)
+        // Allocate and pre-compute P-256 constants (96 bytes PERSISTENT)
         Z_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         B_div_3_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         B_div_ZA_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-        THREE_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
-        ONE_constant = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         // Pre-compute Z = p - 10 for P-256 SSWU
         Z_constant.copy(IndistinguishabilityApplet.curve.pBN);
@@ -116,10 +112,6 @@ public class HashToCurve {
         B_div_ZA_constant.modMult(IndistinguishabilityApplet.curve.aBN, IndistinguishabilityApplet.curve.pBN);  // Z*A
         B_div_ZA_constant.modInv(IndistinguishabilityApplet.curve.pBN);  // 1/(Z*A)
         B_div_ZA_constant.modMult(IndistinguishabilityApplet.curve.bBN, IndistinguishabilityApplet.curve.pBN);  // B/(Z*A)
-
-        // Pre-compute constants (used in SSWU algorithm and curve equation)
-        THREE_constant.setValue((byte) 3);
-        ONE_constant.setValue((byte) 1);
 
         // Pre-compute DST_prime = DST || I2OSP(len(DST), 1)
         // This is constant for RFC9380, so compute once
@@ -186,39 +178,10 @@ public class HashToCurve {
         md.doFinal(tmpBuffer, (short) 0, (short) 0, expandBuffer, (short) 0);
 
         // Compute b_2 = H(b_0 XOR b_1 || I2OSP(2, 1) || DST_prime)
-        // XOR b_0 with b_1 into tmpBuffer (unrolled for performance)
-        tmpBuffer[0] = (byte) (b0Buffer[0] ^ expandBuffer[0]);
-        tmpBuffer[1] = (byte) (b0Buffer[1] ^ expandBuffer[1]);
-        tmpBuffer[2] = (byte) (b0Buffer[2] ^ expandBuffer[2]);
-        tmpBuffer[3] = (byte) (b0Buffer[3] ^ expandBuffer[3]);
-        tmpBuffer[4] = (byte) (b0Buffer[4] ^ expandBuffer[4]);
-        tmpBuffer[5] = (byte) (b0Buffer[5] ^ expandBuffer[5]);
-        tmpBuffer[6] = (byte) (b0Buffer[6] ^ expandBuffer[6]);
-        tmpBuffer[7] = (byte) (b0Buffer[7] ^ expandBuffer[7]);
-        tmpBuffer[8] = (byte) (b0Buffer[8] ^ expandBuffer[8]);
-        tmpBuffer[9] = (byte) (b0Buffer[9] ^ expandBuffer[9]);
-        tmpBuffer[10] = (byte) (b0Buffer[10] ^ expandBuffer[10]);
-        tmpBuffer[11] = (byte) (b0Buffer[11] ^ expandBuffer[11]);
-        tmpBuffer[12] = (byte) (b0Buffer[12] ^ expandBuffer[12]);
-        tmpBuffer[13] = (byte) (b0Buffer[13] ^ expandBuffer[13]);
-        tmpBuffer[14] = (byte) (b0Buffer[14] ^ expandBuffer[14]);
-        tmpBuffer[15] = (byte) (b0Buffer[15] ^ expandBuffer[15]);
-        tmpBuffer[16] = (byte) (b0Buffer[16] ^ expandBuffer[16]);
-        tmpBuffer[17] = (byte) (b0Buffer[17] ^ expandBuffer[17]);
-        tmpBuffer[18] = (byte) (b0Buffer[18] ^ expandBuffer[18]);
-        tmpBuffer[19] = (byte) (b0Buffer[19] ^ expandBuffer[19]);
-        tmpBuffer[20] = (byte) (b0Buffer[20] ^ expandBuffer[20]);
-        tmpBuffer[21] = (byte) (b0Buffer[21] ^ expandBuffer[21]);
-        tmpBuffer[22] = (byte) (b0Buffer[22] ^ expandBuffer[22]);
-        tmpBuffer[23] = (byte) (b0Buffer[23] ^ expandBuffer[23]);
-        tmpBuffer[24] = (byte) (b0Buffer[24] ^ expandBuffer[24]);
-        tmpBuffer[25] = (byte) (b0Buffer[25] ^ expandBuffer[25]);
-        tmpBuffer[26] = (byte) (b0Buffer[26] ^ expandBuffer[26]);
-        tmpBuffer[27] = (byte) (b0Buffer[27] ^ expandBuffer[27]);
-        tmpBuffer[28] = (byte) (b0Buffer[28] ^ expandBuffer[28]);
-        tmpBuffer[29] = (byte) (b0Buffer[29] ^ expandBuffer[29]);
-        tmpBuffer[30] = (byte) (b0Buffer[30] ^ expandBuffer[30]);
-        tmpBuffer[31] = (byte) (b0Buffer[31] ^ expandBuffer[31]);
+        // XOR b_0 with b_1 into tmpBuffer
+        for (short i = 0; i < 32; i++) {
+            tmpBuffer[i] = (byte) (b0Buffer[i] ^ expandBuffer[i]);
+        }
         md.reset();
         md.update(tmpBuffer, (short) 0, (short) 32);
         tmpBuffer[0] = (byte) 0x02;
@@ -227,39 +190,10 @@ public class HashToCurve {
         md.doFinal(tmpBuffer, (short) 0, (short) 0, expandBuffer, (short) 32);
 
         // Compute b_3 = H(b_0 XOR b_2 || I2OSP(3, 1) || DST_prime)
-        // XOR b_0 with b_2 into tmpBuffer (unrolled for performance)
-        tmpBuffer[0] = (byte) (b0Buffer[0] ^ expandBuffer[32]);
-        tmpBuffer[1] = (byte) (b0Buffer[1] ^ expandBuffer[33]);
-        tmpBuffer[2] = (byte) (b0Buffer[2] ^ expandBuffer[34]);
-        tmpBuffer[3] = (byte) (b0Buffer[3] ^ expandBuffer[35]);
-        tmpBuffer[4] = (byte) (b0Buffer[4] ^ expandBuffer[36]);
-        tmpBuffer[5] = (byte) (b0Buffer[5] ^ expandBuffer[37]);
-        tmpBuffer[6] = (byte) (b0Buffer[6] ^ expandBuffer[38]);
-        tmpBuffer[7] = (byte) (b0Buffer[7] ^ expandBuffer[39]);
-        tmpBuffer[8] = (byte) (b0Buffer[8] ^ expandBuffer[40]);
-        tmpBuffer[9] = (byte) (b0Buffer[9] ^ expandBuffer[41]);
-        tmpBuffer[10] = (byte) (b0Buffer[10] ^ expandBuffer[42]);
-        tmpBuffer[11] = (byte) (b0Buffer[11] ^ expandBuffer[43]);
-        tmpBuffer[12] = (byte) (b0Buffer[12] ^ expandBuffer[44]);
-        tmpBuffer[13] = (byte) (b0Buffer[13] ^ expandBuffer[45]);
-        tmpBuffer[14] = (byte) (b0Buffer[14] ^ expandBuffer[46]);
-        tmpBuffer[15] = (byte) (b0Buffer[15] ^ expandBuffer[47]);
-        tmpBuffer[16] = (byte) (b0Buffer[16] ^ expandBuffer[48]);
-        tmpBuffer[17] = (byte) (b0Buffer[17] ^ expandBuffer[49]);
-        tmpBuffer[18] = (byte) (b0Buffer[18] ^ expandBuffer[50]);
-        tmpBuffer[19] = (byte) (b0Buffer[19] ^ expandBuffer[51]);
-        tmpBuffer[20] = (byte) (b0Buffer[20] ^ expandBuffer[52]);
-        tmpBuffer[21] = (byte) (b0Buffer[21] ^ expandBuffer[53]);
-        tmpBuffer[22] = (byte) (b0Buffer[22] ^ expandBuffer[54]);
-        tmpBuffer[23] = (byte) (b0Buffer[23] ^ expandBuffer[55]);
-        tmpBuffer[24] = (byte) (b0Buffer[24] ^ expandBuffer[56]);
-        tmpBuffer[25] = (byte) (b0Buffer[25] ^ expandBuffer[57]);
-        tmpBuffer[26] = (byte) (b0Buffer[26] ^ expandBuffer[58]);
-        tmpBuffer[27] = (byte) (b0Buffer[27] ^ expandBuffer[59]);
-        tmpBuffer[28] = (byte) (b0Buffer[28] ^ expandBuffer[60]);
-        tmpBuffer[29] = (byte) (b0Buffer[29] ^ expandBuffer[61]);
-        tmpBuffer[30] = (byte) (b0Buffer[30] ^ expandBuffer[62]);
-        tmpBuffer[31] = (byte) (b0Buffer[31] ^ expandBuffer[63]);
+        // XOR b_0 with b_2 into tmpBuffer
+        for (short i = 0; i < 32; i++) {
+            tmpBuffer[i] = (byte) (b0Buffer[i] ^ expandBuffer[(short) (32 + i)]);
+        }
         md.reset();
         md.update(tmpBuffer, (short) 0, (short) 32);
         tmpBuffer[0] = (byte) 0x03;
@@ -282,7 +216,7 @@ public class HashToCurve {
         expandMessageXmd(data, offset, length);
 
         // Step 2: Convert uniform bytes to two field elements u0 and u1
-        // Load u0 via rfc_tmp (which is 48 bytes, large enough for the raw value)
+        // Load u0 via rfc_tmp
         rfc_tmp.fromByteArray(expandBuffer, (short) 0, (short) 48);
         rfc_tmp.mod(curve.pBN);
         rfc_u0.copy(rfc_tmp);
@@ -407,7 +341,7 @@ public class HashToCurve {
         // B/3 is pre-computed constant
         x1.copy(B_div_3_constant);
 
-        tmp.copy(ONE_constant);
+        tmp.setValue((byte) 1);
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
         x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
 
@@ -415,7 +349,8 @@ public class HashToCurve {
         // For P-256: A = -3, so gx1 = x1^3 - 3*x1 + B = x1(x1² - 3) + B
         tmp.copy(x1);
         tmp.modSq(curve.pBN);        // x1²
-        tmp.modSub(THREE_constant, curve.pBN);  // x1² - 3
+        gx1.setValue((byte) 3);
+        tmp.modSub(gx1, curve.pBN);  // x1² - 3
         gx1.copy(x1);
         gx1.modMult(tmp, curve.pBN); // x1(x1² - 3)
         gx1.modAdd(curve.bBN, curve.pBN); // + B
@@ -660,7 +595,7 @@ public class HashToCurve {
             // Normal case: x1 = (B/3) * (1 + tv2)
             tv2.modInv(curve.pBN);
             x1.copy(B_div_3_constant);
-            tmp.copy(ONE_constant);
+            tmp.setValue((byte) 1);
             tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
             x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
         }
@@ -669,7 +604,8 @@ public class HashToCurve {
         // For P-256: A = -3, so gx1 = x1^3 - 3*x1 + B = x1(x1² - 3) + B
         tmp.copy(x1);
         tmp.modSq(curve.pBN);        // x1²
-        tmp.modSub(THREE_constant, curve.pBN);  // x1² - 3
+        gx1.setValue((byte) 3);
+        tmp.modSub(gx1, curve.pBN);  // x1² - 3
         gx1.copy(x1);
         gx1.modMult(tmp, curve.pBN); // x1(x1² - 3)
         gx1.modAdd(curve.bBN, curve.pBN); // + B
@@ -695,7 +631,8 @@ public class HashToCurve {
             // For P-256: A = -3, so gx2 = x2^3 - 3*x2 + B = x2(x2² - 3) + B
             tmp.copy(x2);
             tmp.modSq(curve.pBN);        // x2²
-            tmp.modSub(THREE_constant, curve.pBN);  // x2² - 3
+            gx2.setValue((byte) 3);
+            tmp.modSub(gx2, curve.pBN);  // x2² - 3
             gx2.copy(x2);
             gx2.modMult(tmp, curve.pBN); // x2(x2² - 3)
             gx2.modAdd(curve.bBN, curve.pBN); // + B
