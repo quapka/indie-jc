@@ -59,6 +59,10 @@ public class HashToCurve {
     // Allocated locally (32 bytes total)
     private jcmathlib.BigNat rfc_work;    // General work variable
 
+    // Precomputed constants (64 bytes total)
+    private jcmathlib.BigNat precomp_inv3;   // 1/3 mod p (for x1 calculation)
+    private jcmathlib.BigNat precomp_B_div_3; // B/3 mod p (for x1 calculation)
+
     // Temporary ECPoint for P1 in hashToCurveRfc9380 (reused to avoid allocation in hot path)
     private jcmathlib.ECPoint rfc_P1;
 
@@ -84,6 +88,18 @@ public class HashToCurve {
         // Total memory saved: 368 bytes of TRANSIENT memory
         rfc_work = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_TRANSIENT_RESET, IndistinguishabilityApplet.rm);
         rfc_P1 = new jcmathlib.ECPoint(IndistinguishabilityApplet.curve);
+
+        // Precompute constants for SSWU optimization
+        precomp_inv3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        precomp_B_div_3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+
+        // Compute 1/3 mod p
+        precomp_inv3.setValue((byte) 3);
+        precomp_inv3.modInv(IndistinguishabilityApplet.curve.pBN);
+
+        // Compute B/3 mod p
+        precomp_B_div_3.copy(IndistinguishabilityApplet.curve.bBN);
+        precomp_B_div_3.modMult(precomp_inv3, IndistinguishabilityApplet.curve.pBN);
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -314,11 +330,8 @@ public class HashToCurve {
             tv2.zero();
         }
 
-        // x1 = (-B / A) * (1 + tv2)
-        x1.copy(curve.bBN);
-        tmp.setValue((byte) 3);
-        tmp.modInv(curve.pBN);
-        x1.modMult(tmp, curve.pBN);  // x1 = B/3
+        // x1 = (-B / A) * (1 + tv2) - using precomputed B/3
+        x1.copy(precomp_B_div_3);  // x1 = B/3
 
         tmp.setValue((byte) 1);
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
@@ -590,11 +603,8 @@ public class HashToCurve {
 
         // x1 = (-B / A) * (1 + tv2)
         // For P-256: A = -3, B = curve.b
-        // -B/A = B/3
-        x1.copy(curve.bBN);
-        tmp.setValue((byte) 3);
-        tmp.modInv(curve.pBN);
-        x1.modMult(tmp, curve.pBN);  // x1 = B/3
+        // -B/A = B/3 (precomputed)
+        x1.copy(precomp_B_div_3);  // x1 = B/3
 
         tmp.setValue((byte) 1);
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
