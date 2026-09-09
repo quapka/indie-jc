@@ -625,10 +625,8 @@ public class HashToCurve {
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
         // x2 = Z * u^2 * x1
-        x2.copy(Z);
-        tmp.copy(u);
-        tmp.modSq(curve.pBN);
-        x2.modMult(tmp, curve.pBN);
+        // Reuse tv1 which already contains Z * u^2 from line 582
+        x2.copy(tv1);
         x2.modMult(x1, curve.pBN);
 
         // gx2 = x2^3 + A*x2 + B
