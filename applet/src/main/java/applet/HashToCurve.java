@@ -593,7 +593,6 @@ public class HashToCurve {
 
         // Use dedicated RFC9380 BigNats - no conflicts with ResourceManager or other operations
         // All of these are 32 bytes, sized for P-256 field elements
-        jcmathlib.BigNat Z = rfc_Z;
         jcmathlib.BigNat tv1 = rfc_tv1;
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat x1 = rfc_x1;
@@ -606,15 +605,12 @@ public class HashToCurve {
         // Save u's oddness (u is already in a dedicated BigNat, so it's safe)
         boolean sgn0_u = u.isOdd();
 
-        // Z = -10 mod p (precomputed)
-        Z.copy(precomp_Z);
-
         // tv1 = u^2
         tv1.copy(u);
         tv1.modSq(curve.pBN);
 
-        // tv1 = Z * u^2
-        tv1.modMult(Z, curve.pBN);
+        // tv1 = Z * u^2 (using precomputed Z directly)
+        tv1.modMult(precomp_Z, curve.pBN);
 
         // tv2 = tv1^2
         tv2.copy(tv1);
