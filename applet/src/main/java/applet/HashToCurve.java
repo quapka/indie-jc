@@ -230,23 +230,19 @@ public class HashToCurve {
         // Step 1: Expand message to 96 bytes
         expandMessageXmd(data, offset, length);
 
-        // Step 2: Convert uniform bytes to two field elements u0 and u1
-        // Load u0 via rfc_tmp
+        // Step 2 & 3: Load u0 and map to first curve point
+        // Load u0 directly into rfc_tmp, no intermediate copy needed
         rfc_tmp.fromByteArray(expandBuffer, (short) 0, (short) 48);
         rfc_tmp.mod(curve.pBN);
-        rfc_u0.copy(rfc_tmp);
+        // Map u0 to output (mapToSswu only reads from input, doesn't modify it)
+        mapToSswu(rfc_tmp, output);
 
-        // Step 3: Map u0 to first curve point, store in output
-        mapToSswu(rfc_u0, output);
-
-        // Load u1 via rfc_tmp
+        // Step 4: Load u1 and map to second curve point
+        // Reuse rfc_tmp for u1 (u0 processing is complete)
         rfc_tmp.fromByteArray(expandBuffer, (short) 48, (short) 48);
         rfc_tmp.mod(curve.pBN);
-        rfc_u1.copy(rfc_tmp);
-
-        // Step 4: Map u1 to second curve point
-        // Use pre-allocated rfc_P1 to avoid allocation in hot path
-        mapToSswu(rfc_u1, rfc_P1);
+        // Map u1 to rfc_P1
+        mapToSswu(rfc_tmp, rfc_P1);
 
         // Step 5: Add the points: output = P0 + P1
         output.add(rfc_P1);
