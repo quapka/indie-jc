@@ -687,6 +687,9 @@ public class HashToCurve {
         byte[] pointBuffer = curve.rm.POINT_ARRAY_A;
         pointBuffer[0] = (byte) 0x04;
 
+        // Zero the coordinate section once (saves one arrayFill operation)
+        Util.arrayFillNonAtomic(pointBuffer, (short) 1, (short) 64, (byte) 0);
+
         // Write x coordinate to buffer (32 bytes)
         // Copy to tmpBuffer first, then manually pad to avoid prependZeros size issues
         short xLen = chosenX.copyToByteArray(tmpBuffer, (short) 0);
@@ -700,7 +703,7 @@ public class HashToCurve {
             xStart = (short) (xLen - 32);
         }
         short xPadLen = (short) (32 - xDataLen);
-        Util.arrayFillNonAtomic(pointBuffer, (short) 1, xPadLen, (byte) 0);
+        // No need to fill padding - already zeroed above
         Util.arrayCopyNonAtomic(tmpBuffer, xStart, pointBuffer, (short) (1 + xPadLen), xDataLen);
 
         // Write y coordinate to buffer (32 bytes)
@@ -715,7 +718,7 @@ public class HashToCurve {
             yStart = (short) (yLen - 32);
         }
         short yPadLen = (short) (32 - yDataLen);
-        Util.arrayFillNonAtomic(pointBuffer, (short) 33, yPadLen, (byte) 0);
+        // No need to fill padding - already zeroed above
         Util.arrayCopyNonAtomic(tmpBuffer, yStart, pointBuffer, (short) (33 + yPadLen), yDataLen);
 
         // Set the point using setW which validates the point is on the curve
