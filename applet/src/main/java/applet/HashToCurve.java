@@ -59,11 +59,12 @@ public class HashToCurve {
     // Allocated locally (32 bytes total)
     private jcmathlib.BigNat rfc_work;    // General work variable
 
-    // Precomputed constants (128 bytes total)
+    // Precomputed constants (160 bytes total)
     private jcmathlib.BigNat precomp_inv3;   // 1/3 mod p (for x1 calculation)
     private jcmathlib.BigNat precomp_B_div_3; // B/3 mod p (for x1 calculation)
     private jcmathlib.BigNat precomp_Z;      // Z = -10 mod p (for SSWU map)
     private jcmathlib.BigNat precomp_B_div_ZA; // B/(Z*A) mod p (for tv2==0 edge case)
+    private jcmathlib.BigNat precomp_one;    // Constant 1 (to avoid setValue calls)
 
     // Temporary ECPoint for P1 in hashToCurveRfc9380 (reused to avoid allocation in hot path)
     private jcmathlib.ECPoint rfc_P1;
@@ -96,6 +97,7 @@ public class HashToCurve {
         precomp_B_div_3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         precomp_Z = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         precomp_B_div_ZA = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        precomp_one = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         // Compute 1/3 mod p
         precomp_inv3.setValue((byte) 3);
@@ -118,6 +120,9 @@ public class HashToCurve {
         rfc_work.copy(IndistinguishabilityApplet.curve.bBN);
         rfc_work.modMult(precomp_B_div_ZA, IndistinguishabilityApplet.curve.pBN); // B * (1 / (Z * A))
         precomp_B_div_ZA.copy(rfc_work);
+
+        // Compute constant 1
+        precomp_one.setValue((byte) 1);
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -349,7 +354,7 @@ public class HashToCurve {
         // x1 = (-B / A) * (1 + tv2) - using precomputed B/3
         x1.copy(precomp_B_div_3);  // x1 = B/3
 
-        tmp.setValue((byte) 1);
+        tmp.copy(precomp_one);
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
         x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
 
@@ -612,7 +617,7 @@ public class HashToCurve {
         // -B/A = B/3 (precomputed)
         x1.copy(precomp_B_div_3);  // x1 = B/3
 
-        tmp.setValue((byte) 1);
+        tmp.copy(precomp_one);
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
         x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
 
