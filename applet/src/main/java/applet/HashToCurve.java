@@ -589,7 +589,6 @@ public class HashToCurve {
 
         // Use dedicated RFC9380 BigNats - no conflicts with ResourceManager or other operations
         // All of these are 32 bytes, sized for P-256 field elements
-        jcmathlib.BigNat tv1 = rfc_tv1;
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat x1 = rfc_x1;
         jcmathlib.BigNat x2 = rfc_x2;
@@ -598,22 +597,21 @@ public class HashToCurve {
         jcmathlib.BigNat y = rfc_y;
         jcmathlib.BigNat tmp = rfc_work;
 
-        // Save u's oddness (u is already in a dedicated BigNat, so it's safe)
+        // Save u's oddness before modifying u
         boolean sgn0_u = u.isOdd();
 
-        // tv1 = u^2
-        tv1.copy(u);
-        tv1.modSq(curve.pBN);
+        // u = u^2 (reuse u directly, no copy needed)
+        u.modSq(curve.pBN);
 
-        // tv1 = Z * u^2 (using precomputed Z directly)
-        tv1.modMult(precomp_Z, curve.pBN);
+        // u = Z * u^2 (u now contains Z * u^2, using precomputed Z directly)
+        u.modMult(precomp_Z, curve.pBN);
 
-        // tv2 = tv1^2
-        tv2.copy(tv1);
+        // tv2 = u^2 = (Z * u^2)^2
+        tv2.copy(u);
         tv2.modSq(curve.pBN);
 
-        // tv2 = tv2 + tv1
-        tv2.modAdd(tv1, curve.pBN);
+        // tv2 = tv2 + u = (Z * u^2)^2 + (Z * u^2)
+        tv2.modAdd(u, curve.pBN);
 
         // tv2 = inv0(tv2) - compute modular inverse if tv2 != 0, else 0
         boolean tv2IsZero = tv2.isZero();
@@ -646,8 +644,8 @@ public class HashToCurve {
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
         // x2 = Z * u^2 * x1
-        // Reuse tv1 which already contains Z * u^2 from line 582
-        x2.copy(tv1);
+        // Reuse u which already contains Z * u^2
+        x2.copy(u);
         x2.modMult(x1, curve.pBN);
 
         // gx2 = x2^3 + A*x2 + B
