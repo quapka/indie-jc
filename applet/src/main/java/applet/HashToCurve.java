@@ -364,9 +364,8 @@ public class HashToCurve {
         boolean tv2IsZero = tv2.isZero();
         if (!tv2IsZero) {
             tv2.modInv(curve.pBN);
-        } else {
-            tv2.zero();
         }
+        // else: tv2 is already zero, no need to call zero() again
 
         // x1 = (-B / A) * (1 + tv2) - using precomputed B/3
         x1.copy(precomp_B_div_3);  // x1 = B/3
@@ -460,9 +459,8 @@ public class HashToCurve {
         boolean tv2IsZero = tv2.isZero();
         if (!tv2IsZero) {
             tv2.modInv(curve.pBN);
-        } else {
-            tv2.zero();
         }
+        // else: tv2 is already zero, no need to call zero() again
 
         // Format output: tv1 (32 bytes) || tv2_inv (32 bytes)
         // Return tv1 and tv2 AFTER inversion
@@ -621,9 +619,8 @@ public class HashToCurve {
         boolean tv2IsZero = tv2.isZero();
         if (!tv2IsZero) {
             tv2.modInv(curve.pBN);
-        } else {
-            tv2.zero();
         }
+        // else: tv2 is already zero, no need to call zero() again
 
         // x1 = (-B / A) * (1 + tv2)
         // For P-256: A = -3, B = curve.b
