@@ -134,8 +134,6 @@ public class HashToCurve {
         dstPrimeBuffer[RFC9380_DST.length] = (byte) RFC9380_DST.length;
     }
 
-    }
-
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
         Util.arrayFillNonAtomic(prefixBuffer, (short) 32, (short) 4, (byte) 0);
         md.reset();
