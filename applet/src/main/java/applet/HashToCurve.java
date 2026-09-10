@@ -669,13 +669,13 @@ public class HashToCurve {
         if (gx1.isQuadraticResidue(curve.pBN)) {
             // gx1 is a square, use x1
             chosenX = x1;
-            y.copy(gx1);
-            y.modSqrt(curve.pBN);
+            gx1.modSqrt(curve.pBN);
+            y = gx1;  // Reassign y to point to gx1 (no copy needed)
         } else {
             // gx1 is not a square, use x2
             chosenX = x2;
-            y.copy(gx2);
-            y.modSqrt(curve.pBN);
+            gx2.modSqrt(curve.pBN);
+            y = gx2;  // Reassign y to point to gx2 (no copy needed)
         }
 
         // Ensure sgn0(u) == sgn0(y)
