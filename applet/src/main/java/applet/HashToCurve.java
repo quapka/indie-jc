@@ -59,10 +59,11 @@ public class HashToCurve {
     // Allocated locally (32 bytes total)
     private jcmathlib.BigNat rfc_work;    // General work variable
 
-    // Precomputed constants (96 bytes total)
+    // Precomputed constants (128 bytes total)
     private jcmathlib.BigNat precomp_inv3;   // 1/3 mod p (for x1 calculation)
     private jcmathlib.BigNat precomp_B_div_3; // B/3 mod p (for x1 calculation)
     private jcmathlib.BigNat precomp_Z;      // Z = -10 mod p (for SSWU map)
+    private jcmathlib.BigNat precomp_B_div_ZA; // B/(Z*A) mod p (for tv2==0 edge case)
 
     // Temporary ECPoint for P1 in hashToCurveRfc9380 (reused to avoid allocation in hot path)
     private jcmathlib.ECPoint rfc_P1;
@@ -94,6 +95,7 @@ public class HashToCurve {
         precomp_inv3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         precomp_B_div_3 = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
         precomp_Z = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
+        precomp_B_div_ZA = new jcmathlib.BigNat((short) 32, JCSystem.MEMORY_TYPE_PERSISTENT, IndistinguishabilityApplet.rm);
 
         // Compute 1/3 mod p
         precomp_inv3.setValue((byte) 3);
@@ -107,6 +109,15 @@ public class HashToCurve {
         precomp_Z.copy(IndistinguishabilityApplet.curve.pBN);
         rfc_work.setValue((byte) 10);
         precomp_Z.modSub(rfc_work, IndistinguishabilityApplet.curve.pBN);
+
+        // Compute B/(Z*A) mod p for tv2==0 edge case
+        // precomp_B_div_ZA = B / (Z * A)
+        precomp_B_div_ZA.copy(precomp_Z);
+        precomp_B_div_ZA.modMult(IndistinguishabilityApplet.curve.aBN, IndistinguishabilityApplet.curve.pBN); // Z * A
+        precomp_B_div_ZA.modInv(IndistinguishabilityApplet.curve.pBN); // 1 / (Z * A)
+        rfc_work.copy(IndistinguishabilityApplet.curve.bBN);
+        rfc_work.modMult(precomp_B_div_ZA, IndistinguishabilityApplet.curve.pBN); // B * (1 / (Z * A))
+        precomp_B_div_ZA.copy(rfc_work);
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -605,14 +616,9 @@ public class HashToCurve {
         tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
         x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
 
-        // If tv2 == 0, set x1 = B / (Z * A)
-        // For P-256: A = -3, so Z * A = Z * (-3) = -3Z
+        // If tv2 == 0, set x1 = B / (Z * A) (precomputed)
         if (tv2IsZero) {
-            x1.copy(curve.bBN);       // x1 = B
-            tmp.copy(Z);
-            tmp.modMult(curve.aBN, curve.pBN);  // tmp = Z * A
-            tmp.modInv(curve.pBN);     // tmp = 1 / (Z * A)
-            x1.modMult(tmp, curve.pBN); // x1 = B / (Z * A)
+            x1.copy(precomp_B_div_ZA);
         }
 
         // gx1 = x1^3 + A*x1 + B
