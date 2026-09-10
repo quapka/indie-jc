@@ -193,9 +193,16 @@ public class HashToCurve {
         md.doFinal(tmpBuffer, (short) 0, (short) 0, expandBuffer, (short) 0);
 
         // Compute b_2 = H(b_0 XOR b_1 || I2OSP(2, 1) || DST_prime)
-        // XOR b_0 with b_1 into tmpBuffer
-        for (short i = 0; i < 32; i++) {
+        // XOR b_0 with b_1 into tmpBuffer (8-way unrolled)
+        for (short i = 0; i < 32; i += 8) {
             tmpBuffer[i] = (byte) (b0Buffer[i] ^ expandBuffer[i]);
+            tmpBuffer[(short)(i+1)] = (byte) (b0Buffer[(short)(i+1)] ^ expandBuffer[(short)(i+1)]);
+            tmpBuffer[(short)(i+2)] = (byte) (b0Buffer[(short)(i+2)] ^ expandBuffer[(short)(i+2)]);
+            tmpBuffer[(short)(i+3)] = (byte) (b0Buffer[(short)(i+3)] ^ expandBuffer[(short)(i+3)]);
+            tmpBuffer[(short)(i+4)] = (byte) (b0Buffer[(short)(i+4)] ^ expandBuffer[(short)(i+4)]);
+            tmpBuffer[(short)(i+5)] = (byte) (b0Buffer[(short)(i+5)] ^ expandBuffer[(short)(i+5)]);
+            tmpBuffer[(short)(i+6)] = (byte) (b0Buffer[(short)(i+6)] ^ expandBuffer[(short)(i+6)]);
+            tmpBuffer[(short)(i+7)] = (byte) (b0Buffer[(short)(i+7)] ^ expandBuffer[(short)(i+7)]);
         }
         md.reset();
         md.update(tmpBuffer, (short) 0, (short) 32);
@@ -205,9 +212,16 @@ public class HashToCurve {
         md.doFinal(tmpBuffer, (short) 0, (short) 0, expandBuffer, (short) 32);
 
         // Compute b_3 = H(b_0 XOR b_2 || I2OSP(3, 1) || DST_prime)
-        // XOR b_0 with b_2 into tmpBuffer
-        for (short i = 0; i < 32; i++) {
-            tmpBuffer[i] = (byte) (b0Buffer[i] ^ expandBuffer[(short) (32 + i)]);
+        // XOR b_0 with b_2 into tmpBuffer (8-way unrolled)
+        for (short i = 0; i < 32; i += 8) {
+            tmpBuffer[i] = (byte) (b0Buffer[i] ^ expandBuffer[(short)(32+i)]);
+            tmpBuffer[(short)(i+1)] = (byte) (b0Buffer[(short)(i+1)] ^ expandBuffer[(short)(32+i+1)]);
+            tmpBuffer[(short)(i+2)] = (byte) (b0Buffer[(short)(i+2)] ^ expandBuffer[(short)(32+i+2)]);
+            tmpBuffer[(short)(i+3)] = (byte) (b0Buffer[(short)(i+3)] ^ expandBuffer[(short)(32+i+3)]);
+            tmpBuffer[(short)(i+4)] = (byte) (b0Buffer[(short)(i+4)] ^ expandBuffer[(short)(32+i+4)]);
+            tmpBuffer[(short)(i+5)] = (byte) (b0Buffer[(short)(i+5)] ^ expandBuffer[(short)(32+i+5)]);
+            tmpBuffer[(short)(i+6)] = (byte) (b0Buffer[(short)(i+6)] ^ expandBuffer[(short)(32+i+6)]);
+            tmpBuffer[(short)(i+7)] = (byte) (b0Buffer[(short)(i+7)] ^ expandBuffer[(short)(32+i+7)]);
         }
         md.reset();
         md.update(tmpBuffer, (short) 0, (short) 32);
