@@ -35,7 +35,7 @@ public class HashToCurve {
     // RFC 9380 working buffers
     private final byte[] expandBuffer = JCSystem.makeTransientByteArray((short) 96, JCSystem.CLEAR_ON_RESET);
     private final byte[] b0Buffer = JCSystem.makeTransientByteArray((short) 32, JCSystem.CLEAR_ON_RESET);
-    private final byte[] dstPrimeBuffer = JCSystem.makeTransientByteArray((short) 45, JCSystem.CLEAR_ON_RESET); // DST length + 1
+    private final byte[] dstPrimeBuffer = new byte[45];
     private final byte[] tmpBuffer = JCSystem.makeTransientByteArray((short) 64, JCSystem.CLEAR_ON_RESET);
 
     // RFC 9380 BigNats - reuse existing transient BigNats to save memory
@@ -128,6 +128,12 @@ public class HashToCurve {
 
         // Compute constant 3 (for curve equation optimization where A=-3)
         precomp_three.setValue((byte) 3);
+
+        // Precompute DST_prime = DST || I2OSP(len(DST), 1)
+        Util.arrayCopyNonAtomic(RFC9380_DST, (short) 0, dstPrimeBuffer, (short) 0, (short) RFC9380_DST.length);
+        dstPrimeBuffer[RFC9380_DST.length] = (byte) RFC9380_DST.length;
+    }
+
     }
 
     public boolean hash(byte[] data, short offset, short length, ECPoint output) {
@@ -161,9 +167,7 @@ public class HashToCurve {
      * Result is stored in expandBuffer
      */
     private void expandMessageXmd(byte[] msg, short msgOffset, short msgLength) {
-        // DST_prime = DST || I2OSP(len(DST), 1)
-        Util.arrayCopyNonAtomic(RFC9380_DST, (short) 0, dstPrimeBuffer, (short) 0, (short) RFC9380_DST.length);
-        dstPrimeBuffer[RFC9380_DST.length] = (byte) RFC9380_DST.length;
+        // DST_prime is precomputed in constructor
 
         // Compute b_0 = H(Z_pad || msg || I2OSP(len_in_bytes, 2) || I2OSP(0, 1) || DST_prime)
         // Z_pad is 64 zero bytes (SHA-256 block size)
