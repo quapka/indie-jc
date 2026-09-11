@@ -592,11 +592,12 @@ public class HashToCurve {
         jcmathlib.BigNat tv1 = rfc_tv1;
         jcmathlib.BigNat tv2 = rfc_tv2;
         jcmathlib.BigNat x1 = rfc_x1;
-        jcmathlib.BigNat x2 = rfc_x2;
         jcmathlib.BigNat gx1 = rfc_gx1;
         jcmathlib.BigNat gx2 = rfc_gx2;
         jcmathlib.BigNat y = rfc_y;
         jcmathlib.BigNat tmp = rfc_work;
+        // Note: tv1 will be reused as x2 after line 616 (rename for clarity)
+        jcmathlib.BigNat x2;
 
         // Save u's oddness (u is already in a dedicated BigNat, so it's safe)
         boolean sgn0_u = u.isOdd();
@@ -614,6 +615,9 @@ public class HashToCurve {
 
         // tv2 = tv2 + tv1
         tv2.modAdd(tv1, curve.pBN);
+
+        // After this point, tv1 (which contains Z * u^2) will be reused as x2
+        x2 = tv1;
 
         // tv2 = inv0(tv2) - compute modular inverse if tv2 != 0, else 0
         boolean tv2IsZero = tv2.isZero();
@@ -646,8 +650,7 @@ public class HashToCurve {
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
         // x2 = Z * u^2 * x1
-        // Reuse tv1 which already contains Z * u^2
-        x2.copy(tv1);
+        // x2 already points to tv1 which contains Z * u^2, no copy needed
         x2.modMult(x1, curve.pBN);
 
         // gx2 = x2^3 + A*x2 + B
