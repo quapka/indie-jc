@@ -259,11 +259,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                         generateDVRFKeypair(apdu);
                         break;
                     case Consts.INS.GET_VERIFICATION_PUBKEY:
-                        System.out.println("About to getDerivationPubkey");
                         getDerivationPubkey(apdu);
                         break;
                     case Consts.INS.GET_EXAMPLE_PROOF:
-                        System.out.println("About to computeDleq");
                         computeDleq(apdu);
                         break;
                     case Consts.INS.GET_CURRENT_EPOCH:
@@ -418,8 +416,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setIncomingAndReceive();
         nParties = apduBuffer[ISO7816.OFFSET_P1];
         threshold = apduBuffer[ISO7816.OFFSET_P2];
-
-        System.out.println(String.format("Setting self index to: '%d'", apduBuffer[ISO7816.OFFSET_CDATA]));
 
         byte partyID = apduBuffer[ISO7816.OFFSET_CDATA];
         if ( partyID < 1 ) {
@@ -931,13 +927,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short ctxtLen = (short) (extApduSize - 16 - 65 - offset);
 
         short ptxtLen = aesCtrDecryptInner(buffer, offset, ctxtLen, tmp, (short) 0);
-        System.out.println(ptxtLen);
-
-        System.out.println("In-card token");
-        for (short i = 0; i < ptxtLen; i++) {
-            System.out.print(String.format("%02X", tmp[i]));
-        }
-        System.out.println();
 
         if ( validJwt(tmp, (short) 0, ptxtLen) ) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
@@ -1109,13 +1098,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
 
-        System.out.println("Plaintex JWT verify");
-        for (short i = apdu.getOffsetCdata(); i < extApduSize; i++) {
-            System.out.print(String.format("%02X", buffer[i]));
-        }
-        System.out.println();
-
-
         if (validJwt(buffer, apdu.getOffsetCdata(),  extApduSize)) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);
             apdu.setOutgoingAndSend((short) 0, (short) Good.length);
@@ -1226,9 +1208,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         short offset = apdu.getOffsetCdata();
 
         short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
-        System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
-        System.out.println(String.format("secondDot: %d", secondDot));
 
         short nDecoded = 0;
         // add signature verification
@@ -1241,11 +1221,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         );
         // encode signature
         short sigLen = Utils.derEncodeRawEcdsaSignature(procBuffer, (short) 0, derSignature, (short) 0);
-        System.out.println(sigLen);
-        for (short i = 0; i < sigLen; i++ ) {
-            System.out.print(String.format("%02x", derSignature[i]));
-        }
-        System.out.println();
         if ( !verifySignature(buffer, offset, (short) (secondDot - offset), derSignature, (short) 0, sigLen) ) {
             Util.arrayCopyNonAtomic(Bad, (short) 0, apduBuffer, (short) 0, (short) Bad.length);
             // FIXME better output
@@ -1306,7 +1281,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     public void computeDleq(APDU apdu) {
-        System.out.println("computeDleq");
         // FIXME buffer is not used
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
@@ -1314,11 +1288,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // however, in the TVRF the input is hashed-to-curve first
         // 1. get value from user
         // 2. hash it to curve
-        for (short i = ISO7816.OFFSET_CDATA; i < ISO7816.OFFSET_CDATA + 65; i++) {
-            System.out.print(String.format("%02x", apduBuffer[i]));
-        }
         DiscreteLogEquality.userPoint.setW(apduBuffer, (short) (ISO7816.OFFSET_CDATA), (short) 65);
-        System.out.println();
         // 3. multiply by secret
         DiscreteLogEquality.partialDerivedShare.copy(DiscreteLogEquality.userPoint);
         DiscreteLogEquality.partialDerivedShare.multiplication(DiscreteLogEquality.secretShare);
@@ -1385,9 +1355,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
         short offset = apdu.getOffsetCdata();
         short firstDot = indexOf(buffer, offset,  extApduSize, (byte) '.');
-        System.out.println(String.format("firstDot: %d", firstDot));
         short secondDot = indexOf(buffer, (short) (firstDot + 1), extApduSize, (byte) '.');
-        System.out.println(String.format("secondDot: %d", secondDot));
 
         // System.out.println(buffer);
         // byte[] slice = Arrays.copyOfRange(buffer, firstDot, secondDot);
@@ -1404,7 +1372,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // optimize copying the signature
         Util.arrayCopyNonAtomic(procBuffer, (short) 0, derSignature, (short) 5, (short) 32); // set r-value
         Util.arrayCopyNonAtomic(procBuffer, (short) 32, derSignature, (short) 39 /* 4 + 32 + 3 */, (short) 32); // set s-value
-        System.out.println();
 
         // // hardcode DER signature values
         // derSignature[0] = (byte) 0x30;
@@ -1433,11 +1400,6 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         // r-value
         derSignature[37] = (byte) 0x02;
         derSignature[38] = (byte) 0x20;
-        // s-value
-        for (short i = 0; i < derSignature.length; i++) {
-            System.out.print(String.format("%02x", derSignature[i]));
-        }
-        System.out.println();
 
         if ( verifySignature(buffer, (short) 0, secondDot, derSignature, (short) 0, (short) 71) ) {
             Util.arrayCopyNonAtomic(Good, (short) 0, apduBuffer, (short) 0, (short) Good.length);

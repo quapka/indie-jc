@@ -203,7 +203,6 @@ public class DistributedKeyGen {
     }
 
     public short getShares(byte forPartyID, byte[] out, short offset) {
-        System.out.println(String.format("Me: '%d' supposed to send to '%d'", partyIndex, forPartyID));
         // don't leak our own shares
         if ( forPartyID == partyID ) {
             return (short) 0;

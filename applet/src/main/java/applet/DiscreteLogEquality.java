@@ -87,11 +87,7 @@ public class DiscreteLogEquality {
         IndistinguishabilityApplet.rng.nextBytes(tmp, (short) 0, (short) 32);
         bBN.fromByteArray(tmp, (short) 0, (short) 32);
 
-        printBigNat(aBN);
-        printBigNat(bBN);
-        printBigNat(IndistinguishabilityApplet.curve.rBN);
         aBN.modMult(bBN, IndistinguishabilityApplet.curve.rBN);
-        printBigNat(aBN);
         aBN.copyToByteArray(apduBuffer, (short) 0);
 
         apdu.setOutgoingAndSend((short) 0, (short) 32);
@@ -259,11 +255,6 @@ public class DiscreteLogEquality {
 
     public short exampleProof(byte[] out) {
         // convert the ephemeral key to point and secretShare
-        for (short i = 0; i < 32; i ++ ) {
-            System.out.print(String.format("%02x", tmp[i]));
-        }
-        // G.multiplication(secretShare);
-        System.out.println();
         short byteLength = IndistinguishabilityApplet.curve.disposablePub.getW(tmp, (short) 0);
         partialDerivedShare.setW(tmp, (short) 0, byteLength);
 
