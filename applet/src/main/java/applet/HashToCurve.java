@@ -648,19 +648,6 @@ public class HashToCurve {
         gx1.modMult(tmp, curve.pBN); // x1 * (x1^2 - 3)
         gx1.modAdd(curve.bBN, curve.pBN); // + B
 
-        // x2 = Z * u^2 * x1
-        // x2 already points to tv1 which contains Z * u^2, no copy needed
-        x2.modMult(x1, curve.pBN);
-
-        // gx2 = x2^3 + A*x2 + B
-        // For P-256 where A=-3, optimize to: x2(x2^2 - 3) + B
-        tmp.copy(x2);
-        tmp.modSq(curve.pBN);      // x2^2
-        tmp.modSub(precomp_three, curve.pBN);  // x2^2 - 3
-        gx2.copy(x2);
-        gx2.modMult(tmp, curve.pBN); // x2 * (x2^2 - 3)
-        gx2.modAdd(curve.bBN, curve.pBN); // + B
-
         // Choose x based on which gx is a square
         jcmathlib.BigNat chosenX;  // Will point to x1 or x2
 
@@ -670,7 +657,20 @@ public class HashToCurve {
             gx1.modSqrt(curve.pBN);
             y = gx1;  // Reassign y to point to gx1 (no copy needed)
         } else {
-            // gx1 is not a square, use x2
+            // gx1 is not a square, compute x2 and gx2 only now
+            // x2 = Z * u^2 * x1
+            // x2 already points to tv1 which contains Z * u^2, no copy needed
+            x2.modMult(x1, curve.pBN);
+
+            // gx2 = x2^3 + A*x2 + B
+            // For P-256 where A=-3, optimize to: x2(x2^2 - 3) + B
+            tmp.copy(x2);
+            tmp.modSq(curve.pBN);      // x2^2
+            tmp.modSub(precomp_three, curve.pBN);  // x2^2 - 3
+            gx2.copy(x2);
+            gx2.modMult(tmp, curve.pBN); // x2 * (x2^2 - 3)
+            gx2.modAdd(curve.bBN, curve.pBN); // + B
+
             chosenX = x2;
             gx2.modSqrt(curve.pBN);
             y = gx2;  // Reassign y to point to gx2 (no copy needed)
