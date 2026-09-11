@@ -39,6 +39,15 @@ tests=(
     testDeriveDleq
     testDeriveDleqFromJWT
     testLagrange
+    testRfc9380HashToCurveImplementation
+    testRfc9380GetU0
+    testRfc9380GetTv1Tv2
+    testRfc9380GetZ
+    testRfc9380GetU2
+    testRfc9380GetX1Gx1
+    testRfc9380OnCardVsOffCard_P0
+    testRfc9380OnCardVsOffCard_P1
+    testRfc9380OfficialTestVectors
 )
 
 for testName in "${tests[@]}"; do
