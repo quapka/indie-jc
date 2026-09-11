@@ -628,15 +628,14 @@ public class HashToCurve {
         // x1 = (-B / A) * (1 + tv2)
         // For P-256: A = -3, B = curve.b
         // -B/A = B/3 (precomputed)
-        x1.copy(precomp_B_div_3);  // x1 = B/3
-
-        tmp.copy(precomp_one);
-        tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
-        x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
-
-        // If tv2 == 0, set x1 = B / (Z * A) (precomputed)
+        // If tv2 == 0, use special case value B / (Z * A) (precomputed)
         if (tv2IsZero) {
             x1.copy(precomp_B_div_ZA);
+        } else {
+            x1.copy(precomp_B_div_3);  // x1 = B/3
+            tmp.copy(precomp_one);
+            tmp.modAdd(tv2, curve.pBN);   // tmp = 1 + tv2
+            x1.modMult(tmp, curve.pBN);   // x1 = (B/3) * (1 + tv2)
         }
 
         // gx1 = x1^3 + A*x1 + B
