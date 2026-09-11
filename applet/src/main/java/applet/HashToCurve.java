@@ -176,11 +176,11 @@ public class HashToCurve {
         // Add message
         md.update(msg, msgOffset, msgLength);
         // Add I2OSP(96, 2) - length in bytes
-        tmpBuffer[0] = (byte) 0x00;
+        // tmpBuffer[0] already 0 from arrayFill above
         tmpBuffer[1] = (byte) 0x60; // 96 in hex
         md.update(tmpBuffer, (short) 0, (short) 2);
         // Add I2OSP(0, 1)
-        tmpBuffer[0] = (byte) 0x00;
+        // tmpBuffer[0] already 0 from arrayFill above
         md.update(tmpBuffer, (short) 0, (short) 1);
         // Add DST_prime
         md.update(dstPrimeBuffer, (short) 0, (short) (RFC9380_DST.length + 1));
