@@ -116,6 +116,8 @@ final def testCardType = "test.cardType"
 final def testReaderIndex = "test.ReaderIndex"
 final def threshold = "threshold"
 final def nParties = "nParties"
+final def warmupRuns = "warmupRuns"
+final def measurementRuns = "measurementRuns"
 
 test {
     systemProperty 'package.aid', packageAID
@@ -137,6 +139,14 @@ test {
 
     if (project.hasProperty(nParties)) {
         systemProperty nParties, project.findProperty(nParties)
+    }
+
+    if (project.hasProperty(warmupRuns)) {
+        systemProperty warmupRuns, project.findProperty(warmupRuns)
+    }
+
+    if (project.hasProperty(measurementRuns)) {
+        systemProperty measurementRuns, project.findProperty(measurementRuns)
     }
 
     // useTestNG()

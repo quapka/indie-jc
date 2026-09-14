@@ -55,6 +55,7 @@
       default = mkShell {
         name = "gradle2nix";
         packages = [
+          bc
           nodejs
           jdk25_headless
           global-platform-pro
