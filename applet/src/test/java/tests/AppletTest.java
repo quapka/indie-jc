@@ -123,13 +123,13 @@ public class AppletTest extends BaseTest {
     public static byte[] CURVE_G = SecP256r1.G;
     public static short CURVE_K = SecP256r1.k;
 
-    public static short threshold = 5;
-    public static short nParties = 5;
-    
-    // NOTE hardcoded reader indeces are fragile and likely won't work on other systems
-    // or with different cards inserted into a system
-    public static int[] readerIndeces = new int[] {2, 3, 4, 5, 6};
-    public static byte[] partyIDs = new byte[] {1, 2, 3, 4, 5}; // parties are 1-indexed
+    // Configurable via project properties: -Pthreshold=2 -PnParties=3
+    public static short threshold;
+    public static short nParties;
+
+    // Auto-generated based on nParties (0-indexed for readers, 1-indexed for party IDs)
+    public static int[] readerIndeces;
+    public static byte[] partyIDs;
 
     // NOTE: The c0 ff ee bytes are sent only to trigger the extended response working on jcardengine side.
     //       Sending only the 0x7fff would result in not being sent and thus no ext response.
@@ -137,6 +137,37 @@ public class AppletTest extends BaseTest {
 
     public AppletTest() throws Exception {
         super();
+
+        // Read configuration from system properties (set via -P flags in build.gradle)
+        // Usage: ./gradlew test -Pthreshold=2 -PnParties=3
+        // Default: 2-out-of-2
+        threshold = Short.parseShort(System.getProperty("threshold", "2"));
+        nParties = Short.parseShort(System.getProperty("nParties", "2"));
+
+        // Validate configuration
+        if (threshold > nParties) {
+            throw new IllegalArgumentException(
+                String.format("Threshold (%d) cannot be greater than nParties (%d)", threshold, nParties)
+            );
+        }
+        if (threshold < 1) {
+            throw new IllegalArgumentException("Threshold must be at least 1");
+        }
+        if (nParties < 1) {
+            throw new IllegalArgumentException("nParties must be at least 1");
+        }
+
+        // Auto-generate reader indices: [0, 1, 2, ..., nParties-1]
+        readerIndeces = new int[nParties];
+        for (int i = 0; i < nParties; i++) {
+            readerIndeces[i] = i + 2; // offset by two, as first two are virtual readers without physical cards
+        }
+
+        // Auto-generate party IDs: [1, 2, 3, ..., nParties] (1-indexed)
+        partyIDs = new byte[nParties];
+        for (int i = 0; i < nParties; i++) {
+            partyIDs[i] = (byte) (i + 1);
+        }
 
         curve = new ECCurve.Fp(new BigInteger(1, CURVE_P), new BigInteger(1, CURVE_A), new BigInteger(1, CURVE_B));
         BigInteger x = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1, CURVE_G.length / 2 + 1));
@@ -146,8 +177,6 @@ public class AppletTest extends BaseTest {
         curveA = new BigInteger(1, CURVE_A);
         curveB = new BigInteger(1, CURVE_B);
         CURVE_SPEC = new ECParameterSpec(curve, Generator, new BigInteger(1, CURVE_R), BigInteger.valueOf(CURVE_K));
-
-        // FIXME add check that threshold <= nParties and there are correct number of readerIndeces and partyIDs set
 
         Security.addProvider(new BouncyCastleProvider());
     }
@@ -1447,7 +1476,6 @@ public class AppletTest extends BaseTest {
         byte[] digest = hasher.digest();
 
         // Cards initialization
-        int nParties = readerIndeces.length;
         ECPoint[] keys = new ECPoint[nParties];
         ECPoint[][] cardsPubNonces = new ECPoint[nParties][Constants.V];
 
@@ -1509,8 +1537,6 @@ public class AppletTest extends BaseTest {
     @Test
     public void testNofNDLEQSetup() throws Exception {
         // Cards setup
-        int nParties = readerIndeces.length;
-        int threshold = nParties;
 
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];

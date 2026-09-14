@@ -114,6 +114,8 @@ final def appletAID = "${packageAID}:01:02"
 final def buildCardType = "build.cardType"
 final def testCardType = "test.cardType"
 final def testReaderIndex = "test.ReaderIndex"
+final def threshold = "threshold"
+final def nParties = "nParties"
 
 test {
     systemProperty 'package.aid', packageAID
@@ -127,6 +129,14 @@ test {
 
     if (project.hasProperty(testReaderIndex)) {
         systemProperty testReaderIndex, project.findProperty(testReaderIndex)
+    }
+
+    if (project.hasProperty(threshold)) {
+        systemProperty threshold, project.findProperty(threshold)
+    }
+
+    if (project.hasProperty(nParties)) {
+        systemProperty nParties, project.findProperty(nParties)
     }
 
     // useTestNG()
