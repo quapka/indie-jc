@@ -169,6 +169,57 @@ public class AppletTest extends BaseTest {
             partyIDs[i] = (byte) (i + 1);
         }
 
+        // Verify cards are present at configured reader indices (only for physical cards)
+        if (isPhysical()) {
+            System.out.println("Verifying cards are present at reader indices...");
+
+            // Get reader names for better error messages
+            java.util.List<String> readerNames = new java.util.ArrayList<>();
+            try {
+                // Use jnasmartcardio provider (more reliable on Linux/macOS)
+                Security.addProvider(new jnasmartcardio.Smartcardio());
+                javax.smartcardio.TerminalFactory factory = javax.smartcardio.TerminalFactory.getInstance("PC/SC", null);
+
+                java.util.List<javax.smartcardio.CardTerminal> terminals = factory.terminals().list();
+                System.out.println("  Found " + terminals.size() + " card readers:");
+                for (javax.smartcardio.CardTerminal terminal : terminals) {
+                    String name = terminal.getName();
+                    readerNames.add(name);
+                    System.out.println("    [" + (readerNames.size() - 1) + "] " + name);
+                }
+            } catch (Exception e) {
+                // If we can't get reader names, just use indices
+                System.out.println("  Warning: Could not enumerate card readers: " + e.getMessage());
+            }
+
+            // Build reader info string for error messages
+            StringBuilder readerInfo = new StringBuilder();
+            for (int i = 0; i < nParties; i++) {
+                if (i > 0) readerInfo.append(", ");
+                readerInfo.append(readerIndeces[i]);
+                if (readerIndeces[i] < readerNames.size()) {
+                    readerInfo.append(" (").append(readerNames.get(readerIndeces[i])).append(")");
+                }
+            }
+
+            for (int i = 0; i < nParties; i++) {
+                int readerIndex = readerIndeces[i];
+                String readerName = (readerIndex < readerNames.size()) ? readerNames.get(readerIndex) : "unknown";
+                try {
+                    // Try to connect to verify the card exists
+                    connectAtIndex(null, readerIndex);
+                    System.out.println("  Reader " + readerIndex + " (" + readerName + "): Card detected");
+                } catch (Exception e) {
+                    throw new IllegalStateException(
+                        String.format("No card found at reader index %d (%s) - required by party %d. " +
+                                     "Please ensure %d cards are inserted in readers: %s",
+                                     readerIndex, readerName, partyIDs[i], nParties, readerInfo.toString()),
+                        e
+                    );
+                }
+            }
+        }
+
         curve = new ECCurve.Fp(new BigInteger(1, CURVE_P), new BigInteger(1, CURVE_A), new BigInteger(1, CURVE_B));
         BigInteger x = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1, CURVE_G.length / 2 + 1));
         BigInteger y = new BigInteger(1, Arrays.copyOfRange(CURVE_G, 1 + CURVE_G.length / 2, CURVE_G.length));
