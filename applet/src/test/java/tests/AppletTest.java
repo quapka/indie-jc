@@ -2121,12 +2121,32 @@ public class AppletTest extends BaseTest {
             encPayloads[index] = encPayload;
         }
 
+        ECPoint[] individualVerKeys = new ECPoint[nParties];
+        ECPoint aggVerKeys = curve.getInfinity();
+
+        // verify the DLEQ public key shares
+        for (int index = 0; index < readerIndeces.length; index++) {
+            final int idx = index;
+            final int readerIndex = readerIndeces[index];
+            byte partyID = partyIDs[index];
+
+            byte[] verKeyData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
+
+            individualVerKeys[idx] = curve.decodePoint(verKeyData);
+
+            BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
+                buildPartyIDsBigIntArray(partyIDs)
+            );
+            aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
+        }
+
+        Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
+
         // Run measurements multiple times
         for (int measurementRun = 0; measurementRun < numMeasurements; measurementRun++) {
             System.out.println("  Measurement run " + (measurementRun + 1) + "/" + numMeasurements);
 
             // Cards initialization for this run
-            ECPoint[] individualVerKeys = new ECPoint[nParties];
             ECPoint[] derivedSaltShares = new ECPoint[nParties];
             byte[][] dleqProofs = new byte[nParties][64];
 
@@ -2165,10 +2185,6 @@ public class AppletTest extends BaseTest {
 
                 dleqProofs[idx] = Arrays.copyOfRange(ptxtBuff, 0, 64);
                 derivedSaltShares[idx] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
-
-                // verify individual salt shares
-                byte[] verKeyData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
-                individualVerKeys[idx] = curve.decodePoint(verKeyData);
 
                     return duration;
                 }));
@@ -2216,25 +2232,6 @@ public class AppletTest extends BaseTest {
             long parallelDuration = System.nanoTime() - parallelStart;
             benchmark.record(BenchmarkCollector.OP_SEED_DERIVATION_TOTAL, -1, parallelDuration, runNumber);
 
-            if ( measurementRun == numMeasurements - 1) {
-                ECPoint aggVerKeys = curve.getInfinity();
-                salt = curve.getInfinity();
-                for (int index = 0; index < readerIndeces.length; index++) {
-                    byte partyID = partyIDs[index];
-
-                    BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
-                            buildPartyIDsBigIntArray(partyIDs)
-                    );
-
-                    ECPoint v_i = derivedSaltShares[index];
-                    salt = salt.add(v_i.multiply(lambda));
-
-                    aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
-                }
-
-                Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
-                System.out.println(Hex.toHexString(salt.getEncoded(false)));
-            }
 
         } // End of measurement loop
 
