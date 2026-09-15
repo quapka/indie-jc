@@ -1992,11 +1992,18 @@ public class AppletTest extends BaseTest {
     @Test
     public void testDeriveDleqFromJWT() throws Exception {
         // TODO this test seems to be needed to be ran AFTER the testDleqKeyGeneration
-        // Cards initialization
-        ECPoint[] individualVerKeys = new ECPoint[nParties];
-        ECPoint[] derivedSaltShares = new ECPoint[nParties];
-        byte[][] dleqProofs = new byte[nParties][64];
-        byte[][] hashComs = new byte[nParties][32];
+
+        // Read number of measurements from system property (default: 1)
+        int numMeasurements = Integer.parseInt(System.getProperty("measurementRuns", "1"));
+
+        // Create benchmark collector for timing measurements
+        BenchmarkCollector benchmark = new BenchmarkCollector(threshold, nParties);
+
+        System.out.println("\n========================================");
+        System.out.println("testDeriveDleqFromJWT - DERIVE_SEED_SHARE Benchmarking");
+        System.out.println("Configuration: " + threshold + "-of-" + nParties);
+        System.out.println("Measurement runs: " + numMeasurements);
+        System.out.println("========================================\n");
 
         // Establish all card connections sequentially first
         for (int readerIndex : readerIndeces) {
@@ -2114,18 +2121,34 @@ public class AppletTest extends BaseTest {
             encPayloads[index] = encPayload;
         }
 
-        // Run DERIVE_SEED_SHARE and GET_PUBLIC_DLEQ_SHARE in parallel
-        ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
-        List<Future<Void>> futures = new ArrayList<>();
+        // Run measurements multiple times
+        for (int measurementRun = 0; measurementRun < numMeasurements; measurementRun++) {
+            System.out.println("  Measurement run " + (measurementRun + 1) + "/" + numMeasurements);
 
-        for (int index = 0; index < readerIndeces.length; index++) {
-            final int idx = index;
-            final int readerIndex = readerIndeces[index];
-            final byte[] encPayload = encPayloads[index];
-            final KeyParameter ctrKey = ctrKeys[index];
+            // Cards initialization for this run
+            ECPoint[] individualVerKeys = new ECPoint[nParties];
+            ECPoint[] derivedSaltShares = new ECPoint[nParties];
+            byte[][] dleqProofs = new byte[nParties][64];
 
-            futures.add(executor.submit(() -> {
+            // Run DERIVE_SEED_SHARE and GET_PUBLIC_DLEQ_SHARE in parallel
+            ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
+            List<Future<Long>> futures = new ArrayList<>();
+
+            // Record total parallel execution time
+            long parallelStart = System.nanoTime();
+
+            final int runNumber = measurementRun;
+            for (int index = 0; index < readerIndeces.length; index++) {
+                final int idx = index;
+                final int readerIndex = readerIndeces[index];
+                final byte[] encPayload = encPayloads[index];
+                final KeyParameter ctrKey = ctrKeys[index];
+
+                futures.add(executor.submit(() -> {
+                // Time the DERIVE_SEED_SHARE operation per card
+                long start = System.nanoTime();
                 byte[] respData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_SEED_SHARE, 0x00, 0x00, encPayload);
+                long duration = System.nanoTime() - start;
 
                 byte channelNonceByteSize = 16;
                 byte[] channelNonce = new byte[channelNonceByteSize];
@@ -2147,50 +2170,63 @@ public class AppletTest extends BaseTest {
                 byte[] verKeyData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
                 individualVerKeys[idx] = curve.decodePoint(verKeyData);
 
-                return null;
-            }));
-        }
+                    return duration;
+                }));
+            }
 
-        executor.shutdown();
+            executor.shutdown();
 
-        // Wait for all tasks and propagate any exceptions
-        for (Future<Void> future : futures) {
-            future.get();
-        }
+            // Wait for all tasks, record timings, and propagate any exceptions
+            for (int index = 0; index < futures.size(); index++) {
+                long cardDuration = futures.get(index).get();
+                benchmark.record(BenchmarkCollector.OP_SEED_DERIVATION, index, cardDuration, runNumber);
+            }
 
-        HashToCurveTest h2c = new HashToCurveTest(curve);
-        ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
-        // aggregate salts
-        for (int index = 0; index < readerIndeces.length; index++) {
-            int readerIndex = readerIndeces[index];
-            byte partyID = partyIDs[index];
+            long parallelDuration = System.nanoTime() - parallelStart;
+            benchmark.record(BenchmarkCollector.OP_SEED_DERIVATION_TOTAL, -1, parallelDuration, runNumber);
+
+            // Only verify on the last iteration to save time
+            if (measurementRun == numMeasurements - 1) {
+                HashToCurveTest h2c = new HashToCurveTest(curve);
+                ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
+                // aggregate salts
+                for (int index = 0; index < readerIndeces.length; index++) {
+                    int readerIndex = readerIndeces[index];
+                    byte partyID = partyIDs[index];
 
 
-            byte[] proof = dleqProofs[index];
-            ECPoint vk_i = individualVerKeys[index];
-            ECPoint v_i = derivedSaltShares[index];
+                    byte[] proof = dleqProofs[index];
+                    ECPoint vk_i = individualVerKeys[index];
+                    ECPoint v_i = derivedSaltShares[index];
 
-            // Assert.assertArrayEquals(hashCom, chVerifyData);
-            Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
-        }
+                    // Assert.assertArrayEquals(hashCom, chVerifyData);
+                    Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
+                }
 
-        ECPoint aggVerKeys = curve.getInfinity();
-        ECPoint salt = curve.getInfinity();
-        for (int index = 0; index < readerIndeces.length; index++) {
-            byte partyID = partyIDs[index];
+                ECPoint aggVerKeys = curve.getInfinity();
+                ECPoint salt = curve.getInfinity();
+                for (int index = 0; index < readerIndeces.length; index++) {
+                    byte partyID = partyIDs[index];
 
-            BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
-                    buildPartyIDsBigIntArray(partyIDs)
-            );
+                    BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
+                            buildPartyIDsBigIntArray(partyIDs)
+                    );
 
-            ECPoint v_i = derivedSaltShares[index];
-            salt = salt.add(v_i.multiply(lambda));
+                    ECPoint v_i = derivedSaltShares[index];
+                    salt = salt.add(v_i.multiply(lambda));
 
-            aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
-        }
+                    aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
+                }
 
-        Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
-        System.out.println(Hex.toHexString(salt.getEncoded(false)));
+                Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
+                System.out.println(Hex.toHexString(salt.getEncoded(false)));
+            }
+        } // End of measurement loop
+
+        // Output benchmark results
+        System.out.println("\n=== DERIVE_SEED_SHARE Timing Results ===");
+        benchmark.printSummary();
+        benchmark.writeToFile("benchmark_results/results.csv", true);
     }
 
     public static BigInteger[] buildPartyIDsBigIntArray(byte[] ids) throws Exception {
