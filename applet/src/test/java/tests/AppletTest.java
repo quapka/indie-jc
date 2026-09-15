@@ -350,7 +350,7 @@ public class AppletTest extends BaseTest {
     }
 
     @Test
-    public void testDerivingSalt() throws Exception {
+    public void testDerivingSeed() throws Exception {
         SignatureAlgorithm alg = Jwts.SIG.ES256;
         KeyPair pair = alg.keyPair().build();
 
@@ -368,13 +368,13 @@ public class AppletTest extends BaseTest {
         CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DERIVE_SALT, 0x00, 0, token.getBytes());
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
-        byte[] salt = responseAPDU.getData();
+        byte[] seed = responseAPDU.getData();
 
-        Assert.assertEquals(salt.length, 32);
+        Assert.assertEquals(seed.length, 32);
         // For simulated tests, the on card keys are generated
         // deterministically, thus we can assert against a known key
         if ( IndistinguishabilityApplet.CARD_TYPE == jcmathlib.OperationSupport.SIMULATOR ){
-            Assert.assertEquals("6a5323256f3ff924017ae2ebbbd56e2556192e1f322e991b911e56069c17976d", Hex.toHexString(salt));
+            Assert.assertEquals("6a5323256f3ff924017ae2ebbbd56e2556192e1f322e991b911e56069c17976d", Hex.toHexString(seed));
         }
     }
 
@@ -498,8 +498,8 @@ public class AppletTest extends BaseTest {
         ResponseAPDU responseAPDU = connect().transmit(cmd);
         byte[] data = responseAPDU.getData();
 
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
 
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "BC");
         KeyFactory keyFact = KeyFactory.getInstance("ECDH", "BC");
@@ -509,7 +509,7 @@ public class AppletTest extends BaseTest {
         ECPublicKey dvrfPubKey = (ECPublicKey) keyFact.generatePublic(dvrfPubSpec);
         System.out.println(dvrfPubKey);
 
-        // TODO the RNG seed does not produce fixed keys for the test
+        // TODO the RNG prngSeed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
         KeyPair keyPair = kpg.generateKeyPair();
         ECPublicKey pubKey = (ECPublicKey) keyPair.getPublic();
@@ -564,8 +564,8 @@ public class AppletTest extends BaseTest {
     }
 
     public byte[] nonceZkLogin() throws Exception {
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
 
         MessageDigest hasher = MessageDigest.getInstance("SHA-256");
         // Source: https://arxiv.org/pdf/2401.11735 page 8
@@ -670,8 +670,8 @@ public class AppletTest extends BaseTest {
         byte nonceByteSize = 16;
         byte[] nonce = new byte[nonceByteSize];
 
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
         prng.nextBytes(nonce);
 
         // Create the JWT
@@ -691,8 +691,8 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testEncryptedJwtVerification() throws Exception {
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
 
         SignatureAlgorithm alg = Jwts.SIG.ES256; //or ES256 or ES384
         KeyPair pair = alg.keyPair().build();
@@ -734,7 +734,7 @@ public class AppletTest extends BaseTest {
         ECPublicKeySpec dvrfPubSpec = new ECPublicKeySpec(curve.decodePoint(data), namedSpec);
         ECPublicKey cardChannelKey = (ECPublicKey) echdKeyFact.generatePublic(dvrfPubSpec);
 
-        // TODO the RNG seed does not produce fixed keys for the test
+        // TODO the RNG prngSeed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
         KeyPair epheClientChannelKey = kpg.generateKeyPair();
         ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
@@ -833,8 +833,8 @@ public class AppletTest extends BaseTest {
 
     @Test
     public void testEncryptedJwtVerificationAndCommitment() throws Exception {
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
 
         SignatureAlgorithm alg = Jwts.SIG.ES256; //or ES256 or ES384
         KeyPair pair = alg.keyPair().build();
@@ -851,7 +851,7 @@ public class AppletTest extends BaseTest {
         ECNamedCurveParameterSpec namedSpec = ECNamedCurveTable.getParameterSpec("secP256r1");
         ECGenParameterSpec ecGenSpec = new ECGenParameterSpec("secP256r1");
 
-        // TODO the RNG seed does not produce fixed keys for the test
+        // TODO the RNG prngSeed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
         KeyPair epheClientChannelKey = kpg.generateKeyPair();
         ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
@@ -932,11 +932,11 @@ public class AppletTest extends BaseTest {
 
         byte[] ptxtBuff = new byte[32];
         int ptxtLen = cipher.processBytes(data, channelNonceByteSize, data.length - channelNonceByteSize, ptxtBuff, 0);
-        // NOTE This hardcoded salt works for the hash-based derivation that
+        // NOTE This hardcoded seed works for the hash-based derivation that
         // uses hardcoded secret and a test user
-        byte[] expectedSalt = Hex.decode("6a5323256f3ff924017ae2ebbbd56e2556192e1f322e991b911e56069c17976d");
+        byte[] expectedSeed = Hex.decode("6a5323256f3ff924017ae2ebbbd56e2556192e1f322e991b911e56069c17976d");
 
-        Assert.assertArrayEquals(expectedSalt, ptxtBuff);
+        Assert.assertArrayEquals(expectedSeed, ptxtBuff);
     }
 
     @Test
@@ -1678,8 +1678,8 @@ public class AppletTest extends BaseTest {
             Consts.INS.EXT_APDU_ECHO, (byte) 0x00, (byte) 0xff, (byte) 0x04,
             (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04}, data);
 
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
 
         short byteSize = 1024;
         byte[] inputData = new byte[byteSize];
@@ -1877,7 +1877,7 @@ public class AppletTest extends BaseTest {
         // int threshold = readerIndeces.length;
 
         ECPoint[] individualVerKeys = new ECPoint[nParties];
-        ECPoint[] derivedSaltShares = new ECPoint[nParties];
+        ECPoint[] derivedSeedShares = new ECPoint[nParties];
         byte[][] dleqProofs = new byte[nParties][64];
         byte[][] hashComs = new byte[nParties][32];
 
@@ -1901,9 +1901,9 @@ public class AppletTest extends BaseTest {
 
             dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
             // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
-            derivedSaltShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 64, 64 + 65));
+            derivedSeedShares[index] = curve.decodePoint(Arrays.copyOfRange(data, 64, 64 + 65));
 
-            // verify individual salt shares
+            // verify individual seed shares
             data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GET_PUBLIC_DLEQ_SHARE, 0x00, 0x00);
             individualVerKeys[index] = curve.decodePoint(data);
             // System.out.println(individualVerKeys[index]);
@@ -1915,7 +1915,7 @@ public class AppletTest extends BaseTest {
         HashToCurveTest h2c = new HashToCurveTest(curve);
         // ECPoint hashedPoint = h2c.digest(msgBytes);
         ECPoint hashedPoint = h2c.hashToCurveRfc9380(msgBytes, 0, msgBytes.length);
-        // aggregate salts
+        // aggregate seeds
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
@@ -1923,7 +1923,7 @@ public class AppletTest extends BaseTest {
 
             byte[] proof = dleqProofs[index];
             ECPoint vk_i = individualVerKeys[index];
-            ECPoint v_i = derivedSaltShares[index];
+            ECPoint v_i = derivedSeedShares[index];
 
             // byte[] cardHashedPoint = sendAPDU(
             //     readerIndex, Consts.CLA.INDIE, Consts.INS.COMPUTE_HASH_TO_CURVE, 0x00, 0x00, msgBytes
@@ -1967,7 +1967,7 @@ public class AppletTest extends BaseTest {
         }
 
         ECPoint aggVerKeys = curve.getInfinity();
-        ECPoint salt = curve.getInfinity();
+        ECPoint seed = curve.getInfinity();
         for (int index = 0; index < readerIndeces.length; index++) {
             // int readerIndex = readerIndeces[index];
             byte partyID = partyIDs[index];
@@ -1978,15 +1978,15 @@ public class AppletTest extends BaseTest {
             // System.out.println("lambda");
             // System.out.println(lambda);
 
-            ECPoint v_i = derivedSaltShares[index];
-            salt = salt.add(v_i.multiply(lambda));
+            ECPoint v_i = derivedSeedShares[index];
+            seed = seed.add(v_i.multiply(lambda));
 
             // System.out.println(Hex.toHexString(individualVerKeys[index].getEncoded(false)));
 
             aggVerKeys = aggVerKeys.add(individualVerKeys[index].multiply(lambda));
         }
 
-        System.out.println(Hex.toHexString(salt.getEncoded(false)));
+        System.out.println(Hex.toHexString(seed.getEncoded(false)));
         Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
     }
 
@@ -2017,8 +2017,8 @@ public class AppletTest extends BaseTest {
         byte[] data = sendAPDU(readerIndeces[0], Consts.CLA.INDIE, Consts.INS.GET_DLEQ_KEY, 0x00, 0x00);
         ECPoint verificationPoint = curve.decodePoint(data);
 
-        byte[] seed = new byte[32];
-        SecureRandom prng = new SecureRandom(seed);
+        byte[] prngSeed = new byte[32];
+        SecureRandom prng = new SecureRandom(prngSeed);
 
         SignatureAlgorithm alg = Jwts.SIG.ES256; //or ES256 or ES384
         KeyPair pair = alg.keyPair().build();
@@ -2056,7 +2056,7 @@ public class AppletTest extends BaseTest {
             cardIdentityKeys[index] = cardChannelKey;
         }
 
-        // TODO the RNG seed does not produce fixed keys for the test
+        // TODO the RNG prngSeed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
 
         ECPoint[] individualVerKeys = new ECPoint[nParties];
@@ -2125,7 +2125,7 @@ public class AppletTest extends BaseTest {
             }
 
             // Cards initialization for this run
-            ECPoint[] derivedSaltShares = new ECPoint[numCardsToUse];
+            ECPoint[] derivedSeedShares = new ECPoint[numCardsToUse];
             byte[][] dleqProofs = new byte[numCardsToUse][64];
 
             // Generate fresh subject, ephemeral keys, and JWT for each measurement
@@ -2222,7 +2222,7 @@ public class AppletTest extends BaseTest {
                 cipher.processBytes(respData, channelNonceByteSize, respData.length - channelNonceByteSize, ptxtBuff, 0);
 
                 dleqProofs[idx] = Arrays.copyOfRange(ptxtBuff, 0, 64);
-                derivedSaltShares[idx] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
+                derivedSeedShares[idx] = curve.decodePoint(Arrays.copyOfRange(ptxtBuff, 64, 64 + 65));
 
                     return duration;
                 }));
@@ -2239,7 +2239,7 @@ public class AppletTest extends BaseTest {
             // Verify results on each measurement
             HashToCurveTest h2c = new HashToCurveTest(curve);
             ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
-            // aggregate salts
+            // aggregate seeds
             for (int index = 0; index < selectedReaderIndices.length; index++) {
                 int readerIndex = selectedReaderIndices[index];
                 byte partyID = selectedPartyIDs[index];
@@ -2247,14 +2247,14 @@ public class AppletTest extends BaseTest {
 
                 byte[] proof = dleqProofs[index];
                 ECPoint vk_i = selectedIndividualVerKeys[index];
-                ECPoint v_i = derivedSaltShares[index];
+                ECPoint v_i = derivedSeedShares[index];
 
                 // Assert.assertArrayEquals(hashCom, chVerifyData);
                 Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
             }
 
-            // final salt aggregation need to be counted towards the full derivation time
-            ECPoint salt = curve.getInfinity();
+            // final seed aggregation need to be counted towards the full derivation time
+            ECPoint seed = curve.getInfinity();
             for (int index = 0; index < selectedReaderIndices.length; index++) {
                 byte partyID = selectedPartyIDs[index];
 
@@ -2262,8 +2262,8 @@ public class AppletTest extends BaseTest {
                         buildPartyIDsBigIntArray(selectedPartyIDs)
                 );
 
-                ECPoint v_i = derivedSaltShares[index];
-                salt = salt.add(v_i.multiply(lambda));
+                ECPoint v_i = derivedSeedShares[index];
+                seed = seed.add(v_i.multiply(lambda));
             }
 
             // Record total time including verification
