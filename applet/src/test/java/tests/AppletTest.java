@@ -2182,29 +2182,43 @@ public class AppletTest extends BaseTest {
                 benchmark.record(BenchmarkCollector.OP_SEED_DERIVATION, index, cardDuration, runNumber);
             }
 
+            // Verify results on each measurement
+            HashToCurveTest h2c = new HashToCurveTest(curve);
+            ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
+            // aggregate salts
+            for (int index = 0; index < readerIndeces.length; index++) {
+                int readerIndex = readerIndeces[index];
+                byte partyID = partyIDs[index];
+
+
+                byte[] proof = dleqProofs[index];
+                ECPoint vk_i = individualVerKeys[index];
+                ECPoint v_i = derivedSaltShares[index];
+
+                // Assert.assertArrayEquals(hashCom, chVerifyData);
+                Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
+            }
+
+            // final salt aggregation need to be counted towards the full derivation time
+            ECPoint salt = curve.getInfinity();
+            for (int index = 0; index < readerIndeces.length; index++) {
+                byte partyID = partyIDs[index];
+
+                BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
+                        buildPartyIDsBigIntArray(partyIDs)
+                );
+
+                ECPoint v_i = derivedSaltShares[index];
+                salt = salt.add(v_i.multiply(lambda));
+            }
+
+            // Record total time including verification
             long parallelDuration = System.nanoTime() - parallelStart;
             benchmark.record(BenchmarkCollector.OP_SEED_DERIVATION_TOTAL, -1, parallelDuration, runNumber);
 
-            // Only verify on the last iteration to save time
-            if (measurementRun == numMeasurements - 1) {
-                HashToCurveTest h2c = new HashToCurveTest(curve);
-                ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
-                // aggregate salts
-                for (int index = 0; index < readerIndeces.length; index++) {
-                    int readerIndex = readerIndeces[index];
-                    byte partyID = partyIDs[index];
-
-
-                    byte[] proof = dleqProofs[index];
-                    ECPoint vk_i = individualVerKeys[index];
-                    ECPoint v_i = derivedSaltShares[index];
-
-                    // Assert.assertArrayEquals(hashCom, chVerifyData);
-                    Assert.assertTrue(DiscreteLogEqualityTest.VerifyEq(Generator, hashedPoint, vk_i, v_i, proof));
-                }
-
+            if ( measurementRun == numMeasurements - 1) {
                 ECPoint aggVerKeys = curve.getInfinity();
-                ECPoint salt = curve.getInfinity();
+                salt = curve.getInfinity();
                 for (int index = 0; index < readerIndeces.length; index++) {
                     byte partyID = partyIDs[index];
 
@@ -2221,6 +2235,7 @@ public class AppletTest extends BaseTest {
                 Assert.assertArrayEquals(aggVerKeys.getEncoded(false), verificationPoint.getEncoded(false));
                 System.out.println(Hex.toHexString(salt.getEncoded(false)));
             }
+
         } // End of measurement loop
 
         // Output benchmark results
