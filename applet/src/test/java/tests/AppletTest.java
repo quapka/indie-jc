@@ -2084,9 +2084,49 @@ public class AppletTest extends BaseTest {
         for (int measurementRun = 0; measurementRun < numMeasurements; measurementRun++) {
             System.out.println("  Measurement run " + (measurementRun + 1) + "/" + numMeasurements);
 
+            // Randomly select cards for this measurement if threshold < nParties
+            int[] selectedReaderIndices;
+            byte[] selectedPartyIDs;
+            ECPublicKey[] selectedCardIdentityKeys;
+            int numCardsToUse;
+
+            ECPoint[] selectedIndividualVerKeys;
+
+            if (threshold < nParties) {
+                // Randomly select threshold number of cards
+                numCardsToUse = threshold;
+                List<Integer> availableIndices = new ArrayList<>();
+                for (int i = 0; i < readerIndeces.length; i++) {
+                    availableIndices.add(i);
+                }
+                java.util.Collections.shuffle(availableIndices, new Random());
+
+                selectedReaderIndices = new int[numCardsToUse];
+                selectedPartyIDs = new byte[numCardsToUse];
+                selectedCardIdentityKeys = new ECPublicKey[numCardsToUse];
+                selectedIndividualVerKeys = new ECPoint[numCardsToUse];
+
+                for (int i = 0; i < numCardsToUse; i++) {
+                    int idx = availableIndices.get(i);
+                    selectedReaderIndices[i] = readerIndeces[idx];
+                    selectedPartyIDs[i] = partyIDs[idx];
+                    selectedCardIdentityKeys[i] = cardIdentityKeys[idx];
+                    selectedIndividualVerKeys[i] = individualVerKeys[idx];
+                }
+
+                System.out.println("    Selected cards: " + java.util.Arrays.toString(selectedPartyIDs));
+            } else {
+                // Use all cards
+                numCardsToUse = nParties;
+                selectedReaderIndices = readerIndeces;
+                selectedPartyIDs = partyIDs;
+                selectedCardIdentityKeys = cardIdentityKeys;
+                selectedIndividualVerKeys = individualVerKeys;
+            }
+
             // Cards initialization for this run
-            ECPoint[] derivedSaltShares = new ECPoint[nParties];
-            byte[][] dleqProofs = new byte[nParties][64];
+            ECPoint[] derivedSaltShares = new ECPoint[numCardsToUse];
+            byte[][] dleqProofs = new byte[numCardsToUse][64];
 
             // Generate fresh subject, ephemeral keys, and JWT for each measurement
             String freshSubject = UUID.randomUUID().toString();
@@ -2094,10 +2134,10 @@ public class AppletTest extends BaseTest {
             byte[] derInputBytes = derivationInput.getBytes();
 
             // Prepare fresh encrypted payloads for this measurement
-            byte[][] encPayloads = new byte[nParties][];
-            KeyParameter[] ctrKeys = new KeyParameter[nParties];
+            byte[][] encPayloads = new byte[numCardsToUse][];
+            KeyParameter[] ctrKeys = new KeyParameter[numCardsToUse];
 
-            for (int index = 0; index < readerIndeces.length; index++) {
+            for (int index = 0; index < selectedReaderIndices.length; index++) {
                 KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
                 KeyPair epheClientChannelKey = kpg.generateKeyPair();
                 ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
@@ -2114,7 +2154,7 @@ public class AppletTest extends BaseTest {
                 byte[] tokenNonce = hasher.digest();
                 String token = createToken(pair, alg, tokenNonce, freshSubject, issuer);
 
-                ecdh.doPhase(cardIdentityKeys[index], true);
+                ecdh.doPhase(selectedCardIdentityKeys[index], true);
                 byte[] sharedSecret = ecdh.generateSecret();
                 MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
                 byte[] fullChannelKey = sha1.digest(sharedSecret);
@@ -2149,16 +2189,16 @@ public class AppletTest extends BaseTest {
             }
 
             // Run DERIVE_SEED_SHARE and GET_PUBLIC_DLEQ_SHARE in parallel
-            ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
+            ExecutorService executor = Executors.newFixedThreadPool(selectedReaderIndices.length);
             List<Future<Long>> futures = new ArrayList<>();
 
             // Record total parallel execution time
             long parallelStart = System.nanoTime();
 
             final int runNumber = measurementRun;
-            for (int index = 0; index < readerIndeces.length; index++) {
+            for (int index = 0; index < selectedReaderIndices.length; index++) {
                 final int idx = index;
-                final int readerIndex = readerIndeces[index];
+                final int readerIndex = selectedReaderIndices[index];
                 final byte[] encPayload = encPayloads[index];
                 final KeyParameter ctrKey = ctrKeys[index];
 
@@ -2200,13 +2240,13 @@ public class AppletTest extends BaseTest {
             HashToCurveTest h2c = new HashToCurveTest(curve);
             ECPoint hashedPoint = h2c.hashToCurveRfc9380(derInputBytes, 0, derInputBytes.length);
             // aggregate salts
-            for (int index = 0; index < readerIndeces.length; index++) {
-                int readerIndex = readerIndeces[index];
-                byte partyID = partyIDs[index];
+            for (int index = 0; index < selectedReaderIndices.length; index++) {
+                int readerIndex = selectedReaderIndices[index];
+                byte partyID = selectedPartyIDs[index];
 
 
                 byte[] proof = dleqProofs[index];
-                ECPoint vk_i = individualVerKeys[index];
+                ECPoint vk_i = selectedIndividualVerKeys[index];
                 ECPoint v_i = derivedSaltShares[index];
 
                 // Assert.assertArrayEquals(hashCom, chVerifyData);
@@ -2215,11 +2255,11 @@ public class AppletTest extends BaseTest {
 
             // final salt aggregation need to be counted towards the full derivation time
             ECPoint salt = curve.getInfinity();
-            for (int index = 0; index < readerIndeces.length; index++) {
-                byte partyID = partyIDs[index];
+            for (int index = 0; index < selectedReaderIndices.length; index++) {
+                byte partyID = selectedPartyIDs[index];
 
                 BigInteger lambda = lagrangeCoefficient(ZERO, BigInteger.valueOf(partyID),
-                        buildPartyIDsBigIntArray(partyIDs)
+                        buildPartyIDsBigIntArray(selectedPartyIDs)
                 );
 
                 ECPoint v_i = derivedSaltShares[index];
