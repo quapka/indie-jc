@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.stream.*;
 import java.util.Base64;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 import applet.jcmathlib.*;
@@ -2055,71 +2056,8 @@ public class AppletTest extends BaseTest {
             cardIdentityKeys[index] = cardChannelKey;
         }
 
-
-        // TODO how to concatenate the inputs properly?
-        String derivationInput = issuer + subject;
-        byte[] derInputBytes = derivationInput.getBytes();
-
         // TODO the RNG seed does not produce fixed keys for the test
         kpg.initialize(ecGenSpec, new SecureRandom());
-
-        // Prepare all payloads and crypto context sequentially
-        byte[][] encPayloads = new byte[nParties][];
-        KeyParameter[] ctrKeys = new KeyParameter[nParties];
-        byte[][] channelNonces = new byte[nParties][16];
-
-        for (int index = 0; index < readerIndeces.length; index++) {
-            KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
-            KeyPair epheClientChannelKey = kpg.generateKeyPair();
-            ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
-
-            ecdh.init(epheClientChannelKey.getPrivate());
-
-            ECPublicKeySpec epheClientPubKeySpec = echdKeyFact.getKeySpec(epheClientPubKey, ECPublicKeySpec.class);
-            compressed = false;
-            byte[] encodedEpheClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
-
-            MessageDigest hasher = MessageDigest.getInstance("SHA-256");
-            hasher.update(encodedEpheClientPubPoint);
-            hasher.update(new byte[64]);
-            byte[] tokenNonce = hasher.digest();
-            String token = createToken(pair, alg, tokenNonce, subject, issuer);
-            System.out.println(token);
-
-            ecdh.doPhase(cardIdentityKeys[index], true);
-            byte[] sharedSecret = ecdh.generateSecret();
-            MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
-            byte[] fullChannelKey = sha1.digest(sharedSecret);
-
-            byte[] channelKey = Arrays.copyOf(fullChannelKey, 20);
-
-            byte channelNonceByteSize = 16;
-            byte[] channelNonce = new byte[channelNonceByteSize];
-            prng.nextBytes(channelNonce);
-            channelNonces[index] = channelNonce;
-
-            KeyParameter ctrKey = new KeyParameter(channelKey, 0, 16);
-            ctrKeys[index] = ctrKey;
-            CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
-            ParametersWithIV params = new ParametersWithIV(ctrKey, channelNonce);
-
-            cipher.init(true, params);
-
-            byte[] ctxtBuff = new byte[2048];
-            int ctxtLen = cipher.processBytes(token.getBytes(), 0, token.getBytes().length, ctxtBuff, 0);
-
-            byte[] encPayload = new byte[encodedEpheClientPubPoint.length + channelNonceByteSize + ctxtLen];
-            short payloadLength = 0;
-            System.arraycopy(encodedEpheClientPubPoint, 0, encPayload, payloadLength, encodedEpheClientPubPoint.length);
-            payloadLength += encodedEpheClientPubPoint.length;
-
-            System.arraycopy(channelNonce, 0, encPayload, payloadLength, channelNonceByteSize);
-            payloadLength += channelNonceByteSize;
-
-            System.arraycopy(ctxtBuff, 0, encPayload, payloadLength, ctxtLen);
-
-            encPayloads[index] = encPayload;
-        }
 
         ECPoint[] individualVerKeys = new ECPoint[nParties];
         ECPoint aggVerKeys = curve.getInfinity();
@@ -2149,6 +2087,66 @@ public class AppletTest extends BaseTest {
             // Cards initialization for this run
             ECPoint[] derivedSaltShares = new ECPoint[nParties];
             byte[][] dleqProofs = new byte[nParties][64];
+
+            // Generate fresh subject, ephemeral keys, and JWT for each measurement
+            String freshSubject = UUID.randomUUID().toString();
+            String derivationInput = issuer + freshSubject;
+            byte[] derInputBytes = derivationInput.getBytes();
+
+            // Prepare fresh encrypted payloads for this measurement
+            byte[][] encPayloads = new byte[nParties][];
+            KeyParameter[] ctrKeys = new KeyParameter[nParties];
+
+            for (int index = 0; index < readerIndeces.length; index++) {
+                KeyAgreement ecdh = KeyAgreement.getInstance("ECDH", "BC");
+                KeyPair epheClientChannelKey = kpg.generateKeyPair();
+                ECPublicKey epheClientPubKey = (ECPublicKey) epheClientChannelKey.getPublic();
+
+                ecdh.init(epheClientChannelKey.getPrivate());
+
+                ECPublicKeySpec epheClientPubKeySpec = echdKeyFact.getKeySpec(epheClientPubKey, ECPublicKeySpec.class);
+                // boolean compressed = false;
+                byte[] encodedEpheClientPubPoint = epheClientPubKeySpec.getQ().getEncoded(compressed);
+
+                MessageDigest hasher = MessageDigest.getInstance("SHA-256");
+                hasher.update(encodedEpheClientPubPoint);
+                hasher.update(new byte[64]);
+                byte[] tokenNonce = hasher.digest();
+                String token = createToken(pair, alg, tokenNonce, freshSubject, issuer);
+
+                ecdh.doPhase(cardIdentityKeys[index], true);
+                byte[] sharedSecret = ecdh.generateSecret();
+                MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+                byte[] fullChannelKey = sha1.digest(sharedSecret);
+
+                byte[] channelKey = Arrays.copyOf(fullChannelKey, 20);
+
+                byte channelNonceByteSize = 16;
+                byte[] channelNonce = new byte[channelNonceByteSize];
+                prng.nextBytes(channelNonce);
+
+                KeyParameter ctrKey = new KeyParameter(channelKey, 0, 16);
+                ctrKeys[index] = ctrKey;
+                CTRModeCipher cipher = new SICBlockCipher(new AESEngine());
+                ParametersWithIV params = new ParametersWithIV(ctrKey, channelNonce);
+
+                cipher.init(true, params);
+
+                byte[] ctxtBuff = new byte[2048];
+                int ctxtLen = cipher.processBytes(token.getBytes(), 0, token.getBytes().length, ctxtBuff, 0);
+
+                byte[] encPayload = new byte[encodedEpheClientPubPoint.length + channelNonceByteSize + ctxtLen];
+                short payloadLength = 0;
+                System.arraycopy(encodedEpheClientPubPoint, 0, encPayload, payloadLength, encodedEpheClientPubPoint.length);
+                payloadLength += encodedEpheClientPubPoint.length;
+
+                System.arraycopy(channelNonce, 0, encPayload, payloadLength, channelNonceByteSize);
+                payloadLength += channelNonceByteSize;
+
+                System.arraycopy(ctxtBuff, 0, encPayload, payloadLength, ctxtLen);
+
+                encPayloads[index] = encPayload;
+            }
 
             // Run DERIVE_SEED_SHARE and GET_PUBLIC_DLEQ_SHARE in parallel
             ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
