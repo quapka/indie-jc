@@ -139,7 +139,7 @@ public class DiscreteLogEquality {
 
         // calculate the proof
         short proofLength = proveEq2(userPoint, partialDerivedShare, out, outOffset);
-        // and also send the actual derive salt share
+        // and also send the actual derive seed share
         short encodedLength = partialDerivedShare.encode(out, (short) (outOffset + proofLength), false);
 
         return (short) (proofLength + encodedLength);

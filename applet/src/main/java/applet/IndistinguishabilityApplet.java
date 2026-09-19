@@ -84,9 +84,9 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
 
     private static final byte[] HASH_SECRET_DOMAIN_SEPARATOR = {'S', 'a', 'l', 't', ' ', 's', 'e', 'r', 'v', 'i', 'c', 'e'};
 
-    // indie-service HASH_SALT_SECRET
+    // indie-service HASH_SEED_SECRET
     // FIXME generate inside the card as part of the setup
-    private static final byte[] HASH_SALT_SECRET = {
+    private static final byte[] HASH_SEED_SECRET = {
         (byte) 0x89, (byte) 0x52, (byte) 0xd7, (byte) 0xb3,
         (byte) 0x7e, (byte) 0x1c, (byte) 0x86, (byte) 0x0c,
         (byte) 0x88, (byte) 0xb8, (byte) 0xa5, (byte) 0xdc,
@@ -191,8 +191,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.VERIFY_JWT:
                         verifyJWT(apdu);
                         break;
-                    case Consts.INS.DERIVE_SALT:
-                        deriveSalt(apdu);
+                    case Consts.INS.DERIVE_SEED:
+                        deriveSeed(apdu);
                         break;
                     case Consts.INS.DECODE_JWT:
                         decodeJwtBody(apdu);
@@ -315,8 +315,8 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
                     case Consts.INS.GET_DLEQ_KEY:
                         getDleqKey(apdu);
                         break;
-                    case Consts.INS.DERIVE_DLEQ_SALT_SHARE:
-                        deriveDleqSaltShare(apdu);
+                    case Consts.INS.DERIVE_DLEQ_SEED_SHARE:
+                        deriveDleqSeedShare(apdu);
                         break;
                     case Consts.INS.DERIVE_SEED_SHARE:
                         deriveSeedShare(apdu);
@@ -627,7 +627,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, length);
     }
 
-    public void deriveDleqSaltShare(APDU apdu) {
+    public void deriveDleqSeedShare(APDU apdu) {
         byte[] apduBuffer = loadApdu(apdu);
 
         short offset = apdu.getOffsetCdata();
@@ -909,7 +909,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         boolean pubkeyIsValid = Util.arrayCompare(procBuffer, (short) 0, procBuffer, uncompressedECPointSize, (short) 32) == 0;
 
         if ( jwtIsvalid && pubkeyIsValid) {
-            // derive salt
+            // derive seed
             short hashSize = deriveHashSecret(tmp, nDecoded, buffer, (short) (uncompressedECPointSize + aesCtrNonceSize + offset));
             // and encrypt it
             ctxtLen = aesCtrEncryptInner(buffer, offset, hashSize, apduBuffer, (short) 0, true);
@@ -1039,7 +1039,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         valueLen = getValueFor(body, (short) 0, bodySize, NAME_FIELD_NAME, tmp, (short) 0);
         hasher.update(tmp, (short) 0, valueLen);
 
-        hasher.doFinal(HASH_SALT_SECRET, (short) 0, (short) HASH_SALT_SECRET.length, out, outOffset);
+        hasher.doFinal(HASH_SEED_SECRET, (short) 0, (short) HASH_SEED_SECRET.length, out, outOffset);
         return hasher.getLength();
 
     }
@@ -1202,7 +1202,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend((short) 0, nDecoded);
     }
 
-    public void deriveSalt(APDU apdu) {
+    public void deriveSeed(APDU apdu) {
         byte[] buffer = loadApdu(apdu);
         byte[] apduBuffer = apdu.getBuffer();
         short offset = apdu.getOffsetCdata();
@@ -1228,7 +1228,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
             return;
         }
 
-        // if signature valid derive the salt
+        // if signature valid derive the seed
         nDecoded = base64UrlSafeDecoder.decodeBase64Urlsafe(
             buffer,
             (short) (firstDot + 1),
@@ -1243,7 +1243,7 @@ public class IndistinguishabilityApplet extends Applet implements ExtendedLength
     }
 
     /**
-     * Returns the verification public key for the salt derivation,
+     * Returns the verification public key for the seed derivation,
      * in particular, the discrete log of equality proof verification.
      */
     public void getDerivationPubkey(APDU apdu) {

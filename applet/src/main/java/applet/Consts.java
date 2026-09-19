@@ -34,7 +34,7 @@ public class Consts {
         public static final byte SET_A_POINTS = (byte) 0x18;
         public static final byte VERIFY_A_POINTS = (byte) 0x19;
         public static final byte GET_DLEQ_KEY = (byte) 0x1a;
-        public static final byte DERIVE_DLEQ_SALT_SHARE = (byte) 0x1b;
+        public static final byte DERIVE_DLEQ_SEED_SHARE = (byte) 0x1b;
         public static final byte GET_PUBLIC_DLEQ_SHARE = (byte) 0x1c;
         public static final byte COMPUTE_HASH_TO_CURVE = (byte) 0x1d;
         public static final byte GET_DLEQ_PARAMS = (byte) 0x1e;
@@ -50,7 +50,7 @@ public class Consts {
         public static final byte AES_CTR_DECRYPT = (byte) 0x04;
         public static final byte VERIFY_COMMITMENT = (byte) 0x05;
         public static final byte VERIFY_JWT = (byte) 0x06;
-        public static final byte DERIVE_SALT = (byte) 0x07;
+        public static final byte DERIVE_SEED = (byte) 0x07;
         public static final byte DECODE_JWT = (byte) 0x08;
         public static final byte VERIFY_ENCRYPTED_JWT = (byte) 0x09;
         public static final byte VERIFY_ENCRYPTED_JWT_AND_COMMITMENT = (byte) 0x0a;

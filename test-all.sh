@@ -13,7 +13,7 @@ tests=(
     testDebugBad
     testIsInitialized
     testDecodeBase64UrlSafe
-    testDerivingSalt
+    testDerivingSeed
     testGettingExampleDleqProof
     testDVRFKeyGeneration
     testDLEQAgainstGeneratedKey
@@ -51,7 +51,7 @@ tests=(
 )
 
 for testName in "${tests[@]}"; do
-    ./test_integration_jcop4.sh -- --tests AppletTest."$testName" || aggResult=$(( $? | $aggResult ))
+    ./test_integration_jcop4.sh -- --tests -Pthreshold=2 -PnParties=2 AppletTest."$testName" || aggResult=$(( $? | $aggResult ))
 done
 
 if test $aggResult -ne 0; then

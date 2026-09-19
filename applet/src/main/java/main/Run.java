@@ -24,10 +24,10 @@ public class Run {
         CommandAPDU commandAPDU = new CommandAPDU(0x00, 0x03, 0x00, 0x00, byteToken);
         ResponseAPDU responseAPDU = simulator.transmitCommand(commandAPDU);
 
-        byte[] salt = responseAPDU.getData();
+        byte[] seed = responseAPDU.getData();
 
-        for (short i = 0; i < salt.length; i++) {
-            System.out.print(String.format("%02x", salt[i]));
+        for (short i = 0; i < seed.length; i++) {
+            System.out.print(String.format("%02x", seed[i]));
         }
         System.out.println();
     }

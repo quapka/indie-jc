@@ -365,7 +365,7 @@ public class AppletTest extends BaseTest {
         // Set and implicitly get the public key
         connect().transmit(new CommandAPDU(Consts.CLA.INDIE, Consts.INS.SET_OIDC_PUBKEY, 0x00, 0x00, uncompressedPubKey));
 
-        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DERIVE_SALT, 0x00, 0, token.getBytes());
+        CommandAPDU cmd = new CommandAPDU(Consts.CLA.DEBUG, Consts.INS.DERIVE_SEED, 0x00, 0, token.getBytes());
         ResponseAPDU responseAPDU = connect().transmit(cmd);
 
         byte[] seed = responseAPDU.getData();
@@ -1827,7 +1827,7 @@ public class AppletTest extends BaseTest {
             String message = "this is the user input";
             byte[] msgBytes = message.getBytes();
 
-            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
+            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SEED_SHARE, 0x00, 0x00, msgBytes);
         }
 
     };
@@ -1897,7 +1897,7 @@ public class AppletTest extends BaseTest {
             byte partyID = partyIDs[index];
 
 
-            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SALT_SHARE, 0x00, 0x00, msgBytes);
+            data = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.DERIVE_DLEQ_SEED_SHARE, 0x00, 0x00, msgBytes);
 
             dleqProofs[index] = Arrays.copyOfRange(data, 0, 64);
             // hashComs[index] = Arrays.copyOfRange(data, 64, 64 + 32);
