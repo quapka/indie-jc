@@ -13,7 +13,7 @@ import applet.Constants;
 public class HashCustomTest {
 
     private MessageDigest hasher;
-    private static boolean initialized = false;
+    private boolean initialized = false;
 
     public HashCustomTest() throws NoSuchAlgorithmException {
         hasher = MessageDigest.getInstance("SHA-256");

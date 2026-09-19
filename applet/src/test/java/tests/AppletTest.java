@@ -1511,7 +1511,7 @@ public class AppletTest extends BaseTest {
         return responseAPDU.getData();
     }
 
-    @Disabled("Don't run routinely, requires multiple physical cards available.")
+    // @Disabled("Don't run routinely, requires multiple physical cards available.")
     @Test
     public void testNofNEpochGeneration() throws Exception {
         // imitate a random bitcoin hash used for the epoch generation
@@ -1561,20 +1561,35 @@ public class AppletTest extends BaseTest {
         }
 
 
-        // Signing: Generate partial signatures
-        BigInteger[] partialSigs = new BigInteger[nParties];
+        // Signing: Generate partial signatures (parallelized)
+        ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
+        List<Future<BigInteger>> futures = new ArrayList<>();
+
         for (int index = 0; index < readerIndeces.length; index++) {
-            int readerIndex = readerIndeces[index];
-            BigInteger coefA = keyAggCoeff(keys, keys[index]);
+            final int idx = index;
+            final int readerIndex = readerIndeces[index];
 
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            stream.write(correctAggKey.getEncoded(true));
-            stream.write(serializeCoefAForCard(coefA));
-            sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, stream.toByteArray());
+            futures.add(executor.submit(() -> {
+                BigInteger coefA = keyAggCoeff(keys, keys[idx]);
 
-            byte[] partialSig = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.CREATE_PARTIAL_EPOCH, btcHash);
-            partialSigs[index] = new BigInteger(1, partialSig);
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                stream.write(correctAggKey.getEncoded(true));
+                stream.write(serializeCoefAForCard(coefA));
+                sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, stream.toByteArray());
+
+                byte[] partialSig = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.CREATE_PARTIAL_EPOCH, btcHash);
+                return new BigInteger(1, partialSig);
+            }));
         }
+
+        // Wait for all to complete and collect results
+        BigInteger[] partialSigs = new BigInteger[nParties];
+        for (int index = 0; index < futures.size(); index++) {
+            partialSigs[index] = futures.get(index).get();
+        }
+
+        executor.shutdown();
+        executor.awaitTermination(30, TimeUnit.SECONDS);
 
 
         byte[] aggregatedSignature = aggregateSignatures(digest, partialSigs, aggregatedNoncesPoints, correctAggKey);
