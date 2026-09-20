@@ -1183,13 +1183,19 @@ public class AppletTest extends BaseTest {
 
     public boolean SchnorrVerify(byte[] message, byte[] pubkey, byte[] signature) throws NoSuchAlgorithmException {
         if ( message.length != 32 ) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(String.format(
+                "SchnorrVerify: message length must be 32 bytes, got %d bytes. Message: %s",
+                message.length, bytesToHex(message)));
         }
         if ( pubkey.length != 32 ) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(String.format(
+                "SchnorrVerify: pubkey length must be 32 bytes, got %d bytes. Pubkey: %s",
+                pubkey.length, bytesToHex(pubkey)));
         }
         if ( signature.length != 64 ) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(String.format(
+                "SchnorrVerify: signature length must be 64 bytes, got %d bytes. Signature: %s",
+                signature.length, bytesToHex(signature)));
         }
         // P = lift_x(pubkey)
         ECPoint P = curve.getInfinity();
