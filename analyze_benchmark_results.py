@@ -248,7 +248,7 @@ def generate_epoch_latex_table(filepath: Path):
     print("\\small")
     print("\\setlength{\\tabcolsep}{8pt}")
     print("\\renewcommand{\\arraystretch}{1.1}")
-    print("\\begin{tabular}{l rrrr rrrr}")
+    print("\\begin{tabular}{c rrrr rrrr}")
     print("\\toprule")
     print("\\multirow{2}{*}{\\faUsersCog{}} & \\multicolumn{4}{c}{Per-Card (ms)} & \\multicolumn{4}{c}{Total (ms)} \\\\")
     print("\\cmidrule(lr){2-5} \\cmidrule(lr){6-9}")
