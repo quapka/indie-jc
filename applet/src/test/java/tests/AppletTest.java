@@ -1520,12 +1520,25 @@ public class AppletTest extends BaseTest {
     // @Disabled("Don't run routinely, requires multiple physical cards available.")
     @Test
     public void testNofNEpochGeneration() throws Exception {
-        // imitate a random bitcoin hash used for the epoch generation
+        // Configure via system properties: -PwarmupRuns=1 -PmeasurementRuns=2
+        int WARMUP_RUNS = Integer.parseInt(System.getProperty("warmupRuns", "5"));
+        int MEASUREMENT_RUNS = Integer.parseInt(System.getProperty("measurementRuns", "5"));
+
+        System.out.println("\n========================================");
+        System.out.println("Benchmarking: MuSig2 Epoch Generation");
+        System.out.println("Configuration: " + threshold + "-of-" + nParties);
+        System.out.println("Warm-up runs: " + WARMUP_RUNS);
+        System.out.println("Measurement runs: " + MEASUREMENT_RUNS);
+        System.out.println("========================================\n");
+
+        // Initialize benchmark collector
+        BenchmarkCollector benchmark = new BenchmarkCollector(threshold, nParties);
+
+        // One-time setup: Generate bitcoin hash and message digest
         SecureRandom prng = new SecureRandom(new byte[32]);
         byte[] btcHash = new byte[32];
         prng.nextBytes(btcHash);
 
-        // Calculate the message digest
         HashCustomTest hasher = new HashCustomTest();
         byte[] currentEpoch = new byte[64];
         hasher.init("Indistinguishability service");
@@ -1533,19 +1546,52 @@ public class AppletTest extends BaseTest {
         hasher.update(btcHash, (short) 0, (short) 32);
         byte[] digest = hasher.digest();
 
-        // Cards initialization
+        // One-time setup: Generate individual public keys
+        System.out.println("Performing one-time key generation...");
         ECPoint[] keys = new ECPoint[nParties];
-        ECPoint[][] cardsPubNonces = new ECPoint[nParties][Constants.V];
-
-        // Cards generate individual public keys
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             byte[] pubkeyData = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GENERATE_KEY_MUSIG2);
             keys[index] = curve.decodePoint(pubkeyData);
         }
         ECPoint correctAggKey = keyAgg(keys);
+        System.out.println("One-time setup complete.\n");
 
-        // Signing: generate nonces
+        // Warm-up phase
+        System.out.println("Running warm-up phase...");
+        for (int warmup = 0; warmup < WARMUP_RUNS; warmup++) {
+            System.out.println("  Warm-up run " + (warmup + 1) + "/" + WARMUP_RUNS);
+            runMuSig2PartialSignatures(null, warmup, keys, correctAggKey, btcHash, digest);
+        }
+        System.out.println("Warm-up complete.\n");
+
+        // Measurement phase
+        System.out.println("Running measurement phase...");
+        for (int run = 0; run < MEASUREMENT_RUNS; run++) {
+            System.out.println("  Measurement run " + (run + 1) + "/" + MEASUREMENT_RUNS);
+            runMuSig2PartialSignatures(benchmark, run, keys, correctAggKey, btcHash, digest);
+
+            // Save results incrementally after each run
+            benchmark.writeToFile("benchmark_results/musig2_results.csv", true);
+        }
+        System.out.println("Measurements complete.\n");
+
+        // Print final summary
+        System.out.println("========================================");
+        benchmark.printSummary();
+        benchmark.printLatexSummary();
+        System.out.println("========================================\n");
+    }
+
+    /**
+     * Run MuSig2 partial signature generation and verification for one iteration.
+     * If benchmark is null, timing is not recorded (warm-up mode).
+     */
+    private void runMuSig2PartialSignatures(BenchmarkCollector benchmark, int runNumber,
+                                             ECPoint[] keys, ECPoint correctAggKey,
+                                             byte[] btcHash, byte[] digest) throws Exception {
+        // Generate nonces for this iteration
+        ECPoint[][] cardsPubNonces = new ECPoint[nParties][Constants.V];
         for (int index = 0; index < readerIndeces.length; index++) {
             int readerIndex = readerIndeces[index];
             sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.GENERATE_NONCE_MUSIG2);
@@ -1555,27 +1601,32 @@ public class AppletTest extends BaseTest {
             cardsPubNonces[index][1] = curve.decodePoint(Arrays.copyOfRange(nonceData, 33, 66));
         }
 
-        // calculate aggregated nonce
+        // Calculate aggregated nonce
         byte[] aggregatedNonces = aggregateNonces(cardsPubNonces);
         ECPoint[] aggregatedNoncesPoints = new ECPoint[Constants.V];
         aggregatedNoncesPoints[0] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 0, 33));
         aggregatedNoncesPoints[1] = curve.decodePoint(Arrays.copyOfRange(aggregatedNonces, 33, 66));
 
-        // Signing: Send aggregated nonce to cards
+        // Send aggregated nonce to cards
         for (int index = 0; index < readerIndeces.length; index++) {
             sendAPDU(readerIndeces[index], Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_NONCE, aggregatedNonces);
         }
 
-
-        // Signing: Generate partial signatures (parallelized)
+        // Generate partial signatures (parallelized with benchmarking)
         ExecutorService executor = Executors.newFixedThreadPool(readerIndeces.length);
-        List<Future<BigInteger>> futures = new ArrayList<>();
+        List<Future<PartialSigResult>> futures = new ArrayList<>();
+
+        // Record total parallel execution time
+        long parallelStart = System.nanoTime();
 
         for (int index = 0; index < readerIndeces.length; index++) {
             final int idx = index;
             final int readerIndex = readerIndeces[index];
 
             futures.add(executor.submit(() -> {
+                // Record per-card time
+                long start = System.nanoTime();
+
                 BigInteger coefA = keyAggCoeff(keys, keys[idx]);
 
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -1584,27 +1635,48 @@ public class AppletTest extends BaseTest {
                 sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.SET_MUSIG2_AGG_KEY, stream.toByteArray());
 
                 byte[] partialSig = sendAPDU(readerIndex, Consts.CLA.INDIE, Consts.INS.CREATE_PARTIAL_EPOCH, btcHash);
-                return new BigInteger(1, partialSig);
+
+                long duration = System.nanoTime() - start;
+                return new PartialSigResult(new BigInteger(1, partialSig), duration);
             }));
         }
 
         // Wait for all to complete and collect results
         BigInteger[] partialSigs = new BigInteger[nParties];
         for (int index = 0; index < futures.size(); index++) {
-            partialSigs[index] = futures.get(index).get();
+            PartialSigResult result = futures.get(index).get();
+            partialSigs[index] = result.signature;
+
+            if (benchmark != null) {
+                // Record per-card measurement
+                benchmark.record(BenchmarkCollector.OP_MUSIG2_PARTIAL_SIG, index, result.durationNanos, runNumber);
+            }
+        }
+
+        long parallelDuration = System.nanoTime() - parallelStart;
+
+        if (benchmark != null) {
+            // Record total parallel execution time
+            benchmark.record(BenchmarkCollector.OP_MUSIG2_PARTIAL_SIG_TOTAL, -1, parallelDuration, runNumber);
         }
 
         executor.shutdown();
         executor.awaitTermination(30, TimeUnit.SECONDS);
 
-
+        // Verify signature with benchmarking
+        long verifyStart = System.nanoTime();
         byte[] aggregatedSignature = aggregateSignatures(digest, partialSigs, aggregatedNoncesPoints, correctAggKey);
+        boolean verified = SchnorrVerify(digest, correctAggKey.normalize().getXCoord().getEncoded(), aggregatedSignature);
+        long verifyDuration = System.nanoTime() - verifyStart;
 
-        Assert.assertTrue(
-            "2-out-of-2 epoch signature does not verify",
-            SchnorrVerify(digest, correctAggKey.normalize().getXCoord().getEncoded(),
-            aggregatedSignature)
-        );
+        if (benchmark != null) {
+            // Record verification measurement
+            benchmark.record(BenchmarkCollector.OP_MUSIG2_VERIFICATION, -1, verifyDuration, runNumber);
+        }
+
+        if (!verified) {
+            throw new AssertionError("MuSig2 epoch signature verification failed");
+        }
     }
 
     @Test
@@ -2952,5 +3024,18 @@ public class AppletTest extends BaseTest {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    /**
+     * Helper class to store partial signature with timing information.
+     */
+    private static class PartialSigResult {
+        BigInteger signature;
+        long durationNanos;
+
+        PartialSigResult(BigInteger signature, long durationNanos) {
+            this.signature = signature;
+            this.durationNanos = durationNanos;
+        }
     }
 }
