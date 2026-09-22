@@ -1651,6 +1651,7 @@ public class AppletTest extends BaseTest {
             }
         }
 
+        byte[] aggregatedSignature = aggregateSignatures(digest, partialSigs, aggregatedNoncesPoints, correctAggKey);
         long parallelDuration = System.nanoTime() - parallelStart;
 
         if (benchmark != null) {
@@ -1663,7 +1664,6 @@ public class AppletTest extends BaseTest {
 
         // Verify signature with benchmarking
         long verifyStart = System.nanoTime();
-        byte[] aggregatedSignature = aggregateSignatures(digest, partialSigs, aggregatedNoncesPoints, correctAggKey);
         boolean verified = SchnorrVerify(digest, correctAggKey.normalize().getXCoord().getEncoded(), aggregatedSignature);
         long verifyDuration = System.nanoTime() - verifyStart;
 
