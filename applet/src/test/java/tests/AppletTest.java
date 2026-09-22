@@ -1570,16 +1570,14 @@ public class AppletTest extends BaseTest {
         for (int run = 0; run < MEASUREMENT_RUNS; run++) {
             System.out.println("  Measurement run " + (run + 1) + "/" + MEASUREMENT_RUNS);
             runMuSig2PartialSignatures(benchmark, run, keys, correctAggKey, btcHash, digest);
-
-            // Save results incrementally after each run
-            benchmark.writeToFile("benchmark_results/musig2_results.csv", true);
         }
         System.out.println("Measurements complete.\n");
 
-        // Print final summary
+        // Save results and print final summary
         System.out.println("========================================");
         benchmark.printSummary();
         benchmark.printLatexSummary();
+        benchmark.writeToFile("benchmark_results/musig2_results.csv", true);
         System.out.println("========================================\n");
     }
 
